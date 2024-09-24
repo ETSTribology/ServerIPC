@@ -121,3 +121,7 @@ class SimulationRedisClient:
     def kill(self):
         with self.lock:
             self.publish_data('simulation_commands', 'kill')
+
+    def reset(self):
+        with self.lock:
+            self.publish_data('simulation_commands', 'reset')

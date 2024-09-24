@@ -10,6 +10,7 @@ class CCD:
     def __init__(self, params: Parameters, broad_phase_method: ipctk.BroadPhaseMethod = ipctk.BroadPhaseMethod.SPATIAL_HASH):
         self.params = params
         self.broad_phase_method = broad_phase_method
+        self.alpha = 0.0
 
     def __call__(self, x: np.ndarray, dx: np.ndarray) -> float:
         mesh = self.params.mesh
@@ -27,4 +28,5 @@ class CCD:
             min_distance=dmin
         )
         logger.debug(f"CCD computed max_alpha: {max_alpha}")
+        self.alpha = max_alpha
         return max_alpha

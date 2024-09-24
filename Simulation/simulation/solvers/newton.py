@@ -3,46 +3,9 @@ import scipy as sp
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 import logging
+from solvers.line_search import line_search
 
-def line_search(alpha0: float,
-                xk: np.ndarray,
-                dx: np.ndarray,
-                gk: np.ndarray,
-                f: Callable[[np.ndarray], float],
-                maxiters: int = 20,
-                c: float = 1e-4,
-                tau: float = 0.5,
-                alpha_threshold: float = 1e-8) -> float:
-    alphaj = alpha0
-    Dfk = gk.dot(dx)
-    fk = f(xk)
-    
-    # Avoid unnecessary iterations if Dfk is too small (indicating a stationary point)
-    if np.abs(Dfk) < 1e-12:
-        return 0.0
-    
-    flinear = fk + alphaj * c * Dfk
-
-    for j in range(maxiters):
-        # Evaluate the function at the new point
-        fx = f(xk + alphaj * dx)
-        
-        # Check the Armijo condition
-        if fx <= flinear:
-            return alphaj
-        
-        # Reduce step size
-        alphaj *= tau
-        
-        # Update the linear approximation value to prevent recomputation
-        flinear = fk + alphaj * c * Dfk
-        
-        # Stop if the step size becomes too small
-        if alphaj < alpha_threshold:
-            print("Warning: Line search step size is too small.")
-            break
-            
-    return alphaj
+logger = logging.getLogger(__name__)
 
 def newton(x0: np.ndarray,
            f: Callable[[np.ndarray], float],
@@ -81,7 +44,8 @@ def parallel_newton(x0: np.ndarray,
                     rtol: float = 1e-5,
                     callback: Callable[[np.ndarray], None] = None,
                     n_threads: int = 4) -> np.ndarray:
-    xk = x0
+    logger = logging.getLogger('ParallelNewton')
+    xk = x0.copy()
     Hk_cache = None
 
     with ThreadPoolExecutor(max_workers=n_threads) as executor:
@@ -92,7 +56,7 @@ def parallel_newton(x0: np.ndarray,
 
             gnorm = np.linalg.norm(gk, 1)
             if gnorm < rtol:
-                print(f"Converged at iteration {k}")
+                logger.info(f"Converged at iteration {k}")
                 break
 
             # Compute the Hessian in parallel
@@ -120,6 +84,9 @@ def parallel_newton(x0: np.ndarray,
             if np.linalg.norm(alpha * dx) > 1e-5:
                 Hk_cache = None  # Invalidate the cache
 
-            callback(xk)
+            if callback is not None:
+                callback(xk)
+
+            logger.debug(f"Iteration {k}: alpha={alpha}, gradient norm={gnorm}")
 
     return xk

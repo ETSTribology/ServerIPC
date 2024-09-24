@@ -7,11 +7,12 @@ from utils.mesh_utils import to_surface
 class Potential:
     def __init__(self, params: Parameters):
         self.params = params
+        self.cached_x = None
+        self.cached_U = None
 
     def __call__(self, x: np.ndarray) -> float:
         params = self.params
         dt = params.dt
-        dt2 = params.dt2
         xt = params.xt
         xtilde = params.xtilde
         M = params.M
@@ -25,22 +26,33 @@ class Potential:
         mu = params.mu
         epsv = params.epsv
         kB = params.kB
+        B = params.barrier_potential
+        D = params.friction_potential
 
-        hep.compute_element_elasticity(x, grad=False, hessian=False)
-        U = hep.eval()
+        if np.array_equal(x, self.cached_x):
+            U = self.cached_U
+        else:
+            hep.compute_element_elasticity(x, grad=False, hessian=False)
+            U = hep.eval()
+            self.cached_U = U
+            self.cached_x = x.copy()
+
         v = (x - xt) / dt
+
         BX = to_surface(x, mesh, cmesh)
         BXdot = to_surface(v, mesh, cmesh)
+
+        # Compute the barrier potential
         cconstraints.use_area_weighting = True
         cconstraints.use_improved_max_approximator = True
         cconstraints.build(cmesh, BX, dhat, dmin=dmin)
 
         # Create a BarrierPotential object and use it in the build method
-        ipctk.BarrierPotential.use_physical_barrier = True
-        B = ipctk.BarrierPotential(dhat)
         fconstraints.build(cmesh, BX, cconstraints, B, kB, mu)
 
         EB = B(cconstraints, cmesh, BX)
-        D = ipctk.FrictionPotential(epsv)
         EF = D(fconstraints, cmesh, BXdot)
-        return 0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt2*U + kB * EB + dt2*EF
+        potential_energy = 0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt**2 * U + kB * EB + dt**2 * EF
+
+        return potential_energy
+

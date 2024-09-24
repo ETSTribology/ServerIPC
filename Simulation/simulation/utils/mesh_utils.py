@@ -20,12 +20,12 @@ def to_surface(x: np.ndarray, mesh, cmesh: ipctk.CollisionMesh):
 def find_codim_vertices(mesh, boundary_edges):
     # Initialize a set with all vertex indices
     all_vertices = set(range(len(mesh.X)))
-    
+
     # Find vertices connected to boundary edges
     surface_vertices = set()
     for edge in boundary_edges:
         surface_vertices.update(edge)
-    
+
     # Codimensional vertices are those not connected to any boundary edge
     codim_vertices = list(all_vertices - surface_vertices)
     if len(codim_vertices) == 0:

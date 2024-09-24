@@ -1,3 +1,5 @@
+# simulation/solvers/linear_solver.py
+
 import scipy as sp
 import logging
 import numpy as np

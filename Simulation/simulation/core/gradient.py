@@ -25,14 +25,14 @@ class Gradient:
         mu = params.mu
         epsv = params.epsv
         kB = params.kB
+        B = params.barrier_potential
+        D = params.friction_potential
 
-        hep.compute_element_elasticity(x, grad=True, hessian=False)
+        params.hep.compute_element_elasticity(x, grad=True, hessian=False)
         gU = hep.gradient()
         v = (x - xt) / dt
         BX = to_surface(x, mesh, cmesh)
 
-        # Create a BarrierPotential object and use it in the build method
-        B = ipctk.BarrierPotential(dhat)
         barrier_potential = B(cconstraints, cmesh, BX)
         gB = B.gradient(cconstraints, cmesh, BX)
         gB = cmesh.to_full_dof(gB)
@@ -49,7 +49,6 @@ class Gradient:
         # Use the BarrierPotential in the build method
         fconstraints.build(cmesh, BX, cconstraints, B, kB, mu)
 
-        D = ipctk.FrictionPotential(epsv)
         friction_potential = D(fconstraints, cmesh, BXdot)
         gF = D.gradient(fconstraints, cmesh, BXdot)
         gF = cmesh.to_full_dof(gF)

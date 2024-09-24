@@ -18,10 +18,10 @@ class BarrierInitializer:
         avgmass = params.avgmass
         bboxdiag = params.bboxdiag
         cconstraints = params.cconstraints
+        B = params.barrier_potential
 
         # Compute adaptive barrier stiffness
         BX = to_surface(x, mesh, cmesh)
-        B = ipctk.BarrierPotential(dhat)
         barrier_potential = B(cconstraints, cmesh, BX)
         gB = B.gradient(cconstraints, cmesh, BX)
         kB, maxkB = ipctk.initial_barrier_stiffness(

@@ -4,7 +4,6 @@ from core.parameters import Parameters
 from utils.mesh_utils import to_surface
 import numpy as np
 
-
 class Hessian:
     def __init__(self, params: Parameters):
         self.params = params
@@ -25,6 +24,8 @@ class Hessian:
         mu = params.mu
         epsv = params.epsv
         kB = params.kB
+        B = params.barrier_potential
+        D = params.friction_potential
 
         # Compute the Hessian of the elastic potential
         hep.compute_element_elasticity(x, grad=False, hessian=True)
@@ -36,12 +37,10 @@ class Hessian:
         BXdot = to_surface(v, mesh, cmesh)
 
         # Compute the Hessian of the barrier potential using the correct signature
-        B = ipctk.BarrierPotential(dhat)
         HB = B.hessian(cconstraints, cmesh, BX, project_hessian_to_psd=ipctk.PSDProjectionMethod.ABS)
         HB = cmesh.to_full_dof(HB)
 
         # Compute the Hessian of the friction dissipative potential
-        D = ipctk.FrictionPotential(epsv)
         HF = D.hessian(fconstraints, cmesh, BXdot, project_hessian_to_psd=ipctk.PSDProjectionMethod.ABS)
         HF = cmesh.to_full_dof(HF)
 

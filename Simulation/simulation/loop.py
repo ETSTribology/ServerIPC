@@ -14,6 +14,10 @@ from solvers.newton import newton, parallel_newton
 import numpy as np
 from materials import Material
 from utils.mesh_utils import to_surface
+import ipctk
+from initialization import (
+    initialization
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +38,37 @@ def run_simulation(
     epsv,
     dofs,
     redis_client: SimulationRedisClient,
-    material: Material = None
+    material: Material = None,
+    barrier_potential: ipctk.BarrierPotential = None,
+    friction_potential: ipctk.FrictionPotential = None
 ):
     max_iters = 100000  # Number of simulation steps
-    allowed_commands = {"start", "pause", "stop", "resume", "play", "kill"}
+    allowed_commands = {"start", "pause", "stop", "resume", "play", "kill", "reset"}
     simulation_running = False  # Track if the simulation is active
 
     # Precompute objects that do not change within the loop
     solver = LinearSolver(dofs)
+
+    # Set up simulation parameters
+    params = Parameters(
+        mesh=mesh,
+        xt=x,
+        vt=v,
+        a=a,
+        M=M,
+        hep=hep,
+        dt=dt,
+        cmesh=cmesh,
+        cconstraints=cconstraints,
+        fconstraints=fconstraints,
+        material=material,
+        dhat=dhat,
+        dmin=dmin,
+        mu=mu,
+        epsv=epsv,
+        barrier_potential=barrier_potential,
+        friction_potential=friction_potential
+    )
 
     for i in range(max_iters):
         # Retrieve the latest command from Redis
@@ -73,6 +100,30 @@ def run_simulation(
                 elif simulation_command == "kill":
                     logger.info("Killing simulation.")
                     sys.exit()
+                elif simulation_command == "reset":
+                    args, mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, material, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y, nu, psi, detJeU, GNeU, E, F, aabb, vdbc, dX = initialization()
+                    params = Parameters(
+                        mesh=mesh,
+                        xt=x,
+                        vt=v,
+                        a=a,
+                        M=M,
+                        hep=hep,
+                        dt=dt,
+                        cmesh=cmesh,
+                        cconstraints=cconstraints,
+                        fconstraints=fconstraints,
+                        material=material,
+                        dhat=dhat,
+                        dmin=dmin,
+                        mu=mu,
+                        epsv=epsv,
+                        barrier_potential=barrier_potential,
+                        friction_potential=friction_potential
+                    )
+                    simulation_running = False
+                    logger.info("Simulation reset.")
+                    simulation_running = True
             else:
                 logger.warning(f"Invalid simulation command received: {simulation_command}")
 
@@ -81,25 +132,6 @@ def run_simulation(
             logger.debug("Simulation is paused or not started. Waiting for commands.")
             time.sleep(0.1)  # Sleep briefly to prevent tight loop
             continue
-
-        # Set up simulation parameters
-        params = Parameters(
-            mesh=mesh,
-            xt=x,
-            vt=v,
-            a=a,
-            M=M,
-            hep=hep,
-            dt=dt,
-            cmesh=cmesh,
-            cconstraints=cconstraints,
-            fconstraints=fconstraints,
-            material=material,
-            dhat=dhat,
-            dmin=dmin,
-            mu=mu,
-            epsv=epsv,
-        )
 
         # Potential, Gradient, and Hessian objects
         f = Potential(params)
@@ -127,6 +159,11 @@ def run_simulation(
         # Update velocities and positions
         v = (xtp1 - x) / dt
         x = xtp1
+
+        params.xt = x
+        params.vt = v
+        params.a = a
+        params.xtilde = x + dt * v + params.dt2 * a
 
         # Map the updated positions to the collision mesh
         BX = to_surface(x, mesh, cmesh)

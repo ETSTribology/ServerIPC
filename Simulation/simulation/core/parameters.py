@@ -6,6 +6,7 @@ from materials import Material
 import pbatoolkit as pbat
 import numpy as np
 
+
 class Parameters:
     def __init__(self,
                  mesh: pbat.fem.Mesh,
@@ -22,7 +23,11 @@ class Parameters:
                  dhat: float = 1e-3,
                  dmin: float = 1e-4,
                  mu: float = 0.3,
-                 epsv: float = 1e-4):
+                 epsv: float = 1e-4,
+                 barrier_potential: ipctk.BarrierPotential = None,
+                 friction_potential: ipctk.FrictionPotential = None
+    ):
+
         self.mesh = mesh
         self.xt = xt
         self.vt = vt
@@ -48,4 +53,22 @@ class Parameters:
         BX = to_surface(xt, mesh, cmesh)
         self.bboxdiag = ipctk.world_bbox_diagonal_length(BX)
         self.gU = None
-        self.gB = None
+        self.gB = None 
+        self.gF = None
+        self.material = material
+        self.barrier_potential = barrier_potential
+        self.friction_potential = friction_potential
+
+    def reset(self):
+        # Reset positions, velocities, accelerations to initial state
+        self.xt = self.initial_xt.copy()
+        self.vt = self.initial_vt.copy()
+        self.a = self.initial_a.copy()
+
+    def get_initial_state(self):
+        return self.xt.copy(), self.vt.copy(), self.a.copy()
+
+    def set_initial_state(self, xt, vt, a):
+        self.xt = xt.copy()
+        self.vt = vt.copy()
+        self.a = a.copy()

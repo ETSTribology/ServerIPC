@@ -1,3 +1,11 @@
+import numpy as np
+import scipy as sp
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+import logging
+
+
+
 def line_search(alpha0: float,
                 xk: np.ndarray,
                 dx: np.ndarray,
