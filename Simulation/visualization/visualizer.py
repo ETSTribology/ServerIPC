@@ -1,0 +1,133 @@
+import polyscope as ps
+import polyscope.imgui as imgui
+import numpy as np
+import logging
+import queue
+
+logger = logging.getLogger(__name__)
+
+class PolyscopeVisualizer:
+    def __init__(self, mesh_queue: queue.Queue, redis_client):
+        ps.set_up_dir("z_up")
+        ps.init()
+        self.mesh_states = []
+        self.step_names = []
+        self.current_step_index = 0
+        self.is_paused = False
+        self.visual_mesh = None
+        self.initialized = False
+        self.mesh_queue = mesh_queue
+        self.redis_client = redis_client
+        self.material_colors = {}
+
+    def register_initial_mesh(self, BX: np.ndarray, faces: np.ndarray, face_materials: np.ndarray, materials: list):
+        logger.info("Registering initial mesh with Polyscope.")
+        if not self.initialized:
+            self.visual_mesh = ps.register_surface_mesh("Visual Mesh", BX, faces)
+            # Build material colors mapping
+            self.material_colors = self.build_material_colors(materials)
+            # Map face materials to colors
+            face_colors = np.array([self.material_colors[mat_idx] for mat_idx in face_materials])
+            self.visual_mesh.add_color_quantity("material_color", face_colors, defined_on='faces', enabled=True)
+            self.mesh_states.append({'BX': BX.copy(), 'face_materials': face_materials.copy()})
+            self.step_names.append("Initial State")
+            self.initialized = True
+            logger.info("Initial mesh registered with Polyscope.")
+
+    def build_material_colors(self, materials: list):
+        material_colors = {}
+        for idx, mat in enumerate(materials):
+            color = mat.get('color', [128, 128, 128, 1])  # Default to gray
+            # Normalize color to [0,1]
+            color = np.array(color[:3]) / 255.0
+            material_colors[idx] = color
+        return material_colors
+
+    def update_mesh(self, BX: np.ndarray, face_materials: np.ndarray, step_name: str):
+        if self.visual_mesh:
+            self.visual_mesh.update_vertex_positions(BX)
+            face_colors = np.array([self.material_colors[mat_idx] for mat_idx in face_materials])
+            self.visual_mesh.add_color_quantity("material_color", face_colors, defined_on='faces', enabled=True)
+            self.mesh_states.append({'BX': BX.copy(), 'face_materials': face_materials.copy()})
+            self.step_names.append(step_name)
+            self.current_step_index = len(self.mesh_states) - 1
+            logger.info(f"Mesh updated to {step_name}.")
+
+    def reset_to_initial_state(self):
+        if self.mesh_states:
+            self.current_step_index = 0
+            initial_state = self.mesh_states[0]
+            self.visual_mesh.update_vertex_positions(initial_state['BX'])
+            face_materials = initial_state['face_materials']
+            face_colors = np.array([self.material_colors[mat_idx] for mat_idx in face_materials])
+            self.visual_mesh.add_color_quantity("material_color", face_colors, defined_on='faces', enabled=True)
+            logger.info("Mesh reset to initial state.")
+
+    def process_queue(self):
+        while not self.mesh_queue.empty():
+            mesh_data = self.mesh_queue.get()
+            try:
+                BX = np.frombuffer(mesh_data['BX'], dtype=mesh_data['BX_dtype']).reshape(mesh_data['BX_shape'])
+                face_materials = np.frombuffer(mesh_data['face_materials'], dtype=mesh_data['face_materials_dtype']).reshape(mesh_data['face_materials_shape'])
+                step_name = f"Step {len(self.mesh_states)}"
+                self.update_mesh(BX, face_materials, step_name)
+            except Exception as e:
+                logger.error(f"Failed to process mesh update: {e}")
+
+    def render_ui(self):
+        # Handle Pause and Play buttons
+        if imgui.Button("Pause"):
+            self.is_paused = True
+            self.redis_client.send_command("pause")
+            logger.info("Visualization Paused.")
+        imgui.SameLine()
+        if imgui.Button("Play"):
+            self.is_paused = False
+            self.redis_client.send_command("play")
+            logger.info("Visualization Resumed.")
+
+        # Handle Stop and Start buttons
+        if imgui.Button("Stop"):
+            self.redis_client.send_command("stop")
+            logger.info("Sent stop command to simulation server.")
+            self.reset_to_initial_state()
+            self.mesh_states = []
+            self.step_names = []
+            self.is_paused = False
+            logger.info("Stopped simulation and reset mesh to initial state.")
+        imgui.SameLine()
+        if imgui.Button("Start"):
+            self.redis_client.send_command("start")
+            logger.info("Sent start command to simulation server.")
+        # Add Reset button
+        if imgui.Button("Reset"):           
+            self.redis_client.send_command("reset")
+            logger.info("Sent reset command to simulation server.")
+        imgui.Separator()
+        if imgui.Button("Kill Simulation"):
+            self.redis_client.send_command("kill")
+            logger.info("Sent kill command to simulation server.")
+
+        # Handle Reset to Initial State button
+        if imgui.Button("Reset to Initial State"):
+            self.reset_to_initial_state()
+
+        # Add UI list to select steps
+        if len(self.mesh_states) > 1:
+            step_names = [name for name in self.step_names]
+            changed, new_step_index = imgui.Combo("Select Step", self.current_step_index, step_names)
+            if changed:
+                self.current_step_index = new_step_index
+                selected_state = self.mesh_states[self.current_step_index]
+                self.visual_mesh.update_vertex_positions(selected_state['BX'])
+                face_materials = selected_state['face_materials']
+                face_colors = np.array([self.material_colors[mat_idx] for mat_idx in face_materials])
+                self.visual_mesh.add_color_quantity("material_color", face_colors, defined_on='faces', enabled=True)
+                logger.info(f"Switched to {self.step_names[self.current_step_index]}.")
+
+        # Process any pending mesh updates
+        self.process_queue()
+
+    def show(self):
+        ps.set_user_callback(self.render_ui)
+        ps.show()

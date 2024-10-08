@@ -1,0 +1,39 @@
+{
+    "name": "Simple Sliding Rectangle Flat",
+    "inputs": [
+        {
+            "path": "meshes/rectangle.mesh",
+            "percent_fixed": 0.1,
+            "material": {
+                "density": 1000.0,
+                "young_modulus": 1e6,
+                "poisson_ratio": 0.45,
+                "color": [255, 255, 255, 1]
+            },
+            "transform": {
+                "scale": [1.0, 1.0, 1.0],
+                "rotation": [0.0, 0.0, 0.70, 0.70],
+                "translation": [1.0, 1.0, 1.0]
+            }
+        }
+    ],
+    "server": {
+        "redis_host": "localhost",
+        "redis_port": 6379,
+        "redis_db": 0
+    },
+    "friction": {
+        "coefficient": 0.3,
+        "damping":  1e-4
+    },
+    "simulation": {
+        "time_step": 0.016,
+        "max_steps": 1000,
+        "collision_threshold": 1e-3,
+        "min_distance":  1e-4
+    },
+    "initial_conditions": {
+        "gravity": 9.81,
+        "side_force": 0
+    }
+}

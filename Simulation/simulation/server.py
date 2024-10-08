@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 ipctk.set_num_threads(10)
 
 def main():
-    args, mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, material, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y, nu, psi, detJeU, GNeU, E, F, aabb, vdbc, dX = initialization()
+    config, mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, materials, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi, detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials = initialization()
 
     # Initialize Parameters instance
     run_simulation(
@@ -46,9 +46,13 @@ def main():
         epsv=epsv,
         dofs=dofs,
         redis_client=redis_client,
-        material=material,
+        materials=materials,
         barrier_potential=barrier_potential,
-        friction_potential=friction_potential
+        friction_potential=friction_potential,
+        config=config,
+        element_materials=element_materials,
+        num_nodes_list=num_nodes_list,
+        face_materials=face_materials,
     )
 
 if __name__ == "__main__":

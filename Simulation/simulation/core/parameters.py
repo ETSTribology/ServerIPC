@@ -6,7 +6,6 @@ from materials import Material
 import pbatoolkit as pbat
 import numpy as np
 
-
 class Parameters:
     def __init__(self,
                  mesh: pbat.fem.Mesh,
@@ -19,7 +18,8 @@ class Parameters:
                  cmesh: ipctk.CollisionMesh,
                  cconstraints: ipctk.Collisions,
                  fconstraints: ipctk.FrictionCollisions,
-                 material: Material,
+                 materials: list,
+                 element_materials: list,
                  dhat: float = 1e-3,
                  dmin: float = 1e-4,
                  mu: float = 0.3,
@@ -55,7 +55,8 @@ class Parameters:
         self.gU = None
         self.gB = None 
         self.gF = None
-        self.material = material
+        self.materials = materials
+        self.element_materials = element_materials
         self.barrier_potential = barrier_potential
         self.friction_potential = friction_potential
 

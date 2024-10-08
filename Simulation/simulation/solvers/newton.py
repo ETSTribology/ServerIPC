@@ -4,8 +4,11 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 import logging
 from solvers.line_search import line_search
+import torch
+from torch import autograd
 
 logger = logging.getLogger(__name__)
+
 
 def newton(x0: np.ndarray,
            f: Callable[[np.ndarray], float],
@@ -43,7 +46,7 @@ def parallel_newton(x0: np.ndarray,
                     maxiters: int = 10,
                     rtol: float = 1e-5,
                     callback: Callable[[np.ndarray], None] = None,
-                    n_threads: int = 4) -> np.ndarray:
+                    n_threads: int = 8) -> np.ndarray:
     logger = logging.getLogger('ParallelNewton')
     xk = x0.copy()
     Hk_cache = None

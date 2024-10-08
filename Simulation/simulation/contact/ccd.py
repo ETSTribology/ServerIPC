@@ -7,7 +7,7 @@ from utils.mesh_utils import to_surface
 logger = logging.getLogger(__name__)
 
 class CCD:
-    def __init__(self, params: Parameters, broad_phase_method: ipctk.BroadPhaseMethod = ipctk.BroadPhaseMethod.SPATIAL_HASH):
+    def __init__(self, params: Parameters, broad_phase_method: ipctk.BroadPhaseMethod = ipctk.BroadPhaseMethod.BOUNDING_VOLUME_HIERARCHY):
         self.params = params
         self.broad_phase_method = broad_phase_method
         self.alpha = 0.0

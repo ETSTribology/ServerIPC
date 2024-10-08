@@ -1,7 +1,7 @@
 import logging
 import time
 import sys
-from typing import Callable
+from typing import Callable, List
 from solvers.linear_solver import LinearSolver
 from contact.barrier_updater import BarrierUpdater
 from contact.ccd import CCD
@@ -38,10 +38,16 @@ def run_simulation(
     epsv,
     dofs,
     redis_client: SimulationRedisClient,
-    material: Material = None,
+    materials: list,
     barrier_potential: ipctk.BarrierPotential = None,
-    friction_potential: ipctk.FrictionPotential = None
+    friction_potential: ipctk.FrictionPotential = None,
+    config: dict = None,
+    element_materials: list = None,
+    num_nodes_list: list = None,
+    face_materials: np.ndarray = None
 ):
+    
+    material=materials[0]
     max_iters = 100000  # Number of simulation steps
     allowed_commands = {"start", "pause", "stop", "resume", "play", "kill", "reset"}
     simulation_running = False  # Track if the simulation is active
@@ -61,7 +67,8 @@ def run_simulation(
         cmesh=cmesh,
         cconstraints=cconstraints,
         fconstraints=fconstraints,
-        material=material,
+        materials=materials,
+        element_materials=element_materials,
         dhat=dhat,
         dmin=dmin,
         mu=mu,
@@ -101,7 +108,8 @@ def run_simulation(
                     logger.info("Killing simulation.")
                     sys.exit()
                 elif simulation_command == "reset":
-                    args, mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, material, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y, nu, psi, detJeU, GNeU, E, F, aabb, vdbc, dX = initialization()
+                    config, mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, materials, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi, detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials = initialization()
+                    
                     params = Parameters(
                         mesh=mesh,
                         xt=x,
@@ -113,7 +121,8 @@ def run_simulation(
                         cmesh=cmesh,
                         cconstraints=cconstraints,
                         fconstraints=fconstraints,
-                        material=material,
+                        materials=materials,
+                        element_materials=element_materials,
                         dhat=dhat,
                         dmin=dmin,
                         mu=mu,
@@ -121,6 +130,8 @@ def run_simulation(
                         barrier_potential=barrier_potential,
                         friction_potential=friction_potential
                     )
+
+
                     simulation_running = False
                     logger.info("Simulation reset.")
                     simulation_running = True
@@ -169,17 +180,21 @@ def run_simulation(
         BX = to_surface(x, mesh, cmesh)
 
         mesh_data = {
-            "timestamp": time.time(),
-            "step": i,
-            "x": x.tobytes(),
-            "x_shape": x.shape,
-            "x_dtype": str(x.dtype),
-            "BX": BX.tobytes(),
-            "BX_shape": BX.shape,
-            "BX_dtype": str(BX.dtype),
-            "faces": cmesh.faces.tobytes(),
-            "faces_shape": cmesh.faces.shape,
-            "faces_dtype": str(cmesh.faces.dtype)
+            "timestamp": time.time(),  # Current timestamp
+            "step": i,  # Current simulation step
+            "x": x.tobytes(),  # Serialize the positions
+            "x_shape": x.shape,  # Shape of the positions array
+            "x_dtype": str(x.dtype),  # Data type of the positions array
+            "BX": BX.tobytes(),  # Serialize the surface mesh
+            "BX_shape": BX.shape,  # Shape of the surface mesh
+            "BX_dtype": str(BX.dtype),  # Data type of the surface mesh
+            "faces": cmesh.faces.tobytes(),  # Serialize the collision mesh faces
+            "faces_shape": cmesh.faces.shape,  # Shape of the collision mesh faces
+            "faces_dtype": str(cmesh.faces.dtype),  # Data type of the collision mesh faces
+            "face_materials": face_materials.tobytes(),  # Serialize the face materials
+            "face_materials_shape": face_materials.shape,  # Shape of the face materials array
+            "face_materials_dtype": str(face_materials.dtype),  # Data type of the face materials array
+            "materials": materials  # List of materials
         }
 
         # Serialize the mesh data

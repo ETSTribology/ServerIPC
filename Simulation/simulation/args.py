@@ -8,8 +8,8 @@ def parse_arguments():
         prog="3D Elastic Simulation of Linear FEM Tetrahedra using IPC",
         description="Simulate 3D elastic deformations with contact handling."
     )
-    parser.add_argument("-i", "--input", help="Path to input mesh", required=True)
-    parser.add_argument("--percent-fixed", type=float, default=0.1,
+    parser.add_argument("-i", "--input", help="Path to input mesh", required=False)
+    parser.add_argument("--percent-fixed", type=float, default=0.0,
                         help="Percentage of input mesh's bottom to fix")
     parser.add_argument("-m", "--mass-density", type=float, default=1000.0,
                         help="Mass density")
@@ -25,4 +25,7 @@ def parse_arguments():
                         help="Redis port")
     parser.add_argument("--redis-db", type=int, default=0,
                         help="Redis database")
+    parser.add_argument("-j", "--n-threads", type=int, default=4,
+                        help="Number of threads to use for parallel Newton solver")
+    parser.add_argument("--json", type=str, default=None, help="Path to JSON file with simulation parameters")
     return parser.parse_args()

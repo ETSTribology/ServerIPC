@@ -1,1 +1,1 @@
-from .materials import Material
+from .materials import Material, add_custom_material
