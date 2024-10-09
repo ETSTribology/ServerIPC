@@ -9,7 +9,6 @@ from torch import autograd
 
 logger = logging.getLogger(__name__)
 
-
 def newton(x0: np.ndarray,
            f: Callable[[np.ndarray], float],
            grad: Callable[[np.ndarray], np.ndarray],
@@ -18,22 +17,32 @@ def newton(x0: np.ndarray,
            alpha0: Callable[[np.ndarray, np.ndarray], float],
            maxiters: int = 10,
            rtol: float = 1e-5,
-           callback: Callable[[np.ndarray], None] = None) -> np.ndarray:
+           callback: Callable[[np.ndarray], None] = None,
+           reg_param: float = 1e-4) -> np.ndarray:
     logger = logging.getLogger('Newton')
     xk = x0.copy()
     gk = grad(xk)
     for k in range(maxiters):
-        gnorm = np.linalg.norm(gk, 1)
+        gnorm = np.linalg.norm(gk, 2)
         if gnorm < rtol:
             logger.info(f"Converged at iteration {k} with gradient norm {gnorm}.")
             break
         Hk = hess(xk)
-        dx = lsolver(Hk, -gk)
-        alpha = line_search(alpha0(xk, dx), xk, dx, gk, f)
+        
+        # Regularize Hessian to handle ill-conditioned cases
+        Hk_reg = Hk + reg_param * sp.sparse.eye(Hk.shape[0])
+        
+        dx = lsolver(Hk_reg, -gk)
+        
+        # Improved line search for better step size selection
+        alpha = line_search(alpha0(xk, dx), xk, dx, gk, f, maxiters=20, c=1e-4, tau=0.9)
+        
         xk = xk + alpha * dx
         gk = grad(xk)
+        
         if callback is not None:
             callback(xk)
+        
         logger.debug(f"Iteration {k}: alpha={alpha}, gradient norm={gnorm}")
     return xk
 
@@ -46,7 +55,8 @@ def parallel_newton(x0: np.ndarray,
                     maxiters: int = 10,
                     rtol: float = 1e-5,
                     callback: Callable[[np.ndarray], None] = None,
-                    n_threads: int = 8) -> np.ndarray:
+                    n_threads: int = 8,
+                    reg_param: float = 1e-4) -> np.ndarray:
     logger = logging.getLogger('ParallelNewton')
     xk = x0.copy()
     Hk_cache = None
@@ -57,9 +67,9 @@ def parallel_newton(x0: np.ndarray,
             future_grad = executor.submit(grad, xk)
             gk = future_grad.result()
 
-            gnorm = np.linalg.norm(gk, 1)
+            gnorm = np.linalg.norm(gk, 2)
             if gnorm < rtol:
-                logger.info(f"Converged at iteration {k}")
+                logger.info(f"Converged at iteration {k} with gradient norm {gnorm}")
                 break
 
             # Compute the Hessian in parallel
@@ -70,11 +80,14 @@ def parallel_newton(x0: np.ndarray,
             else:
                 Hk = Hk_cache
 
+            # Regularize Hessian to handle ill-conditioned cases
+            Hk_reg = Hk + reg_param * sp.sparse.eye(Hk.shape[0])
+
             # Solve the linear system
-            dx = lsolver(Hk, -gk)
+            dx = lsolver(Hk_reg, -gk)
 
             # Perform line search to find optimal step size
-            alpha = line_search(alpha0(xk, dx), xk, dx, gk, f, maxiters=10, c=1e-4, tau=0.8)
+            alpha = line_search(alpha0(xk, dx), xk, dx, gk, f, maxiters=20, c=1e-4, tau=0.9)
 
             # Update the current solution
             xk = xk + alpha * dx
