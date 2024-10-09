@@ -15,39 +15,40 @@ import numpy as np
 from materials import Material
 from utils.mesh_utils import to_surface
 import ipctk
-from initialization import (
-    initialization
-)
+from initialization import initialization
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+def reset_simulation():
+    return initialization()
 
 def run_simulation(
-    mesh,
-    x,
-    v,
-    a,
-    M,
-    hep,
-    dt,
+    mesh: np.ndarray,
+    x: np.ndarray,
+    v: np.ndarray,
+    a: np.ndarray,
+    M: np.ndarray,
+    hep: float,
+    dt: float,
     cmesh,
     cconstraints,
     fconstraints,
-    dhat,
-    dmin,
-    mu,
-    epsv,
-    dofs,
+    dhat: float,
+    dmin: float,
+    mu: float,
+    epsv: float,
+    dofs: int,
     redis_client: SimulationRedisClient,
-    materials: list,
+    materials: List[Material],
     barrier_potential: ipctk.BarrierPotential = None,
     friction_potential: ipctk.FrictionPotential = None,
     config: dict = None,
-    element_materials: list = None,
-    num_nodes_list: list = None,
+    element_materials: List = None,
+    num_nodes_list: List = None,
     face_materials: np.ndarray = None
-):
-    
-    material=materials[0]
+) -> None:
+    material = materials[0]
     max_iters = 100000  # Number of simulation steps
     allowed_commands = {"start", "pause", "stop", "resume", "play", "kill", "reset"}
     simulation_running = False  # Track if the simulation is active
@@ -82,11 +83,15 @@ def run_simulation(
         simulation_command = redis_client.get_command()
 
         if simulation_command:
-            if simulation_command in allowed_commands:
-                if simulation_command == "start":
+            time.sleep(0.1)  # Sleep briefly to prevent rapid polling
+
+            if simulation_command not in allowed_commands:
+                logger.warning(f"Invalid simulation command received: {simulation_command}")
+            else:
+                if simulation_command in {"start", "resume", "play"}:
                     if not simulation_running:
                         simulation_running = True
-                        logger.info("Simulation started.")
+                        logger.info(f"Simulation {simulation_command}.")
                     else:
                         logger.warning("Simulation is already running.")
                 elif simulation_command == "pause":
@@ -95,12 +100,6 @@ def run_simulation(
                         logger.info("Simulation paused.")
                     else:
                         logger.warning("Simulation is not running; cannot pause.")
-                elif simulation_command in {"resume", "play"}:
-                    if not simulation_running:
-                        simulation_running = True
-                        logger.info("Resuming simulation.")
-                    else:
-                        logger.warning("Simulation is already running.")
                 elif simulation_command == "stop":
                     logger.info("Stopping simulation.")
                     simulation_running = False
@@ -108,8 +107,7 @@ def run_simulation(
                     logger.info("Killing simulation.")
                     sys.exit()
                 elif simulation_command == "reset":
-                    config, mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, materials, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi, detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials = initialization()
-                    
+                    mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, materials, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi, detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials = reset_simulation()
                     params = Parameters(
                         mesh=mesh,
                         xt=x,
@@ -130,18 +128,14 @@ def run_simulation(
                         barrier_potential=barrier_potential,
                         friction_potential=friction_potential
                     )
-
-
                     simulation_running = False
                     logger.info("Simulation reset.")
                     simulation_running = True
-            else:
-                logger.warning(f"Invalid simulation command received: {simulation_command}")
 
         if not simulation_running:
             # If simulation is not running, skip the simulation step
             logger.debug("Simulation is paused or not started. Waiting for commands.")
-            time.sleep(0.1)  # Sleep briefly to prevent tight loop
+            time.sleep(0.1)
             continue
 
         # Potential, Gradient, and Hessian objects
@@ -168,8 +162,8 @@ def run_simulation(
         )
 
         # Update velocities and positions
-        v = (xtp1 - x) / dt
-        x = xtp1
+        v[:] = (xtp1 - x) / dt
+        x[:] = xtp1
 
         params.xt = x
         params.vt = v
