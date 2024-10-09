@@ -2,7 +2,7 @@ import scipy as sp
 import logging
 import numpy as np
 from scipy.sparse.linalg import cg, splu, spsolve
-import pbat.math.linalg
+import pbatoolkit as pbat
 
 logger = logging.getLogger(__name__)
 
