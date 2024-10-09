@@ -42,6 +42,7 @@ class Gradient:
             from contact.barrier_initializer import BarrierInitializer
             binit = BarrierInitializer(params)
             binit(x, gU, gB)
+            kB = params.kB
 
         kB = params.kB
         BXdot = to_surface(v, mesh, cmesh)
