@@ -28,9 +28,16 @@ class LinearSolver:
                 x_dofs = Addinv.solve(bd).squeeze()
                 logger.debug("LDLT decomposition used successfully.")
 
+            elif self.solver_type == "chol":
+                # Use faster chol if built from source with SuiteSparse
+                Addinv = pbat.math.linalg.chol(
+                    Add, solver=pbat.math.linalg.SolverBackend.SuiteSparse)
+                Addinv.compute(sp.sparse.tril(
+                    Add), pbat.math.linalg.Cholmod.SparseStorage.SymmetricLowerTriangular)
+                x_dofs = Addinv.solve(bd).squeeze()
+                logger.debug("Cholesky decomposition used successfully.")
             elif self.solver_type == "cg":
-                x_dofs, info = cg(Add, bd, tol=tol, maxiter=max_iter)
-
+                x_dofs, info = cg(Add, bd, maxiter=max_iter)
                 if info == 0:
                     logger.debug("CG method converged successfully.")
                 else:
@@ -38,27 +45,21 @@ class LinearSolver:
                     Addinv = pbat.math.linalg.ldlt(Add)
                     Addinv.compute(Add)
                     x_dofs = Addinv.solve(bd).squeeze()
-
             elif self.solver_type == "lu":
                 Addinv = splu(Add)
                 x_dofs = Addinv.solve(bd).squeeze()
                 logger.debug("LU decomposition used successfully.")
-
             elif self.solver_type == "direct":
                 x_dofs = spsolve(Add, bd)
                 logger.debug("Direct sparse solve used successfully.")
-
             else:
                 raise ValueError(f"Unsupported solver type: {self.solver_type}. Use 'ldlt', 'cg', 'lu', or 'direct'.")
-
-            # Set the computed values in the full solution vector
             x[dofs] = x_dofs
 
             logger.debug("Linear system solved successfully.")
             return x
-
-        except sp.sparse.linalg.ArpackNoConvergence as e:
-            logger.error(f"Failed to solve linear system using CG or LU method due to convergence issues: {e}")
+        except sp.sparse.linalg.ConvergenceError as e:
+            logger.error(f"Failed to solve linear system due to convergence issues: {e}")
             raise
         except Exception as e:
             logger.error(f"Failed to solve linear system: {e}")
