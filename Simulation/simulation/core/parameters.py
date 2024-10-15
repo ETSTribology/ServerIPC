@@ -2,9 +2,11 @@ import numpy as np
 import scipy as sp
 import ipctk
 from utils.mesh_utils import to_surface
-from materials import Material
 import pbatoolkit as pbat
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Parameters:
     def __init__(self,
@@ -53,12 +55,14 @@ class Parameters:
         BX = to_surface(xt, mesh, cmesh)
         self.bboxdiag = ipctk.world_bbox_diagonal_length(BX)
         self.gU = None
-        self.gB = None 
+        self.gB = None
         self.gF = None
         self.materials = materials
         self.element_materials = element_materials
         self.barrier_potential = barrier_potential
         self.friction_potential = friction_potential
+
+        logger.info("Parameters initialized.")
 
     def reset(self):
         # Reset positions, velocities, accelerations to initial state

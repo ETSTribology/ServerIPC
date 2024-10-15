@@ -3,6 +3,9 @@ import ipctk
 from core.parameters import Parameters
 from utils.mesh_utils import to_surface
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Hessian:
     def __init__(self, params: Parameters):

@@ -31,3 +31,6 @@ def find_codim_vertices(mesh, boundary_edges):
     if len(codim_vertices) == 0:
         logging.warning("No codimensional vertices found.")
     return codim_vertices
+
+def compute_tetrahedron_centroids(V, C):
+    return np.mean(V[C], axis=1)

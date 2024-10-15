@@ -3,17 +3,32 @@
     "inputs": [
         {
             "path": "meshes/rectangle.mesh",
-            "percent_fixed": 0.1,
+            "percent_fixed": 0.0,
             "material": {
                 "density": 1000.0,
                 "young_modulus": 1e6,
-                "poisson_ratio": 0.45,
-                "color": [255, 255, 255, 1]
+                "poisson_ratio": 0.3,
+                "color": [255, 255, 255]
             },
             "transform": {
-                "scale": [1.0, 1.0, 1.0],
+                "scale": [5.0, 5.0, 5.0],
                 "rotation": [0.0, 0.0, 0.70, 0.70],
-                "translation": [1.0, 1.0, 1.0]
+                "translation": [0.0, 0.0, 80.0]
+            }
+        },
+        {
+            "path": "meshes/rectangle.mesh",
+            "percent_fixed": 1.0,
+            "material": {
+                "density": 7000.0,
+                "young_modulus": 210e9,
+                "poisson_ratio": 0.30,
+                "color": [128, 128, 128]
+            },
+            "transform": {
+                "scale": [100.0, 100.0, 2.0],
+                "rotation": [0.0, 0.0, 0.0, 1.0],
+                "translation": [-200, -200, 0]
             }
         }
     ],
@@ -24,13 +39,12 @@
     },
     "friction": {
         "coefficient": 0.3,
-        "damping":  1e-4
+        "damping": 1e-4
     },
     "simulation": {
-        "time_step": 0.016,
-        "max_steps": 1000,
-        "collision_threshold": 1e-3,
-        "min_distance":  1e-4
+        "dt": 0.016,
+        "dhat": 1e-3,
+        "dmin": 1e-4
     },
     "initial_conditions": {
         "gravity": 9.81,

@@ -11,6 +11,7 @@ class BarrierUpdater:
         self.params = params
 
     def __call__(self, xk: np.ndarray):
+        logger.debug("Updating barrier stiffness")
         mesh = self.params.mesh
         cmesh = self.params.cmesh
         kB = self.params.kB

@@ -3,6 +3,9 @@ import scipy as sp
 import ipctk
 from core.parameters import Parameters
 from utils.mesh_utils import to_surface
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Potential:
     def __init__(self, params: Parameters):
@@ -47,12 +50,21 @@ class Potential:
         cconstraints.use_improved_max_approximator = True
         cconstraints.build(cmesh, BX, dhat, dmin=dmin)
 
-        # Create a BarrierPotential object and use it in the build method
+        # Build friction constraints
         fconstraints.build(cmesh, BX, cconstraints, B, kB, mu)
 
         EB = B(cconstraints, cmesh, BX)
         EF = D(fconstraints, cmesh, BXdot)
-        potential_energy = 0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt**2 * U + kB * EB + dt**2 * EF
+
+        potential_energy = (
+            0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt**2 * U + kB * EB + dt**2 * EF
+        )
+
+        # Add the check for finite potential energy here
+        if not np.isfinite(potential_energy):
+            logger.error(f"Potential energy is not finite: {potential_energy}")
+            raise ValueError("Potential energy is NaN or Inf.")
 
         return potential_energy
+
 

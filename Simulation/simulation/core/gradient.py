@@ -3,6 +3,9 @@ import scipy as sp
 import ipctk
 from core.parameters import Parameters
 from utils.mesh_utils import to_surface
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Gradient:
     def __init__(self, params: Parameters):

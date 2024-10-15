@@ -20,12 +20,14 @@ def line_search(alpha0: float,
     """
     Optimized line search using backtracking and adaptive strategies.
     """
+    logger.debug(f"Running line search with alpha0={alpha0}")
     alphaj = alpha0
     Dfk = np.dot(gk, dx)
     fk = f(xk)
 
     # Early exit if gradient is near zero (stationary point)
     if np.abs(Dfk) < grad_threshold:
+        logger.debug("Gradient is near zero. Exiting line search.")
         return 0.0
 
     flinear = fk + alphaj * c * Dfk

@@ -53,8 +53,12 @@ def run_simulation(
     allowed_commands = {"start", "pause", "stop", "resume", "play", "kill", "reset"}
     simulation_running = False  # Track if the simulation is active
 
+    logger.info("Simulation initialized.")
+
     # Precompute objects that do not change within the loop
-    solver = LinearSolver(dofs)
+    solver = LinearSolver(dofs, solver_type="cg")
+
+    logger.info("Simulation started.")
 
     # Set up simulation parameters
     params = Parameters(
@@ -77,6 +81,8 @@ def run_simulation(
         barrier_potential=barrier_potential,
         friction_potential=friction_potential
     )
+
+    logger.info("Simulation parameters set.")
 
     for i in range(max_iters):
         # Retrieve the latest command from Redis
@@ -107,11 +113,12 @@ def run_simulation(
                     logger.info("Killing simulation.")
                     sys.exit()
                 elif simulation_command == "reset":
-                    mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, materials, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi, detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials = reset_simulation()
-                    params = Parameters(
+                    config, mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, materials, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi, detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials = initialization()
+                    # Initialize Parameters instance
+                    run_simulation(
                         mesh=mesh,
-                        xt=x,
-                        vt=v,
+                        x=x,
+                        v=v,
                         a=a,
                         M=M,
                         hep=hep,
@@ -119,23 +126,29 @@ def run_simulation(
                         cmesh=cmesh,
                         cconstraints=cconstraints,
                         fconstraints=fconstraints,
-                        materials=materials,
-                        element_materials=element_materials,
                         dhat=dhat,
                         dmin=dmin,
                         mu=mu,
                         epsv=epsv,
+                        dofs=dofs,
+                        redis_client=redis_client,
+                        materials=materials,
                         barrier_potential=barrier_potential,
-                        friction_potential=friction_potential
+                        friction_potential=friction_potential,
+                        config=config,
+                        element_materials=element_materials,
+                        num_nodes_list=num_nodes_list,
+                        face_materials=face_materials,
                     )
-                    simulation_running = False
-                    logger.info("Simulation reset.")
-                    simulation_running = True
 
         if not simulation_running:
             # If simulation is not running, skip the simulation step
-            logger.debug("Simulation is paused or not started. Waiting for commands.")
-            time.sleep(0.1)
+            try:
+                logger.debug("Simulation is paused or not started. Waiting for commands.")
+                time.sleep(2)
+            except KeyboardInterrupt:
+                logger.info("Simulation stopped by user.")
+                sys.exit()
             continue
 
         # Potential, Gradient, and Hessian objects
@@ -158,12 +171,12 @@ def run_simulation(
             maxiters=10,
             rtol=1e-5,
             callback=updater,
-            n_threads=4  # Adjust based on your system
+            n_threads=8
         )
 
         # Update velocities and positions
-        v[:] = (xtp1 - x) / dt
-        x[:] = xtp1
+        v = (xtp1 - x) / dt
+        x = xtp1
 
         params.xt = x
         params.vt = v

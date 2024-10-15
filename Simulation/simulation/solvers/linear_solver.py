@@ -55,8 +55,6 @@ class LinearSolver:
             else:
                 raise ValueError(f"Unsupported solver type: {self.solver_type}. Use 'ldlt', 'cg', 'lu', or 'direct'.")
             x[dofs] = x_dofs
-
-            logger.debug("Linear system solved successfully.")
             return x
         except sp.sparse.linalg.ConvergenceError as e:
             logger.error(f"Failed to solve linear system due to convergence issues: {e}")
