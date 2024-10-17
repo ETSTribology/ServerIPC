@@ -7,7 +7,7 @@ import meshio
 import pbatoolkit as pbat
 import igl
 import ipctk
-from redis_interface.redis_client import SimulationRedisClient
+from net_interface.redis_client import SimulationRedisClient
 from utils.mesh_utils import combine, to_surface, find_codim_vertices
 from utils.logging_setup import setup_logging
 from materials import Material
@@ -16,16 +16,8 @@ import collections
 import os
 import scipy.spatial.transform as spt
 from utils.config import generate_default_config, load_config, get_config_value
-from utils.load import load_individual_meshes, combine_meshes
+from utils.load import load_individual_meshes, combine_meshes, load_individual_meshes_with_instancing
 from materials.materials import materials, add_custom_material
-
-# # Set environment variables before importing any libraries
-# os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'  # Prevent multiple OpenMP runtimes
-# os.environ['OMP_NUM_THREADS'] = '1'
-# os.environ['OPENBLAS_NUM_THREADS'] = '1'
-# os.environ['MKL_NUM_THREADS'] = '1'
-# os.environ['NUMEXPR_NUM_THREADS'] = '1'
-# os.environ['VECLIB_MAXIMUM_THREADS'] = '1'
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +46,7 @@ def compute_face_to_element_mapping(C: np.ndarray, F: np.ndarray) -> np.ndarray:
         if len(elems) == 1:
             face_to_element.append(elems[0])
         elif len(elems) > 1:
-            face_to_element.append(elems[0])
+            face_to_element.append(elems[0])  # You might want to handle shared faces differently
         else:
             logger.warning(f"No element found for face: {face}")
             face_to_element.append(-1)
@@ -71,17 +63,24 @@ def setup_initial_conditions(mesh: pbat.fem.Mesh):
 
 
 def setup_mass_matrix(mesh, materials, element_materials):
-    # Compute the Jacobian determinants
+    # Compute Jacobian determinants
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
+    num_elements = mesh.E.shape[1]
 
-    # Get density per element based on the material indices
+    # Verify element_materials length
+    if len(element_materials) != num_elements:
+        logger.error(f"Expected {num_elements} elements, but got {len(element_materials)} in element_materials.")
+        raise ValueError("Mismatch between number of elements and length of element_materials.")
+
+    # Get density per element
     densities = np.array([materials[i]['density'] for i in element_materials])
 
-    # Construct the mass matrix using density and the Jacobian determinants
-    M = pbat.fem.MassMatrix(mesh, detJeM, rho=densities, dims=mesh.dims, quadrature_order=2).to_matrix()
+    # Construct the mass matrix
+    M = pbat.fem.MassMatrix(
+        mesh, detJeM, rho=densities, dims=mesh.dims, quadrature_order=2).to_matrix()
 
     # Lumped mass per degree of freedom
-    lumped_mass_dofs = M.sum(axis=1).A1  # Convert to 1D array
+    lumped_mass_dofs = M.sum(axis=1).A1
 
     # Error handling for mismatched DOFs
     expected_dofs = mesh.X.shape[1] * mesh.dims
@@ -95,26 +94,31 @@ def setup_mass_matrix(mesh, materials, element_materials):
     logger.info("Mass matrix setup completed.")
     return lumped_mass_dofs, M, Minv
 
+
 def setup_external_forces(mesh, materials, element_materials, Minv, gravity=9.81):
     # Compute inner product weights for quadrature
     qgf = pbat.fem.inner_product_weights(mesh, quadrature_order=1).flatten(order="F")
-    Qf = sp.sparse.diags([qgf], offsets=[0])
 
-    # Shape function matrix
+    Qf = sp.sparse.diags(qgf, offsets=0)
+
     Nf = pbat.fem.shape_function_matrix(mesh, quadrature_order=1)
 
-    # Gravity vector (assuming gravity acts in the negative Y direction)
     g = np.zeros(mesh.dims)
-    g[1] = -gravity
+    g[-1] = -gravity
 
-    # Get densities per element
     rho = np.array([materials[i]['density'] for i in element_materials])
 
-    # Compute per-element gravity forces
-    fe = np.outer(rho, g)
+    logger.debug(f"Element densities: {rho[:5]}")
 
-    # Assemble global force vector
-    f = (Nf.T @ Qf @ fe).flatten(order="F")
+    fe = rho[np.newaxis, :] * g[:, np.newaxis]
+
+    logger.debug(f"Shape of fe: {fe.shape}")
+
+    f = fe @ Qf @ Nf
+
+    f = f.reshape(-1, order="F")
+
+    logger.debug(f"Shape of f after reshape: {f.shape}")
 
     a = Minv @ f
 
@@ -268,7 +272,7 @@ def initialization():
     all_meshes, materials = load_individual_meshes(inputs)
 
     # Combine all meshes into a single mesh
-    mesh, V, C, element_materials, num_nodes_list = combine_meshes(all_meshes, materials)
+    mesh, V, C, element_materials, num_nodes_list, instances = combine_meshes(all_meshes, materials, False)
 
     # Setup initial conditions
     x, v, acceleration, n = setup_initial_conditions(mesh)
@@ -291,8 +295,6 @@ def initialization():
     # Initialize Redis client
     redis_client = initialize_redis_client(redis_host, redis_port, redis_db)
 
-    material = initial_material()
-
     ipctk.BarrierPotential.use_physical_barrier = True
     barrier_potential = ipctk.BarrierPotential(dhat)
     friction_potential = ipctk.FrictionPotential(damping_coefficient)
@@ -301,5 +303,5 @@ def initialization():
         config, mesh, x, v, acceleration, mass_matrix, hep, dt, cmesh, cconstraints, fconstraints,
         dhat, dmin, friction_coefficient, damping_coefficient, degrees_of_freedom, redis_client, materials, barrier_potential,
         friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi,
-        detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials
+        detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials, instances
     )

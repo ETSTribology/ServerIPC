@@ -9,13 +9,14 @@ from core.parameters import Parameters
 from core.potential import Potential
 from core.gradient import Gradient
 from core.hessian import Hessian
-from redis_interface.redis_client import SimulationRedisClient
+from net_interface.redis_client import SimulationRedisClient
 from solvers.newton import newton, parallel_newton
 import numpy as np
 from materials import Material
 from utils.mesh_utils import to_surface
 import ipctk
 from initialization import initialization
+from typing import Dict, Tuple, Optional, List
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -46,7 +47,8 @@ def run_simulation(
     config: dict = None,
     element_materials: List = None,
     num_nodes_list: List = None,
-    face_materials: np.ndarray = None
+    face_materials: np.ndarray = None,
+    instances: Optional[List[Dict]] = None
 ) -> None:
     material = materials[0]
     max_iters = 100000  # Number of simulation steps
@@ -113,7 +115,7 @@ def run_simulation(
                     logger.info("Killing simulation.")
                     sys.exit()
                 elif simulation_command == "reset":
-                    config, mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, materials, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi, detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials = initialization()
+                    config, mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, materials, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi, detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials, instances = initialization()
                     # Initialize Parameters instance
                     run_simulation(
                         mesh=mesh,

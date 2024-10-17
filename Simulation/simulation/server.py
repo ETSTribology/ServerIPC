@@ -8,7 +8,7 @@ import meshio
 import pbatoolkit as pbat
 import igl
 import ipctk
-from redis_interface.redis_client import SimulationRedisClient
+from net_interface.redis_client import SimulationRedisClient
 from loop import run_simulation
 from utils.mesh_utils import combine, to_surface, find_codim_vertices
 from utils.logging_setup import setup_logging
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 ipctk.set_num_threads(10)
 
 def main():
-    config, mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, materials, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi, detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials = initialization()
+    config, mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv, dofs, redis_client, materials, barrier_potential, friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi, detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials, instances = initialization()
 
     # Initialize Parameters instance
     run_simulation(
@@ -53,6 +53,7 @@ def main():
         element_materials=element_materials,
         num_nodes_list=num_nodes_list,
         face_materials=face_materials,
+        instances=instances
     )
 
 if __name__ == "__main__":
