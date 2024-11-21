@@ -1,0 +1,92 @@
+site_name: "3D simulation to calculate the coeffiants of friction between two objects using IPC and FEM"
+site_url: "https://github.com/ETSTribology/ServerIPC"
+site_description: "3D simulation to calculate the coeffiants of friction between two objects"
+site_author: "Antoine Boucher"
+
+# Repository settings for edit links
+repo_url: "https://github.com/ETSTribology/ServerIPC"
+repo_name: "ETSTribology/ServerIPC"
+edit_uri: "blob/main/docs"
+
+# Theme configuration
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep-purple
+      accent: deep-purple
+      toggle:
+        icon: material/brightness-7
+        name: "Switch to dark mode"
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep-purple
+      accent: deep-purple
+      toggle:
+        icon: material/brightness-4
+        name: "Switch to light mode"
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.expand
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - toc.follow
+    - content.tabs.link
+  favicon: "_static/imgs/favicon.ico"
+  logo: "_static/imgs/pbat.svg"
+
+# Navigation structure
+nav:
+  - Home: index.md
+
+# Markdown extensions and plugins
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - mkdocs_graphviz
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings
+  - bibtex:
+      bib_file: "docs/refs.bib"
+  - include-markdown
+  - git-revision-date-localized:
+      locale: "en"
+  - mkdocs-jupyter
+
+# Paths to static files (CSS, JS, images)
+extra_css:
+  - "_static/stylesheets/custom.css"
+
+extra_javascript:
+  - "_static/javascripts/config.js"
+  - "_static/javascripts/custom.js"
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  - https://cdn.jsdelivr.net/gh/rod2ik/cdn@main/mkdocs/javascripts/mkdocs-graphviz.js
+
+# Static files to include
+extra:
+  css:
+    - "_static/stylesheets/custom.css"
+  js:
+    - "_static/javascripts/custom.js"
+
+use_directory_urls: true
+strict: false
