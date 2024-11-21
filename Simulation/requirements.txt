@@ -1,9 +1,9 @@
-
-redis
+redis==5.2.0
 numpy
 scipy
-meshio
-pbatoolkit
-igl
-ipctk
-bson
+meshio==5.3.5
+pbatoolkit==0.0.10
+libigl==2.5.1
+ipctk==
+bson==0.5.10
+minio==7.2.10

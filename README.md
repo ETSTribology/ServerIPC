@@ -9,6 +9,7 @@ This project simulates 3D elastic bodies using linear FEM tetrahedra and Increme
 - **Finite Element Method (FEM)**: Simulates elastic deformations using tetrahedral meshes.
 - **Incremental Potential Contact (IPC)**: Handles collision detection and response.
 - **Redis Integration**: Allows controlling the simulation (start, pause, stop, etc.) and streaming simulation data.
+- **Minio Integration**: Allow to storage the screenshots and the meshes in a buckets
 - **Modular Design**: Organized into multiple modules for scalability and maintainability.
 
 ## Installation
@@ -35,22 +36,22 @@ This project simulates 3D elastic bodies using linear FEM tetrahedra and Increme
 
 ## Available Materials
 
-| Material        | Young's Modulus (Pa) | Poisson's Ratio | Density (kg/m³) |
-|-----------------|----------------------|-----------------|-----------------|
-| **Wood**        | 1.0e10               | 0.35            | 600             |
-| **Steel**       | 2.1e11               | 0.30            | 7850            |
-| **Aluminum**    | 6.9e10               | 0.33            | 2700            |
-| **Concrete**    | 3.0e10               | 0.20            | 2400            |
-| **Rubber**      | 1.0e7                | 0.48            | 1100            |
-| **Copper**      | 1.1e11               | 0.34            | 8960            |
-| **Glass**       | 5.0e10               | 0.22            | 2500            |
-| **Titanium**    | 1.16e11              | 0.32            | 4500            |
-| **Brass**       | 1.0e11               | 0.34            | 8500            |
-| **PLA**         | 4.4e9                | 0.30            | 1250            |
-| **ABS**         | 2.3e9                | 0.35            | 1050            |
-| **PETG**        | 2.59e9               | 0.40            | 1300            |
-| **Hydrogel**    | 1.0e6                | 0.35            | 1000            |
-| **Polyacrylamide** | 1.0e6               | 0.45            | 1050            |
+| Material           | Young's Modulus (Pa) | Poisson's Ratio | Density (kg/m³) |
+|--------------------|----------------------|-----------------|-----------------|
+| **Wood**           | 1.0e10               | 0.35            | 600             |
+| **Steel**          | 2.1e11               | 0.30            | 7850            |
+| **Aluminum**       | 6.9e10               | 0.33            | 2700            |
+| **Concrete**       | 3.0e10               | 0.20            | 2400            |
+| **Rubber**         | 1.0e7                | 0.48            | 1100            |
+| **Copper**         | 1.1e11               | 0.34            | 8960            |
+| **Glass**          | 5.0e10               | 0.22            | 2500            |
+| **Titanium**       | 1.16e11              | 0.32            | 4500            |
+| **Brass**          | 1.0e11               | 0.34            | 8500            |
+| **PLA**            | 4.4e9                | 0.30            | 1250            |
+| **ABS**            | 2.3e9                | 0.35            | 1050            |
+| **PETG**           | 2.59e9               | 0.40            | 1300            |
+| **Hydrogel**       | 1.0e6                | 0.35            | 1000            |
+| **Polyacrylamide** | 1.0e6                | 0.45            | 1050            |
 
 ## Usage
 

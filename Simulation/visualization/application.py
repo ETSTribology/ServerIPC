@@ -4,6 +4,7 @@ import queue
 import numpy as np
 from visualizer import PolyscopeVisualizer
 from redis_client import RedisClient
+from minio_client import MinioClient
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +15,17 @@ class ClientApplication:
         redis_host='localhost',
         redis_port=6379,
         redis_db=0,
+        minio_endpoint='localhost:9000',
+        minio_access_key='minioadmin',
+        minio_secret_key='minioadmin',
     ):
         self.redis_client = RedisClient(
             host=redis_host, port=redis_port, db=redis_db)
+        self.minio_client = MinioClient(
+            endpoint=minio_endpoint,
+            access_key=minio_access_key,
+            secret_key=minio_secret_key,
+        )   
         self.mesh_queue = queue.Queue()
         self.visualizer = PolyscopeVisualizer(
             self.mesh_queue,
@@ -44,6 +53,13 @@ class ClientApplication:
             self.initial_mesh_loaded = True
         else:
             logger.warning("No 'mesh_state' available in Redis.")
+            # load a fake mesh for testing
+            self.visualizer.register_initial_mesh(
+                np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]]),
+                np.array([[0, 1, 2]]),
+                np.array([[0]]),
+                ['default']
+            )
 
     def listen_for_updates(self):
         try:

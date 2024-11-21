@@ -13,10 +13,11 @@
             },
             "transform": {
                 "scale": [5.0, 5.0, 5.0],
-                "rotation": [0.0, 0.0, 0.70, 0.70],
+                "rotation": [0.0, 0.3, 0.70, 0.70],
                 "translation": [0.0, 0.0, 80.0]
             }
         },
+
         {
             "path": "meshes/rectangle.mesh",
             "percent_fixed": 1.0,
@@ -37,11 +38,16 @@
     "server": {
         "redis_host": "localhost",
         "redis_port": 6379,
-        "redis_db": 0
+        "redis_db": 0,
+        "redis_password": "password",
+        "minio_host": "localhost",
+        "minio_port": 9000,
+        "minio_access_key": "minio",
+        "minio_secret_key": "minio123"
     },
     "friction": {
-        "coefficient": 0.3,
-        "damping": 1e-4
+        "coefficient": 0,
+        "damping": 0
     },
     "simulation": {
         "dt": 0.1,
