@@ -4,15 +4,19 @@ import numpy as np
 import logging
 import queue
 import os
+from mesh_manager import MeshManager
+from screenshot_manager import ScreenshotManager
+from redis_client import RedisClient
 
 logger = logging.getLogger(__name__)
-
 
 class PolyscopeVisualizer:
     def __init__(
         self,
         mesh_queue: queue.Queue,
-        redis_client,
+        redis_client: RedisClient,
+        mesh_manager: MeshManager,
+        screenshot_manager: ScreenshotManager,
     ):
         ps.set_up_dir("z_up")
         ps.init()
@@ -24,6 +28,8 @@ class PolyscopeVisualizer:
         self.initialized = False
         self.mesh_queue = mesh_queue
         self.redis_client = redis_client
+        self.mesh_manager = mesh_manager
+        self.screenshot_manager = screenshot_manager
         self.material_colors = {}
         self.faces = None
 
@@ -51,7 +57,7 @@ class PolyscopeVisualizer:
                 "material_color", face_colors, defined_on="faces", enabled=True
             )
             self.mesh_states.append(
-                {"BX": BX.copy(), "face_materials": face_materials.copy()}
+                {"BX": BX.copy(), "face_materials": face_materials.copy(), "step": "Initial_State"}
             )
             self.step_names.append("Initial_State")
             self.initialized = True
@@ -95,16 +101,19 @@ class PolyscopeVisualizer:
 
             # Store the new state
             self.mesh_states.append(
-                {"BX": BX.copy(), "face_materials": face_materials.copy()}
+                {"BX": BX.copy(), "face_materials": face_materials.copy(), "step": step_name}
             )
             self.step_names.append(step_name)
             self.current_step_index = len(self.mesh_states) - 1
 
             logger.info(f"Mesh updated to {step_name}.")
-            screenshot_dir = "screenshots"
-            os.makedirs(screenshot_dir, exist_ok=True)
-            ps.screenshot(f"{screenshot_dir}/{step_name}.png")
 
+            # Save mesh using MeshManager
+            mesh = meshio.Mesh(points=BX, cells=[("triangle", self.faces)])
+            self.mesh_manager.save_mesh(mesh, step_name)
+
+            # Capture screenshot
+            self.screenshot_manager.save_screenshot(step_name)
 
     def reset_to_initial_state(self):
         if self.mesh_states:
@@ -189,12 +198,19 @@ class PolyscopeVisualizer:
 
         imgui.Separator()
 
+        # Handle Create GIF button
+        if imgui.Button("Create GIF"):
+            self.screenshot_manager.create_gif()
+            logger.info("Requested GIF creation from screenshots.")
+
+        imgui.Separator()
+
         # Process any pending mesh updates
         self.process_queue()
 
         # Add UI list to select steps
         if len(self.mesh_states) > 1:
-            step_names = [name for name in self.step_names]
+            step_names = [state["step"] for state in self.mesh_states]
             changed, new_step_index = imgui.Combo(
                 "Select Step", self.current_step_index, step_names
             )
@@ -213,9 +229,8 @@ class PolyscopeVisualizer:
                     "material_color", face_colors, defined_on="faces", enabled=True
                 )
                 logger.info(
-                    f"Switched to {self.step_names[self.current_step_index]}."
+                    f"Switched to {self.mesh_states[self.current_step_index]['step']}."
                 )
-
 
     def show(self):
         ps.set_user_callback(self.render_ui)
