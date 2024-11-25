@@ -4,6 +4,7 @@ scipy
 meshio==5.3.5
 pbatoolkit==0.0.10
 libigl==2.5.1
-ipctk==
+ipctk
 bson==0.5.10
 minio==7.2.10
+PyYAML

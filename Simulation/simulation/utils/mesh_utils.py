@@ -3,6 +3,7 @@ import itertools
 import meshio
 import ipctk
 import logging
+import pbatoolkit as pbat
 
 def combine(V: list, C: list):
     Vsizes = [Vi.shape[0] for Vi in V]
@@ -12,8 +13,9 @@ def combine(V: list, C: list):
     V = np.vstack(V)
     return V, C
 
-def to_surface(x: np.ndarray, mesh, cmesh: ipctk.CollisionMesh):
-    X = x.reshape(mesh.X.shape[0], mesh.X.shape[1], order="F").T
+def to_surface(x: np.ndarray, mesh: pbat.fem.Mesh, cmesh: ipctk.CollisionMesh):
+    X = x.reshape(mesh.X.shape[0],
+                  mesh.X.shape[1], order='F').T
     XB = cmesh.map_displacements(X)
     return XB
 

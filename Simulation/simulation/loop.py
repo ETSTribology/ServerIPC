@@ -163,7 +163,7 @@ def run_simulation(
         ccd = CCD(params)
 
         # Run Newton's method to compute the next time step
-        xtp1 = parallel_newton(
+        xtp1 = newton(
             x,
             f,
             g,

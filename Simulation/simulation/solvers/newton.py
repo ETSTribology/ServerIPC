@@ -16,27 +16,18 @@ def newton(x0: np.ndarray,
            maxiters: int = 10,
            rtol: float = 1e-5,
            callback: Callable[[np.ndarray], None] = None,
-           reg_param: float = 1e-4) -> np.ndarray:
-    logger.info("Running Newton's method.")
-    xk = x0.copy()
-    gk = grad(xk)
+           n_threads: int = 1) -> np.ndarray:
+    xk = x0
+    gk = grad(x0)
     for k in range(maxiters):
-        gnorm = np.linalg.norm(gk, 2)
+        gnorm = np.linalg.norm(gk, 1)
         if gnorm < rtol:
-            logger.info(f"Converged at iteration {k} with gradient norm {gnorm}.")
             break
         Hk = hess(xk)
-
-        # Regularize Hessian to handle ill-conditioned cases
-        Hk_reg = Hk + reg_param * sp.sparse.eye(Hk.shape[0])
-
-        dx = lsolver(Hk_reg, -gk)
-        # Improved line search for better step size selection
-        alpha_result = alpha0(xk, dx)
-        alpha = line_search(alpha_result, xk, dx, gk, f, maxiters=20, c=1e-4, tau=0.9)
-        xk = xk + alpha * dx
+        dx = lsolver(Hk, -gk)
+        alpha = line_search(alpha0(xk, dx), xk, dx, gk, f)
+        xk = xk + alpha*dx
         gk = grad(xk)
-
         if callback is not None:
             callback(xk)
     return xk

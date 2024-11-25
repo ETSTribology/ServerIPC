@@ -5,40 +5,33 @@ from utils.mesh_utils import to_surface
 import numpy as np
 import logging
 
-logger = logging.getLogger(__name__)
-
-class Hessian:
+class Hessian():
     def __init__(self, params: Parameters):
         self.params = params
 
     def __call__(self, x: np.ndarray) -> sp.sparse.csc_matrix:
-        params = self.params
-        dt = params.dt
-        dt2 = params.dt2
-        xt = params.xt
-        M = params.M
-        hep = params.hep
-        mesh = params.mesh
-        cmesh = params.cmesh
-        cconstraints = params.cconstraints
-        fconstraints = params.fconstraints
-        dhat = params.dhat
-        dmin = params.dmin
-        mu = params.mu
-        epsv = params.epsv
-        kB = params.kB
-        B = params.barrier_potential
-        D = params.friction_potential
+        dt = self.params.dt
+        dt2 = self.params.dt2
+        xt = self.params.xt
+        M = self.params.M
+        hep = self.params.hep
+        mesh = self.params.mesh
+        cmesh = self.params.cmesh
+        cconstraints = self.params.cconstraints
+        fconstraints = self.params.fconstraints
+        dhat = self.params.dhat
+        dmin = self.params.dmin
+        mu = self.params.mu
+        epsv = self.params.epsv
+        kB = self.params.kB
+        B = self.params.barrier_potential
+        D = self.params.friction_potential
 
-        # Compute the Hessian of the elastic potential
         hep.compute_element_elasticity(x, grad=False, hessian=True)
         HU = hep.hessian()
-
-        # Velocity
         v = (x - xt) / dt
         BX = to_surface(x, mesh, cmesh)
         BXdot = to_surface(v, mesh, cmesh)
-
         # Compute the Hessian of the barrier potential using the correct signature
         HB = B.hessian(cconstraints, cmesh, BX, project_hessian_to_psd=ipctk.PSDProjectionMethod.ABS)
         HB = cmesh.to_full_dof(HB)
@@ -46,7 +39,5 @@ class Hessian:
         # Compute the Hessian of the friction dissipative potential
         HF = D.hessian(fconstraints, cmesh, BXdot, project_hessian_to_psd=ipctk.PSDProjectionMethod.ABS)
         HF = cmesh.to_full_dof(HF)
-
-        # Combine Hessians
-        H = M + dt2 * HU + kB * HB + dt * HF
+        H = M + dt2*HU + kB * HB + HF
         return H

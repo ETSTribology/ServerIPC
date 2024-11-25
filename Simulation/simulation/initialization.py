@@ -63,67 +63,26 @@ def setup_initial_conditions(mesh: pbat.fem.Mesh):
 
 
 def setup_mass_matrix(mesh, materials, element_materials):
-    # Compute Jacobian determinants
-    detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
-    num_elements = mesh.E.shape[1]
-
-    # Verify element_materials length
-    if len(element_materials) != num_elements:
-        logger.error(f"Expected {num_elements} elements, but got {len(element_materials)} in element_materials.")
-        raise ValueError("Mismatch between number of elements and length of element_materials.")
-
-    # Get density per element
-    densities = np.array([materials[i]['density'] for i in element_materials])
-
-    # Construct the mass matrix
-    M = pbat.fem.MassMatrix(
-        mesh, detJeM, rho=densities, dims=mesh.dims, quadrature_order=2).to_matrix()
-
-    # Lumped mass per degree of freedom
-    lumped_mass_dofs = M.sum(axis=1).A1
-
-    # Error handling for mismatched DOFs
-    expected_dofs = mesh.X.shape[1] * mesh.dims
-    if len(lumped_mass_dofs) != expected_dofs:
-        logger.error(f"Lumped mass vector length mismatch. Expected {expected_dofs} DOFs, but got {len(lumped_mass_dofs)}.")
-        raise ValueError(f"Lumped mass length mismatch: expected {expected_dofs}, but got {len(lumped_mass_dofs)}.")
-
+    # Construct the mass matrix with lumping
+    M, detJe = pbat.fem.mass_matrix(
+        mesh,
+        rho=1000,
+        lump=True
+    )
     # Inverse of lumped mass matrix (diagonal)
-    Minv = sp.sparse.diags(1.0 / lumped_mass_dofs, offsets=0)
+    Minv = sp.sparse.diags(1./M.diagonal())
+    return M, Minv
 
-    logger.info("Mass matrix setup completed.")
-    return lumped_mass_dofs, M, Minv
 
 
 def setup_external_forces(mesh, materials, element_materials, Minv, gravity=9.81):
-    # Compute inner product weights for quadrature
-    qgf = pbat.fem.inner_product_weights(mesh, quadrature_order=1).flatten(order="F")
-
-    Qf = sp.sparse.diags(qgf, offsets=0)
-
-    Nf = pbat.fem.shape_function_matrix(mesh, quadrature_order=1)
-
     g = np.zeros(mesh.dims)
     g[-1] = -gravity
-
-    rho = np.array([materials[i]['density'] for i in element_materials])
-
-    logger.debug(f"Element densities: {rho[:5]}")
-
-    fe = rho[np.newaxis, :] * g[:, np.newaxis]
-
-    logger.debug(f"Shape of fe: {fe.shape}")
-
-    f = fe @ Qf @ Nf
-
-    f = f.reshape(-1, order="F")
-
-    logger.debug(f"Shape of f after reshape: {f.shape}")
-
+    rho = 1000
+    f, detJeF = pbat.fem.load_vector(mesh, rho*g)
     a = Minv @ f
-
-    logger.info("Gravity force vector computed.")
-    return f, a, qgf, Qf, Nf
+    
+    return f, a, detJeF
 
 def setup_hyperelastic_potential(mesh, materials, element_materials):
     logger.info("Hyperelastic potential setup started.")
@@ -132,9 +91,8 @@ def setup_hyperelastic_potential(mesh, materials, element_materials):
     Y = np.array([materials[i]['young_modulus'] for i in element_materials])
     nu = np.array([materials[i]['poisson_ratio'] for i in element_materials])
     psi = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep = pbat.fem.HyperElasticPotential(
-        mesh, detJeU, GNeU, Y, nu, energy=psi, quadrature_order=1)
-    hep.precompute_hessian_sparsity()
+    hep, egU, wgU, GNeU = pbat.fem.hyper_elastic_potential(
+        mesh, Y=Y, nu=nu, energy=psi)
     logger.info("Hyperelastic potential setup completed.")
     return hep, Y, nu, psi, detJeU, GNeU
 
@@ -154,8 +112,8 @@ def setup_collision_mesh(mesh: pbat.fem.Mesh, V: np.ndarray, C: np.ndarray, elem
         collision_mesh = ipctk.CollisionMesh(is_on_surface, edges, boundary_faces)
 
     logger.info("Collision mesh constructed.")
-    collision_constraints = ipctk.Collisions()
-    friction_constraints = ipctk.FrictionCollisions()
+    collision_constraints = ipctk.NormalCollisions()
+    friction_constraints = ipctk.TangentialCollisions()
 
     face_to_element_mapping = compute_face_to_element_mapping(C, boundary_faces)
     logger.info("Face to element mapping computed.")
@@ -278,10 +236,10 @@ def initialization():
     x, v, acceleration, n = setup_initial_conditions(mesh)
 
     # Mass matrix
-    lumped_mass, mass_matrix, inverse_mass_matrix = setup_mass_matrix(mesh, materials, element_materials)
+    mass_matrix, inverse_mass_matrix = setup_mass_matrix(mesh, materials, element_materials)
 
     # Compute the total external forces (gravity only)
-    f_ext, acceleration, qgf, Qf, Nf = setup_external_forces(mesh, materials, element_materials, inverse_mass_matrix, gravity)
+    f_ext, acceleration, qgf = setup_external_forces(mesh, materials, element_materials, inverse_mass_matrix, gravity)
 
     # Hyperelastic potential
     hep, Y_array, nu_array, psi, detJeU, GNeU = setup_hyperelastic_potential(mesh, materials, element_materials)
@@ -302,6 +260,6 @@ def initialization():
     return (
         config, mesh, x, v, acceleration, mass_matrix, hep, dt, cmesh, cconstraints, fconstraints,
         dhat, dmin, friction_coefficient, damping_coefficient, degrees_of_freedom, redis_client, materials, barrier_potential,
-        friction_potential, n, f_ext, Qf, Nf, qgf, Y_array, nu_array, psi,
+        friction_potential, n, f_ext, qgf, Y_array, nu_array, psi,
         detJeU, GNeU, E, F, element_materials, num_nodes_list, face_materials, instances
     )
