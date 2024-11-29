@@ -1,6 +1,6 @@
-site_name: "3D simulation to calculate the coeffiants of friction between two objects using IPC and FEM"
+site_name: "3D simulation to calculate the coefficients of friction between two objects using IPC and FEM"
 site_url: "https://github.com/ETSTribology/ServerIPC"
-site_description: "3D simulation to calculate the coeffiants of friction between two objects"
+site_description: "3D simulation to calculate the coefficients of friction between two objects"
 site_author: "Antoine Boucher"
 
 # Repository settings for edit links
@@ -44,7 +44,44 @@ theme:
 
 # Navigation structure
 nav:
-  - Home: index.md
+  - Home: 
+      - Overview: index.md
+      - Installation: installation.md
+      - Quickstart: quickstart.md
+      - Gallery: gallery.md
+  - Code Documentation:
+      - Core:
+          - Overview: "reference/core/index.md"
+          - Contact: "reference/core/contact/index.md"
+          - Math: "reference/core/math/index.md"
+          - Materials: "reference/core/materials/index.md"
+          - Registry: "reference/core/registry/index.md"
+          - Solvers: "reference/core/solvers/index.md"
+          - States: "reference/core/states/index.md"
+          - Utils:
+              - Overview: "reference/core/utils/index.md"
+              - Config:
+                - Overview: "reference/core/utils/config/index.md"
+                - Schema: "reference/core/utils/config/schema.md"
+              - IO: "reference/core/utils/io/index.md"
+              - Logs: "reference/core/utils/logs/index.md"
+              - Modifier: "reference/core/utils/modifier/index.md"
+      - Simulation: "reference/simulation/index.md"
+      - Network:
+          - Overview: "reference/nets/index.md"
+          - Controller: "reference/nets/controller/index.md"
+          - Proto: "reference/nets/proto/index.md"
+          - Serialization: "reference/nets/serialization/index.md"
+          - Storage: "reference/nets/storage/index.md"
+      - Visualization: "reference/visualization/index.md"
+  - Benchmarks: reference/benchmarks.md
+  - Development:
+    - Changelog: changelog.md
+    - Contributing: contributing.md
+    - Code of Conduct: code_of_conduct.md
+    - License: license.md
+
+
 
 # Markdown extensions and plugins
 markdown_extensions:
@@ -59,10 +96,21 @@ markdown_extensions:
   - footnotes
   - toc:
       permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid_custom
 
 plugins:
   - search
-  - mkdocstrings
+  - mermaid2:
+      version: 11.4.0
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
   - bibtex:
       bib_file: "docs/refs.bib"
   - include-markdown

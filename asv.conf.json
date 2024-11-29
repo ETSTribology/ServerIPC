@@ -1,0 +1,13 @@
+{
+    "version": 1,
+    "project": "serveripc",
+    "project_url": "https://github.com/ETSTribology/ServerIPC",
+    "repo": ".",
+    "branches": ["main"],
+    "environment_type": "virtualenv",
+    "env_dir": ".asv/env",
+    "results_dir": ".asv/results",
+    "html_dir": ".asv/html",
+    "dvcs": "git",
+    "benchmark_dir": "benchmarks"
+}

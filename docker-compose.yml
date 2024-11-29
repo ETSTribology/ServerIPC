@@ -21,11 +21,42 @@ services:
       - minio_config:/root/.minio
     command: server /data --console-address ":9001"
 
+
+  surrealdb:
+    image: surrealdb/surrealdb:latest
+    container_name: surrealdb
+    ports:
+      - "8000:8000"
+    environment:
+      SURREALDB_USER: root
+      SURREALDB_PASSWORD: rootpassword
+    volumes:
+      - surrealdb_data:/data
+    command: start --bind all --log trace
+
+
+  postgres:
+    image: postgres:14
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: surreal_config
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
 volumes:
   dragonfly-data:
     driver: local
   minio_data:
     driver: local
   minio_config:
+    driver: local
+  surrealdb_data:
+    driver: local
+  postgres_data:
     driver: local
 
