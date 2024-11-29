@@ -1,0 +1,36 @@
+// proto/simulation.proto
+
+syntax = "proto3";
+
+package simulation;
+
+service SimulationService {
+  rpc SendCommand (CommandRequest) returns (CommandResponse);
+  rpc PublishData (DataRequest) returns (DataResponse);
+  rpc SubscribeCommands (Empty) returns (stream CommandMessage);
+}
+
+message Empty {}
+
+message CommandRequest {
+  string command = 1;
+}
+
+message CommandResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message DataRequest {
+  string channel = 1;
+  string data = 2;
+}
+
+message DataResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message CommandMessage {
+  string command = 1;
+}
