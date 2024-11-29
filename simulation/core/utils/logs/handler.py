@@ -44,7 +44,7 @@ class LogHandlerBase(logging.Handler, ABC):
 
 
 registry_container = RegistryContainer()
-registry_container.add_registry("log_handler", "core.utils.logs.handler.LogHandlerBase")
+registry_container.add_registry("log_handler", "simulation.core.utils.logs.handler.LogHandlerBase")
 
 
 @register(type="log_handler", name="surrealdb")

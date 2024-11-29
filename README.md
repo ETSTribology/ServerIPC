@@ -1,181 +1,185 @@
 # 3D Elastic Simulation with IPC
 
+[![Build Status](https://img.shields.io/github/actions/workflow/status/YourUsername/YourRepo/build.yml?branch=main)](https://github.com/YourUsername/YourRepo/actions)
+[![License](https://img.shields.io/github/license/YourUsername/YourRepo)](LICENSE)
+[![Python Version](https://img.shields.io/pypi/pyversions/your-package-name)](https://pypi.org/project/your-package-name/)
+[![Documentation Status](https://readthedocs.org/projects/your-project-name/badge/?version=latest)](https://your-project-name.readthedocs.io/en/latest/?badge=latest)
+
 ## Overview
 
-This project simulates 3D elastic bodies using linear FEM tetrahedra and Incremental Potential Contact (IPC). It leverages Redis for communication and control, enabling real-time interaction with the simulation.
+This project simulates 3D elastic bodies using linear Finite Element Method (FEM) with tetrahedral elements and Incremental Potential Contact (IPC). It integrates with Redis and MinIO for real-time communication, control, and data storage, enabling interactive simulations and data persistence.
 
 ## Features
 
 - **Finite Element Method (FEM)**: Simulates elastic deformations using tetrahedral meshes.
-- **Incremental Potential Contact (IPC)**: Handles collision detection and response.
-- **Redis Integration**: Allows controlling the simulation (start, pause, stop, etc.) and streaming simulation data.
-- **Minio Integration**: Allow to storage the screenshots and the meshes in a buckets
+- **Incremental Potential Contact (IPC)**: Handles collision detection and response efficiently.
+- **Real-time Communication Network**: Utilizes Redis for real-time communication between the simulation server and visualization client.
 - **Modular Design**: Organized into multiple modules for scalability and maintainability.
+- **Configurable**: Utilizes Hydra-Core for flexible configuration management.
 
 ## Installation
 
-1. **Clone the Repository**
+### Prerequisites
 
-   ```bash
-   git clone https://github.com/ETSTribology/ServerIPC.git
-   cd elastic-simulation-ipc
-   ```
+- **Python 3.8+**
+- **CUDA Toolkit** (if using CUDA acceleration)
+- **CMake** (for building native extensions)
+- **Docker** (for running the simulation server in a container)
 
-2. **Create a Virtual Environment**
 
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
 
-3. **Install Dependencies**
+### Create a Virtual Environment
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+```
 
-## Available Materials
+### Install Dependencies
 
-| Material           | Young's Modulus (Pa) | Poisson's Ratio | Density (kg/m³) |
-|--------------------|----------------------|-----------------|-----------------|
-| **Wood**           | 1.0e10               | 0.35            | 600             |
-| **Steel**          | 2.1e11               | 0.30            | 7850            |
-| **Aluminum**       | 6.9e10               | 0.33            | 2700            |
-| **Concrete**       | 3.0e10               | 0.20            | 2400            |
-| **Rubber**         | 1.0e7                | 0.48            | 1100            |
-| **Copper**         | 1.1e11               | 0.34            | 8960            |
-| **Glass**          | 5.0e10               | 0.22            | 2500            |
-| **Titanium**       | 1.16e11              | 0.32            | 4500            |
-| **Brass**          | 1.0e11               | 0.34            | 8500            |
-| **PLA**            | 4.4e9                | 0.30            | 1250            |
-| **ABS**            | 2.3e9                | 0.35            | 1050            |
-| **PETG**           | 2.59e9               | 0.40            | 1300            |
-| **Hydrogel**       | 1.0e6                | 0.35            | 1000            |
-| **Polyacrylamide** | 1.0e6                | 0.45            | 1050            |
+```bash
+pip install -r requirements.txt
+```
+
+### Install the Package
+
+To install the package with CUDA support and build the necessary C++ extensions, run:
+
+```bash
+cd extern/ipc-toolkit
+pip install . --config-settings=cmake.args="-DCMAKE_BUILD_TYPE=Release -DIPC_TOOLKIT_WITH_CUDA=ON -DIPC_TOOLKIT_BUILD_PYTHON=ON -DCMAKE_CUDA_ARCHITECTURES=native"
+```
+
 
 ## Usage
 
-Run the simulation using the main.py script with appropriate arguments.
+### Running the Simulation Server
 
-```bash
-python simulation/server.py -i meshes/input_mesh.msh --percent-fixed 0.1 -m 1000.0 -Y 6e9 -n 0.45 -c 2 --redis-host localhost --redis-port 6379 --redis-db 0
-```
+Use the `server.py` script to start the simulation server. The server can be configured via command-line arguments or a JSON/YAML configuration file.
 
-### Arguments
+### Controlling the Simulation via Redis
 
-- `-i`, `--input`: Path to the input mesh file.
-- `--percent-fixed`: Percentage of the input mesh's bottom to fix (default: 0.1).
-- `-m`, `--mass-density`: Mass density (default: 1000.0).
-- `-Y`, `--young-modulus`: Young's modulus (default: 6e9).
-- `-n`, `--poisson-ratio`: Poisson's ratio (default: 0.45).
-- `-c`, `--copy`: Number of copies of the input model (default: 1).
-- `--redis-host`: Redis host address (default: localhost).
-- `--redis-port`: Redis port (default: 6379).
-- `--redis-db`: Redis database number (default: 0).
+The simulation listens to the `simulation_commands` channel in Redis. You can send commands to control the simulation:
 
-### Redis Commands
+- **Start the Simulation**:
 
-The simulation listens to the `simulation_commands` channel in Redis. You can send commands like `start`, `pause`, `resume`, `stop`, `play`, and `kill` to control the simulation.
+  ```bash
+  redis-cli publish simulation_commands '{"command": "start"}'
+  ```
 
-```bash
-# Start the simulation
-redis-cli publish simulation_commands start
+- **Pause the Simulation**:
 
-# Pause the simulation
-redis-cli publish simulation_commands pause
+  ```bash
+  redis-cli publish simulation_commands '{"command": "pause"}'
+  ```
 
-# Resume the simulation
-redis-cli publish simulation_commands resume
+- **Resume the Simulation**:
 
-# Stop the simulation
-redis-cli publish simulation_commands stop
+  ```bash
+  redis-cli publish simulation_commands '{"command": "resume"}'
+  ```
 
-# Kill the simulation
-redis-cli publish simulation_commands kill
-```
+- **Stop the Simulation**:
 
-### Simulation Updates
+  ```bash
+  redis-cli publish simulation_commands '{"command": "stop"}'
+  ```
 
-The simulation publishes mesh updates to the `simulation_updates` channel in Redis. You can subscribe to this channel to receive real-time updates.
+- **Kill the Simulation**:
+
+  ```bash
+  redis-cli publish simulation_commands '{"command": "kill"}'
+  ```
+
+### Receiving Simulation Updates
+
+Subscribe to the `simulation_updates` channel in Redis to receive real-time updates:
 
 ```bash
 redis-cli subscribe simulation_updates
 ```
 
-## Client Application Controls
+### Running the Visualization Client
 
-Within the Polyscope visualization window, you can interact with the simulation using the UI:
-
-- **Pause**: Pauses the simulation.
-- **Play**: Resumes the simulation.
-- **Stop**: Stops the simulation and resets the mesh to the initial state.
-- **Start**: Starts the simulation.
-- **Kill Simulation**: Terminates the simulation server.
-- **Reset to Initial State**: Resets the visualization to the initial mesh state.
-- **Select Step**: Navigate through different simulation steps.
+Use the `client.py` script to run the visualization client, which connects to the simulation server and displays the simulation in real-time.
 
 ```bash
-python simulation/visualization/client.py --redis-host localhost --redis-port 6379 --redis-db 0
+python simulation/visualization/client.py \
+  --redis-host localhost \
+  --redis-port 6379 \
+  --redis-db 0
 ```
+
+### Client Controls
+
+Within the visualization window, you can interact with the simulation:
+
+- **Start**: Start the simulation.
+- **Pause**: Pause the simulation.
+- **Resume**: Resume the simulation.
+- **Stop**: Stop the simulation and reset to the initial state.
+- **Reset**: Reset the visualization to the initial mesh state.
+- **Navigate Steps**: Use the step slider to navigate through simulation steps.
 
 ## Example JSON Configuration
 
-The simulation can also be controlled through a JSON configuration file. Below is an example configuration:
+Alternatively, you can use a JSON configuration file. Below is an example:
 
 ```json
 {
-  "name": "Sample Simulation Configuration",
-  "inputs": [
-    {
-      "path": "meshes/input_mesh.msh",
-      "percent_fixed": 0.1,
-      "material": {
-        "density": 1000.0,
-        "young_modulus": 6e9,
-        "poisson_ratio": 0.45,
-        "color": [255, 255, 255, 1]
-      },
-      "transform": {
-        "scale": [1.0, 1.0, 1.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "translation": [0.0, 0.0, 0.0]
-      },
-      "force": {
-        "gravity": 9.81,
-        "top_force": 10,
-        "side_force": 0
-      }
-    }
-  ],
-  "friction": {
-    "friction_coefficient": 0.3,
-    "damping_coefficient": 1e-4
-  },
   "simulation": {
-    "dhat": 1e-3,
-    "dmin": 1e-4,
-    "dt": 0.016
+    "input": "meshes/input_mesh.msh",
+    "percent_fixed": 0.1,
+    "mass_density": 1000.0,
+    "young_modulus": 6e9,
+    "poisson_ratio": 0.45,
+    "copies": 2
   },
-  "server": {
-    "redis_host": "localhost",
-    "redis_port": 6379,
-    "redis_db": 0
+  "communication": {
+    "redis": {
+      "host": "localhost",
+      "port": 6379,
+      "db": 0
+    }
   },
-  "initial_conditions": {
-    "gravity": 9.81
+  "storage": {
+    "minio": {
+      "endpoint": "localhost:9000",
+      "access_key": "minioadmin",
+      "secret_key": "minioadminpassword",
+      "bucket": "simulation-data"
+    }
   }
 }
 ```
 
-### How to Use the JSON Config
-
-To run the simulation using the JSON config file, you can provide the path to the file using the `--json` argument:
+Run the simulation with the JSON config:
 
 ```bash
-python simulation/server.py --json config.json
+python simulation/server.py --config config.json
 ```
 
-This configuration file defines the mesh input, material properties, transformation settings, external forces, friction parameters, and server details.
+## Docker Compose Setup
 
+Start the services:
 
-pip install . --config-settings=cmake.args="-DCMAKE_BUILD_TYPE='Release' -DIPC_TOOLKIT_WITH_CUDA='ON' -DIPC_TOOLKIT_BUILD_PYTHON='ON' -DCMAKE_CUDA_ARCHITECTURES='native'"
+```bash
+docker-compose up -d
+```
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+### Additional Improvements
+
+- **Configuration Management**: The project now uses Hydra-Core for flexible configuration management, allowing you to override configurations via command-line or environment variables.
+- **Logging**: Enhanced logging configuration for better debugging and monitoring.
+- **Error Handling**: Improved error handling for more robust execution.
+
+### References
+
+- **Hydra Documentation**: [https://hydra.cc/docs/intro/](https://hydra.cc/docs/intro/)
+- **Redis Documentation**: [https://redis.io/documentation](https://redis.io/documentation)
+- **MinIO Documentation**: [https://docs.min.io/](https://docs.min.io/)
+- **IPC Toolkit**: [https://ipc-sim.github.io/](https://ipc-sim.github.io/)

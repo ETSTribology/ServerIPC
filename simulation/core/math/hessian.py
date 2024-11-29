@@ -23,7 +23,7 @@ class HessianBase(ABC):
 
 
 registry_container = RegistryContainer()
-registry_container.add_registry("hessian", "core.math.hessian.HessianBase")
+registry_container.add_registry("hessian", "simulation.core.math.hessian.HessianBase")
 
 
 @register(type="hessian", name="default")

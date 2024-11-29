@@ -21,7 +21,7 @@ class PotentialBase(ABC):
 
 
 registry_container = RegistryContainer()
-registry_container.add_registry("potential", "core.math.potential.PotentialBase")
+registry_container.add_registry("potential", "simulation.core.math.potential.PotentialBase")
 
 
 @register(type="potential", name="default")

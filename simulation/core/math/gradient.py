@@ -22,7 +22,7 @@ class GradientBase(ABC):
 
 
 registry_container = RegistryContainer()
-registry_container.add_registry("gradient", "core.math.gradient.GradientBase")
+registry_container.add_registry("gradient", "simulation.core.math.gradient.GradientBase")
 
 
 @register(type="gradient", name="default")

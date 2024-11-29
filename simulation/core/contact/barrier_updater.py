@@ -4,10 +4,12 @@ from functools import lru_cache
 
 import ipctk
 import numpy as np
-from core.parameters import ParametersBase
-from core.registry.container import RegistryContainer
-from core.registry.decorators import register
-from core.utils.modifier.mesh import to_surface
+from simulation.core.parameters import ParametersBase
+from simulation.core.registry.container import RegistryContainer
+from simulation.core.registry.decorators import register
+from simulation.core.utils.modifier.mesh import to_surface
+
+from core.utils.singleton import SingletonMeta
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +33,7 @@ class BarrierUpdaterBase(ABC):
 
 registry_container = RegistryContainer()
 registry_container.add_registry(
-    "barrier_updater", "core.contact.barrier_updater.BarrierUpdaterBase"
+    "barrier_updater", "simulation.core.contact.barrier_updater.BarrierUpdaterBase"
 )
 
 
@@ -60,7 +62,7 @@ class BarrierUpdater(BarrierUpdaterBase):
         self.logger.debug(f"Barrier stiffness updated: kB={kB_new}, dprev={dcurrent}")
 
 
-class BarrierUpdaterFactory:
+class BarrierUpdaterFactory(metaclass=SingletonMeta):
     @staticmethod
     @lru_cache(maxsize=None)
     def get_class(type_lower: str):

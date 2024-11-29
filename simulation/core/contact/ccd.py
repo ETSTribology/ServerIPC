@@ -4,10 +4,10 @@ from functools import lru_cache
 
 import ipctk
 import numpy as np
-from core.parameters import ParametersBase
-from core.registry.container import RegistryContainer
-from core.registry.decorators import register
-from core.utils.modifier.mesh import to_surface
+from simulation.core.parameters import ParametersBase
+from simulation.core.registry.container import RegistryContainer
+from simulation.core.registry.decorators import register
+from simulation.core.utils.modifier.mesh import to_surface
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class CCDBase(ABC):
 
 
 registry_container = RegistryContainer()
-registry_container.add_registry("ccd", "core.contact.ccd.CCDBase")
+registry_container.add_registry("ccd", "simulation.core.contact.ccd.CCDBase")
 
 
 @register(type="ccd", name="default")

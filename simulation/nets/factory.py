@@ -1,10 +1,12 @@
+from typing import Type
 from nets.grpc import GRPC
 from nets.nets import Nets
 from nets.redis import Redis
 from nets.websocket import WebSocket
+from simulation.core.utils.singleton import SingletonMeta
 
 
-class NetsFactory:
+class NetsFactory(metaclass=SingletonMeta):
     @staticmethod
     def create_client(method: str, **kwargs) -> Nets:
         method = method.lower()

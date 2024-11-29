@@ -6,9 +6,9 @@ import ipctk
 import numpy as np
 import pbatoolkit as pbat
 import scipy as sp
-from core.registry.container import RegistryContainer
-from core.registry.decorators import register
-from core.utils.modifier.mesh import to_surface
+from simulation.core.registry.container import RegistryContainer
+from simulation.core.registry.decorators import register
+from simulation.core.utils.modifier.mesh import to_surface
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class ParametersBase(ABC):
 
 
 registry_container = RegistryContainer()
-registry_container.add_registry("parameters", "core.parameters.ParametersBase")
+registry_container.add_registry("parameters", "simulation.core.parameters.ParametersBase")
 
 
 @register(type="parameters", name="default")

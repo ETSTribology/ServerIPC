@@ -4,9 +4,10 @@ from nets.serialization.serialization import (
     PickleSerializer,
     Serializer,
 )
+from simulation.core.utils.singleton import SingletonMeta
 
 
-class SerializerFactory:
+class SerializerFactory(metaclass=SingletonMeta):
     _serializers = {
         "pickle": PickleSerializer,
         "json": JSONSerializer,

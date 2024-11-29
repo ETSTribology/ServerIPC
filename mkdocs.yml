@@ -47,9 +47,10 @@ nav:
   - Home: 
       - Overview: index.md
       - Installation: installation.md
+        CUDA: cuda.md
       - Quickstart: quickstart.md
       - Gallery: gallery.md
-  - Code Documentation:
+  - API:
       - Core:
           - Overview: "reference/core/index.md"
           - Contact: "reference/core/contact/index.md"
@@ -74,7 +75,20 @@ nav:
           - Serialization: "reference/nets/serialization/index.md"
           - Storage: "reference/nets/storage/index.md"
       - Visualization: "reference/visualization/index.md"
-  - Benchmarks: reference/benchmarks.md
+  - Courses:
+    - FEM:
+        - Introduction: course/fem/index.md
+        - Method: course/fem/method.md
+        - Shape Functions: course/fem/shape_functions.md
+        - Spatial Integration: course/fem/spatial_integration.md
+        - Operators: course/fem/operators.md
+        - Boundary Conditions: course/fem/boundary_conditions.md
+        - Vector-valued Functions: course/fem/vector_valued_functions.md
+        - Limitations: course/fem/limitations.md
+    - Math:
+      - Introduction: course/math/index.md
+      - Linear Algebra: course/math/linear_algebra.md
+      - Optimization: course/math/optimization.md
   - Development:
     - Changelog: changelog.md
     - Contributing: contributing.md

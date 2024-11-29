@@ -4,10 +4,11 @@ from functools import lru_cache
 
 import ipctk
 import numpy as np
-from core.parameters import ParametersBase
-from core.registry.container import RegistryContainer
-from core.registry.decorators import register
-from core.utils.modifier.mesh import to_surface
+from simulation.core.parameters import ParametersBase
+from simulation.core.registry.container import RegistryContainer
+from simulation.core.registry.decorators import register
+from simulation.core.utils.modifier.mesh import to_surface
+from simulation.core.utils.singleton import SingletonMeta
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class BarrierInitializerBase(ABC):
 
 registry_container = RegistryContainer()
 registry_container.add_registry(
-    "barrier_initializer", "core.contact.barrier_initializer.BarrierInitializerBase"
+    "barrier_initializer", "simulation.core.contact.barrier_initializer.BarrierInitializerBase"
 )
 
 
@@ -66,7 +67,7 @@ class BarrierInitializer(BarrierInitializerBase):
         )
 
 
-class BarrierInitializerFactory:
+class BarrierInitializerFactory(metaclass=SingletonMeta):
     @staticmethod
     @lru_cache(maxsize=None)
     def get_class(type_lower: str):
