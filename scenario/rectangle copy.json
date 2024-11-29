@@ -1,0 +1,61 @@
+{
+    "name": "Simple Sliding Rectangle Flat",
+    "inputs": [
+        {
+            "path": "meshes/rectangle.mesh",
+            "percent_fixed": 0.0,
+            "material": {
+                "name": "steel",
+                "density": 7000.0,
+                "young_modulus": 210e9,
+                "poisson_ratio": 0.30,
+                "color": [128, 128, 128]
+            },
+            "transform": {
+                "scale": [5.0, 5.0, 5.0],
+                "rotation": [0.0, 0.3, 0.70, 0.70],
+                "translation": [0.0, 0.0, 80.0]
+            }
+        },
+
+        {
+            "path": "meshes/rectangle.mesh",
+            "percent_fixed": 1.0,
+            "material": {
+                "name": "steel",
+                "density": 7000.0,
+                "young_modulus": 210e9,
+                "poisson_ratio": 0.30,
+                "color": [128, 128, 128]
+            },
+            "transform": {
+                "scale": [100.0, 200.0, 2.0],
+                "rotation": [0.0, 0.0, 0.0, 1.0],
+                "translation": [-200, -200, 0]
+            }
+        }
+    ],
+    "server": {
+        "redis_host": "localhost",
+        "redis_port": 6379,
+        "redis_db": 0,
+        "redis_password": "password",
+        "minio_host": "localhost",
+        "minio_port": 9000,
+        "minio_access_key": "minio",
+        "minio_secret_key": "minio123"
+    },
+    "friction": {
+        "coefficient": 0,
+        "damping": 0
+    },
+    "simulation": {
+        "dt": 0.1,
+        "dhat": 1e-3,
+        "dmin": 1e-4
+    },
+    "initial_conditions": {
+        "gravity": 9.81,
+        "side_force": 0
+    }
+}
