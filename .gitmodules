@@ -1,9 +1,9 @@
 [submodule "PhysicsBasedAnimationToolkit"]
-	path = PhysicsBasedAnimationToolkit
+	path = extern/PhysicsBasedAnimationToolkit
 	url = https://github.com/Q-Minh/PhysicsBasedAnimationToolkit.git
 [submodule "ipc-toolkit"]
-	path = ipc-toolkit
+	path = extern/ipc-toolkit
 	url = https://github.com/ipc-sim/ipc-toolkit.git
 [submodule "vcpkg"]
-	path = vcpkg
+	path = extern/vcpkg
 	url = https://github.com/microsoft/vcpkg.git
