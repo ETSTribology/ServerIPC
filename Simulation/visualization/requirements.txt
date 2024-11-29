@@ -1,9 +1,0 @@
-redis
-numpy
-scipy
-meshio
-pbatoolkit
-igl
-ipctk
-bson
-polyscope
