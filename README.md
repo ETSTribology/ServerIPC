@@ -176,3 +176,6 @@ python simulation/server.py --json config.json
 ```
 
 This configuration file defines the mesh input, material properties, transformation settings, external forces, friction parameters, and server details.
+
+
+pip install . --config-settings=cmake.args="-DCMAKE_BUILD_TYPE='Release' -DIPC_TOOLKIT_WITH_CUDA='ON' -DIPC_TOOLKIT_BUILD_PYTHON='ON' -DCMAKE_CUDA_ARCHITECTURES='native'"

@@ -6,6 +6,9 @@ from typing import Any, Dict, List, Tuple
 import yaml
 from core.utils.singleton import SingletonMeta
 
+import hydra
+from omegaconf import DictConfig, OmegaConf
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,9 +16,21 @@ class ConfigManager(metaclass=SingletonMeta):
     """Singleton class for managing simulation configurations.
     Provides easy access, validation, and dynamic updates of configuration values.
     """
+    config: DictConfig = field(default_factory=lambda: OmegaConf.create())
 
     def __init__(self):
         self.config = self.generate_default_config()
+
+
+    def initialize(self, config_name: str = "config.yaml", config_path: str = "./configs") -> None:
+        """Initializes the ConfigManager with Hydra."""
+        # Initialize Hydra only if it hasn't been initialized yet
+        if not hydra.core.global_hydra.GlobalHydra().is_initialized():
+            hydra.initialize(config_path=config_path, job_name="simulation_app")
+
+        # Compose the configuration
+        self.config = hydra.compose(config_name=config_name)
+        logger.info(f"Configuration loaded:\n{OmegaConf.to_yaml(self.config)}")
 
     @staticmethod
     def generate_default_config() -> Dict[str, Any]:
