@@ -114,9 +114,7 @@ class SimulationState:
 
         # Remove all associated aliases
         self.aliases = {
-            alias: target
-            for alias, target in self.aliases.items()
-            if target != primary_key
+            alias: target for alias, target in self.aliases.items() if target != primary_key
         }
 
     def list_attributes(self) -> Dict[str, Dict[str, Any]]:
@@ -182,9 +180,7 @@ class SimulationState:
             If any required attributes are missing.
 
         """
-        missing_attrs = [
-            attr for attr in required_attrs if self.get_attribute(attr) is None
-        ]
+        missing_attrs = [attr for attr in required_attrs if self.get_attribute(attr) is None]
         if missing_attrs:
             raise ValueError(f"Missing required attributes: {', '.join(missing_attrs)}")
 

@@ -5,8 +5,17 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import yaml
+
 from simulation.core.utils.logs.handler import HandlerFactory
-from simulation.core.utils.logs.message import *
+from simulation.core.utils.logs.message import (
+    LOGGING_MANAGER_ADD_HANDLER,
+    LOGGING_MANAGER_FAILED_CONFIGURE_HANDLER,
+    LOGGING_MANAGER_LOADED_CONFIG,
+    LOGGING_MANAGER_REMOVE_HANDLER,
+    LOGGING_MANAGER_SET_LEVEL,
+    LOGGING_MANAGER_SETUP_DEFAULT,
+    LOGGING_MANAGER_SETUP_FORMATTER,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +63,7 @@ class LoggingManager:
         """Sets up default logging with a console handler."""
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.INFO)
-        formatter = logging.Formatter(
-            "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
         console_handler.setFormatter(formatter)
         self.logger.addHandler(console_handler)
         logging.getLogger().debug(
@@ -115,9 +122,7 @@ class LoggingManager:
                     continue
 
                 # Prepare parameters for the handler
-                params = handler_props.get(
-                    "params", {}
-                ).copy()  # Copy to avoid mutation
+                params = handler_props.get("params", {}).copy()  # Copy to avoid mutation
 
                 # Inject handler-specific clients if required
                 if handler_type.lower() == "surrealdb":
@@ -188,15 +193,13 @@ class LoggingManager:
             raise ValueError(f"Configuration file does not exist: {file_path}")
 
         try:
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 if file_path.endswith((".yaml", ".yml")):
                     config = yaml.safe_load(f)
                 elif file_path.endswith(".json"):
                     config = json.load(f)
                 else:
-                    raise ValueError(
-                        "Unsupported configuration file format. Use YAML or JSON."
-                    )
+                    raise ValueError("Unsupported configuration file format. Use YAML or JSON.")
             logging.getLogger().debug(
                 LOGGING_MANAGER_LOADED_CONFIG,
                 file_path,
@@ -204,6 +207,4 @@ class LoggingManager:
             )
             return config
         except Exception as e:
-            raise ValueError(
-                f"Failed to load logging configuration from {file_path}: {e}"
-            )
+            raise ValueError(f"Failed to load logging configuration from {file_path}: {e}")

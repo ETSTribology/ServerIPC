@@ -1,0 +1,66 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Main Configuration",
+    "type": "object",
+    "version": "1.0.0",
+    "required": [
+        "backend",
+        "visualization",
+        "extensions"
+    ],
+    "properties": {
+        "backend": {
+            "$ref": "backend.json",
+            "description": "Configuration for the backend.",
+            "default": {
+                "backend": "redis",
+                "config": {
+                    "host": "localhost",
+                    "port": 6379,
+                    "db": 0
+                }
+            }
+        },
+        "visualization": {
+            "$ref": "visualization.json",
+            "description": "Configuration for the visualization.",
+            "default": {
+                "colorScheme": "dark",
+                "interactiveMode": true,
+                "loggingLevel": "INFO",
+                "performanceTracking": true
+            }
+        },
+        "extensions": {
+            "$ref": "extensions.json",
+            "description": "Configuration for various extensions.",
+            "default": {
+                "mesh": {
+                    "enabled": false,
+                    "folder": "meshes"
+                },
+                "screenshot": {
+                    "enabled": false,
+                    "directory": "screenshots"
+                },
+                "board": {
+                    "enabled": false,
+                    "name": "tensorboard",
+                    "host": "localhost",
+                    "port": 6006
+                }
+            }
+        },
+        "storage": {
+            "$ref": "storage.json",
+            "description": "Configuration for the storage backend.",
+            "default": {
+                "backend": "local",
+                "config": {
+                    "directory": "storage"
+                }
+            }
+        }
+    },
+    "additionalProperties": false
+}

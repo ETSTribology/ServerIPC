@@ -1,10 +1,10 @@
-import pytest
 from simulation.core.utils.singleton import SingletonMeta
 
 
 class TestSingletonMeta:
     def test_singleton_instance_creation(self):
         """Test that only one instance of a class is created."""
+
         class SingletonClass(metaclass=SingletonMeta):
             def __init__(self, value=None):
                 self.value = value
@@ -25,6 +25,7 @@ class TestSingletonMeta:
 
     def test_different_classes_have_separate_instances(self):
         """Test that different classes using SingletonMeta have separate instances."""
+
         class SingletonClassA(metaclass=SingletonMeta):
             def __init__(self, value=None):
                 self.value_a = value
@@ -52,7 +53,8 @@ class TestSingletonMeta:
 
     def test_thread_safety(self):
         """Basic test to ensure thread safety of singleton creation.
-        Note: A comprehensive thread safety test would require more complex multi-threading setup."""
+        Note: A comprehensive thread safety test would require more complex multi-threading setup.
+        """
         import threading
 
         class ThreadSafeSingleton(metaclass=SingletonMeta):

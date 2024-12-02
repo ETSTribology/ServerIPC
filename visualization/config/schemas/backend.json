@@ -1,0 +1,131 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Backend Configuration",
+    "type": "object",
+    "required": ["backend", "config"],
+    "properties": {
+        "backend": {
+            "type": "string",
+            "enum": ["redis", "websocket", "grpc"],
+            "description": "The type of backend to configure."
+        },
+        "config": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "host": {
+                    "type": "string",
+                    "description": "The host address of the backend server."
+                },
+                "port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "description": "The port number of the backend server."
+                },
+                "db": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "The database index (required for Redis)."
+                },
+                "password": {
+                    "type": "string",
+                    "description": "Optional password for Redis authentication."
+                },
+                "ssl": {
+                    "type": "boolean",
+                    "description": "Enable SSL for Redis or WebSocket."
+                },
+                "path": {
+                    "type": "string",
+                    "description": "The path for the WebSocket endpoint."
+                },
+                "secure": {
+                    "type": "boolean",
+                    "description": "Enable secure WebSocket connections (wss)."
+                },
+                "service": {
+                    "type": "string",
+                    "description": "The gRPC service name."
+                },
+                "credentials": {
+                    "type": "object",
+                    "required": ["certificate", "privateKey"],
+                    "properties": {
+                        "certificate": {
+                            "type": "string",
+                            "description": "Path to the SSL certificate file."
+                        },
+                        "privateKey": {
+                            "type": "string",
+                            "description": "Path to the private key file."
+                        }
+                    },
+                    "description": "The credentials for gRPC connection."
+                }
+            },
+            "required": ["host", "port"]
+        }
+    },
+    "allOf": [
+        {
+            "if": {
+                "properties": { "backend": { "const": "redis" } }
+            },
+            "then": {
+                "required": ["config"],
+                "properties": {
+                    "config": {
+                        "required": ["host", "port", "db"],
+                        "properties": {
+                            "host": { "type": "string" },
+                            "port": { "type": "integer" },
+                            "db": { "type": "integer" },
+                            "password": { "type": "string" },
+                            "ssl": { "type": "boolean" }
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "if": {
+                "properties": { "backend": { "const": "websocket" } }
+            },
+            "then": {
+                "required": ["config"],
+                "properties": {
+                    "config": {
+                        "required": ["host", "port", "path"],
+                        "properties": {
+                            "host": { "type": "string" },
+                            "port": { "type": "integer" },
+                            "path": { "type": "string" },
+                            "secure": { "type": "boolean" }
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "if": {
+                "properties": { "backend": { "const": "grpc" } }
+            },
+            "then": {
+                "required": ["config"],
+                "properties": {
+                    "config": {
+                        "required": ["host", "port", "service", "credentials"],
+                        "properties": {
+                            "host": { "type": "string" },
+                            "port": { "type": "integer" },
+                            "service": { "type": "string" },
+                            "credentials": { "type": "object" },
+                            "ssl": { "type": "boolean" }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

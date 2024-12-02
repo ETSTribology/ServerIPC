@@ -1,9 +1,8 @@
-from typing import Type
+from simulation.core.utils.singleton import SingletonMeta
 from simulation.nets.live.grpc import GRPC
-from simulation.nets.nets import Nets
 from simulation.nets.live.redis import Redis
 from simulation.nets.live.websocket import WebSocket
-from simulation.core.utils.singleton import SingletonMeta
+from simulation.nets.nets import Nets
 
 
 class NetsFactory(metaclass=SingletonMeta):

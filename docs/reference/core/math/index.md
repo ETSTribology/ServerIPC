@@ -98,6 +98,3 @@ The `PotentialFactory` class generates instances for computing potential energie
 ::: simulation.core.math.potential.PotentialFactory
 
 ---
-
-
-

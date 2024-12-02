@@ -253,9 +253,7 @@ def add_custom_material(
     name_upper = name.upper()
 
     if any(c < 0 or c > 255 for c in color):
-        raise ValueError(
-            f"Invalid color {color}. RGB values must be between 0 and 255."
-        )
+        raise ValueError(f"Invalid color {color}. RGB values must be between 0 and 255.")
 
     if name_upper in materials and not overwrite:
         raise ValueError(

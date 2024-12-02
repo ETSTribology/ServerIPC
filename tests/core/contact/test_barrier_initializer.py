@@ -1,15 +1,16 @@
-import pytest
-import numpy as np
 import logging
+
 import ipctk
-from simulation.core.registry.container import RegistryContainer
+import numpy as np
+import pytest
 
 from simulation.core.contact.barrier_initializer import (
-    BarrierInitializerBase, 
-    BarrierInitializer, 
-    BarrierInitializerFactory
+    BarrierInitializer,
+    BarrierInitializerBase,
+    BarrierInitializerFactory,
 )
 from simulation.core.parameters import ParametersBase
+from simulation.core.registry.container import RegistryContainer
 
 
 class MockParameters(ParametersBase):
@@ -19,10 +20,10 @@ class MockParameters(ParametersBase):
         self.dhat = 0.1
         self.dmin = 0.01
         self.avgmass = 1.0
-        self.broad_phase_method = 'default'
+        self.broad_phase_method = "default"
         self.cconstraints = ipctk.NormalCollisions()
         self.fconstraints = ipctk.TangentialCollisions()
-        
+
         # Attributes to be set during initialization
         self.kB = None
         self.maxkB = None
@@ -54,8 +55,8 @@ class TestBarrierInitializerBase:
 
     def test_base_class_interface(self):
         """Ensure the base class defines the required interface."""
-        assert hasattr(BarrierInitializerBase, '__call__')
-        assert hasattr(BarrierInitializerBase, '__init__')
+        assert callable(BarrierInitializerBase)
+        assert hasattr(BarrierInitializerBase, "__init__")
 
 
 class TestBarrierInitializer:
@@ -67,7 +68,7 @@ class TestBarrierInitializer:
     def test_barrier_initializer_call(self, mock_params, caplog):
         """Test the BarrierInitializer's __call__ method."""
         caplog.set_level(logging.INFO)
-        
+
         # Prepare test data
         x = np.array([[0, 0, 0], [1, 1, 1]], dtype=np.float64)
         gU = np.zeros_like(x)
@@ -78,7 +79,7 @@ class TestBarrierInitializer:
         barrier_initializer(x, gU, gB)
 
         # Check logging
-        assert any('Initialized barrier stiffness' in record.message for record in caplog.records)
+        assert any("Initialized barrier stiffness" in record.message for record in caplog.records)
 
         # Check parameter updates
         assert mock_params.kB is not None
@@ -88,17 +89,17 @@ class TestBarrierInitializer:
     def test_barrier_initializer_with_different_inputs(self, mock_params):
         """Test BarrierInitializer with various input configurations."""
         barrier_initializer = BarrierInitializer(mock_params)
-        
+
         # Different input configurations
         test_cases = [
             (np.array([[0, 0, 0], [0.5, 0.5, 0.5]]), np.random.rand(2, 3), np.random.rand(2, 3)),
             (np.array([[1, 1, 1], [2, 2, 2]]), np.random.rand(2, 3), np.random.rand(2, 3)),
-            (np.random.rand(2, 3), np.random.rand(2, 3), np.random.rand(2, 3))
+            (np.random.rand(2, 3), np.random.rand(2, 3), np.random.rand(2, 3)),
         ]
 
         for x, gU, gB in test_cases:
             barrier_initializer(x, gU, gB)
-            
+
             # Check parameter updates
             assert mock_params.kB is not None
             assert mock_params.maxkB is not None
@@ -109,23 +110,23 @@ class TestBarrierInitializerFactory:
     def test_barrier_initializer_factory_create_default(self, caplog):
         """Test creating a default BarrierInitializer through the factory."""
         caplog.set_level(logging.ERROR)
-        
+
         # Create mock parameters
         mock_params = MockParameters()
 
         # Create through factory
-        barrier_initializer = BarrierInitializerFactory.create('default', mock_params)
-        
+        barrier_initializer = BarrierInitializerFactory.create("default", mock_params)
+
         assert isinstance(barrier_initializer, BarrierInitializer)
 
     def test_barrier_initializer_factory_invalid_type(self, caplog):
         """Test creating a BarrierInitializer with an invalid type raises an exception."""
         caplog.set_level(logging.ERROR)
-        
+
         mock_params = MockParameters()
-        
+
         with pytest.raises(Exception):
-            BarrierInitializerFactory.create('non_existent_barrier_initializer', mock_params)
+            BarrierInitializerFactory.create("non_existent_barrier_initializer", mock_params)
 
     def test_barrier_initializer_registry(self):
         """Test that the BarrierInitializer is correctly registered in the registry."""
@@ -133,8 +134,8 @@ class TestBarrierInitializerFactory:
         barrier_initializer_registry = registry_container.barrier_initializer
 
         # Check that 'default' is registered
-        assert 'default' in barrier_initializer_registry
-        assert barrier_initializer_registry['default'] is BarrierInitializer
+        assert "default" in barrier_initializer_registry
+        assert barrier_initializer_registry["default"] is BarrierInitializer
 
 
 class TestCustomBarrierInitializerRegistration:
@@ -152,11 +153,13 @@ class TestCustomBarrierInitializerRegistration:
         registry_container = RegistryContainer()
         barrier_initializer_registry = registry_container.barrier_initializer
 
-        assert 'custom_barrier_initializer' in barrier_initializer_registry
-        assert barrier_initializer_registry['custom_barrier_initializer'] is CustomBarrierInitializer
+        assert "custom_barrier_initializer" in barrier_initializer_registry
+        assert (
+            barrier_initializer_registry["custom_barrier_initializer"] is CustomBarrierInitializer
+        )
 
         # Test creating through factory
         mock_params = MockParameters()
         factory = BarrierInitializerFactory()
-        custom_barrier_initializer = factory.create('custom_barrier_initializer', mock_params)
+        custom_barrier_initializer = factory.create("custom_barrier_initializer", mock_params)
         assert isinstance(custom_barrier_initializer, CustomBarrierInitializer)

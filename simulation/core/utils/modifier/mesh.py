@@ -66,9 +66,7 @@ def compute_face_to_element_mapping(C: np.ndarray, F: np.ndarray) -> np.ndarray:
         if len(elems) == 1:
             face_to_element.append(elems[0])
         elif len(elems) > 1:
-            face_to_element.append(
-                elems[0]
-            )  # You might want to handle shared faces differently
+            face_to_element.append(elems[0])  # You might want to handle shared faces differently
         else:
             logger.warning(f"No element found for face: {face}")
             face_to_element.append(-1)

@@ -5,13 +5,11 @@ from abc import ABC, abstractmethod
 from functools import lru_cache
 from typing import List, Type
 
-from core.registry.container import RegistryContainer
-from core.registry.decorators import register
-from core.utils.singleton import SingletonMeta
+from simulation.core.registry.container import RegistryContainer
+from simulation.core.registry.decorators import register
+from simulation.core.utils.singleton import SingletonMeta
 from minio import Minio
 from minio.error import S3Error
-
-from simulation.nets.storage.storage import Minio
 
 logger = logging.getLogger(__name__)
 
@@ -55,12 +53,8 @@ class StorageBase(ABC):
 class MinIOStorage(StorageBase):
     """MinIO storage implementation of StorageBase."""
 
-    def __init__(
-        self, endpoint: str, access_key: str, secret_key: str, secure: bool = False
-    ):
-        self.client = Minio(
-            endpoint, access_key=access_key, secret_key=secret_key, secure=secure
-        )
+    def __init__(self, endpoint: str, access_key: str, secret_key: str, secure: bool = False):
+        self.client = Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("MinIOStorage client initialized.")
 
@@ -83,16 +77,12 @@ class MinIOStorage(StorageBase):
         content_type: str = "application/octet-stream",
     ) -> None:
         try:
-            self.client.fput_object(
-                bucket_name, object_name, file_path, content_type=content_type
-            )
+            self.client.fput_object(bucket_name, object_name, file_path, content_type=content_type)
             self.logger.info(
                 f"Uploaded '{file_path}' to bucket '{bucket_name}' as '{object_name}'."
             )
         except S3Error as e:
-            self.logger.error(
-                f"Failed to upload file '{file_path}' to bucket '{bucket_name}': {e}"
-            )
+            self.logger.error(f"Failed to upload file '{file_path}' to bucket '{bucket_name}': {e}")
             raise
 
     def download_file(self, bucket_name: str, object_name: str, file_path: str) -> None:
@@ -120,9 +110,7 @@ class MinIOStorage(StorageBase):
     def delete_object(self, bucket_name: str, object_name: str) -> None:
         try:
             self.client.remove_object(bucket_name, object_name)
-            self.logger.info(
-                f"Deleted object '{object_name}' from bucket '{bucket_name}'."
-            )
+            self.logger.info(f"Deleted object '{object_name}' from bucket '{bucket_name}'.")
         except S3Error as e:
             self.logger.error(
                 f"Failed to delete object '{object_name}' from bucket '{bucket_name}': {e}"
@@ -154,9 +142,7 @@ class StorageFactoryy(metaclass=SingletonMeta):
             return storage_instance
         except Exception as e:
             logger.error(f"Failed to create storage '{type_lower}': {e}")
-            raise RuntimeError(
-                f"Error during storage initialization for type '{type_lower}': {e}"
-            )
+            raise RuntimeError(f"Error during storage initialization for type '{type_lower}': {e}")
 
 
 @register(type="storage", name="local")
@@ -166,9 +152,7 @@ class LocalStorage(StorageBase):
     def __init__(self, base_directory: str = "./storage"):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.base_directory = base_directory
-        self.logger.info(
-            f"Initializing LocalStorage with base directory: {self.base_directory}"
-        )
+        self.logger.info(f"Initializing LocalStorage with base directory: {self.base_directory}")
         self._ensure_base_directory()
 
     def _ensure_base_directory(self) -> None:
@@ -177,9 +161,7 @@ class LocalStorage(StorageBase):
             os.makedirs(self.base_directory, exist_ok=True)
             self.logger.info(f"Base directory '{self.base_directory}' is ready.")
         except Exception as e:
-            self.logger.error(
-                f"Failed to create base directory '{self.base_directory}': {e}"
-            )
+            self.logger.error(f"Failed to create base directory '{self.base_directory}': {e}")
             raise
 
     def _get_bucket_path(self, bucket_name: str) -> str:
@@ -212,9 +194,7 @@ class LocalStorage(StorageBase):
                 f"Uploaded '{file_path}' to bucket '{bucket_name}' as '{object_name}'."
             )
         except Exception as e:
-            self.logger.error(
-                f"Failed to upload file '{file_path}' to bucket '{bucket_name}': {e}"
-            )
+            self.logger.error(f"Failed to upload file '{file_path}' to bucket '{bucket_name}': {e}")
             raise
 
     def download_file(self, bucket_name: str, object_name: str, file_path: str) -> None:
@@ -249,9 +229,7 @@ class LocalStorage(StorageBase):
         object_path = os.path.join(bucket_path, object_name)
         try:
             os.remove(object_path)
-            self.logger.info(
-                f"Deleted object '{object_name}' from bucket '{bucket_name}'."
-            )
+            self.logger.info(f"Deleted object '{object_name}' from bucket '{bucket_name}'.")
         except Exception as e:
             self.logger.error(
                 f"Failed to delete object '{object_name}' from bucket '{bucket_name}': {e}"
@@ -290,6 +268,4 @@ class StorageFactory(metaclass=SingletonMeta):
             return storage_instance
         except Exception as e:
             self.logger.error(f"Failed to create storage '{type_lower}': {e}")
-            raise RuntimeError(
-                f"Error during storage initialization for type '{type_lower}': {e}"
-            )
+            raise RuntimeError(f"Error during storage initialization for type '{type_lower}': {e}")

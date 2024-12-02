@@ -2,37 +2,32 @@ import json
 import logging
 import os
 from dataclasses import field
-from typing import Any, Dict, List, Tuple, Optional, Union
-
-import yaml
-from simulation.core.utils.singleton import SingletonMeta
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import hydra
+import yaml
 from omegaconf import DictConfig, OmegaConf
 
-logger = logging.getLogger(__name__)
+from simulation.core.utils.singleton import SingletonMeta
 
+logger = logging.getLogger(__name__)
 
 
 class ConfigManager(metaclass=SingletonMeta):
     """Singleton class for managing simulation configurations.
     Provides easy access, validation, and dynamic updates of configuration values.
     """
+
     config: DictConfig = field(default_factory=lambda: OmegaConf.create())
 
     def __init__(self):
         self.config = self.generate_default_config()
-
 
     def initialize(self, config_name: str = "config.yaml", config_path: str = "./configs") -> None:
         """Initializes the ConfigManager with Hydra."""
         # Initialize Hydra only if it hasn't been initialized yet
         if not hydra.core.global_hydra.GlobalHydra().is_initialized():
             hydra.initialize(config_path=config_path, job_name="simulation_app")
-
-        # Compose the configuration
-        self.config = hydra.compose(config_name=config_name)
-        logger.info(f"Configuration loaded:\n{OmegaConf.to_yaml(self.config)}")
 
         # Compose the configuration
         self.config = hydra.compose(config_name=config_name)
@@ -149,7 +144,7 @@ class ConfigManager(metaclass=SingletonMeta):
         """
         if config_path and os.path.exists(config_path):
             try:
-                with open(config_path, "r") as file:
+                with open(config_path) as file:
                     if config_path.endswith(".json"):
                         self.config = json.load(file)
                     elif config_path.endswith((".yaml", ".yml")):
@@ -196,167 +191,73 @@ class ConfigManager(metaclass=SingletonMeta):
         config[keys[-1]] = value
         logger.info(f"Parameter '{key}' set to {value}.")
 
-    def load_material_properties(self, input_entry: dict) -> dict:
-        """Loads material properties from the input entry.
-
-        Args:
-            input_entry (dict): The input entry containing material details.
-
-        Returns:
-            dict: Material properties including density, Young's modulus, etc.
-
-        """
-        material_props = input_entry.get("material", {})
-        return {
-            "density": material_props.get("density", 1000.0),
-            "young_modulus": material_props.get("young_modulus", 1e6),
-            "poisson_ratio": material_props.get("poisson_ratio", 0.45),
-            "color": material_props.get("color", [255, 255, 255, 1]),
-        }
-
-    def load_transform_properties(
-        self, input_entry: dict
-    ) -> Tuple[List[float], List[float], List[float]]:
-        """Loads transformation properties (scale, rotation, translation) from the input entry.
-
-        Args:
-            input_entry (dict): Input entry containing transformation details.
-
-        Returns:
-            Tuple[List[float], List[float], List[float]]: Scale, rotation, and translation properties.
-
-        """
-        transform = input_entry.get("transform", {})
-        return (
-            transform.get("scale", [1.0, 1.0, 1.0]),
-            transform.get("rotation", [0.0, 0.0, 0.0, 1.0]),
-            transform.get("translation", [0.0, 0.0, 0.0]),
-        )
-
     def load_material_properties(self, material_name: str = "default") -> Dict[str, Any]:
-        """
-        Load material properties for a given material name.
-
-        Args:
-            material_name (str, optional): Name of the material. Defaults to "default".
-
-        Returns:
-            Dict[str, Any]: Material properties dictionary.
-        """
-        default_material = {
-            "name": "default",
-            "density": 1000.0,  # kg/m³
-            "young_modulus": 1e6,  # Pa
-            "poisson_ratio": 0.3,
-            "damping_coefficient": 0.1
-        }
-        
-        # In a real-world scenario, this could load from a configuration file or database
-        return default_material
-
-    def load_transform_properties(self, transform_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Load transformation properties.
-
-        Args:
-            transform_config (Optional[Dict[str, Any]], optional): Transformation configuration. Defaults to None.
-
-        Returns:
-            Dict[str, Any]: Transformation properties.
-        """
-        default_transform = {
-            "translation": [0.0, 0.0, 0.0],
-            "rotation": [0.0, 0.0, 0.0],
-            "scale": [1.0, 1.0, 1.0]
-        }
-        
-        if transform_config:
-            default_transform.update(transform_config)
-        
-        return default_transform
-
-    def load_material_properties(self, material_name: str = "default") -> Dict[str, Any]:
-        """
-        Load material properties from a configuration or default settings.
-        
-        Args:
-            material_name (str): Name of the material to load properties for.
-        
-        Returns:
-            Dict[str, Any]: Material properties dictionary.
-        """
-        default_properties = {
-            "default": {
-                "young_modulus": 1e6,  # 1 MPa
-                "poisson_ratio": 0.3,
-                "density": 1000.0,  # kg/m³
-            },
-            "steel": {
-                "young_modulus": 200e9,  # 200 GPa
-                "poisson_ratio": 0.3,
-                "density": 7850.0,  # kg/m³
-            }
-        }
-        
-        return default_properties.get(material_name, default_properties["default"])
-
-    def load_material_properties(self, material_name: str) -> Dict[str, Any]:
         """Load material properties for a given material name.
 
         Args:
-            material_name (str): Name of the material.
+            material_name (str): Name of the material to load properties for.
 
         Returns:
-            Dict[str, Any]: Material properties dictionary.
-
-        Raises:
-            ValueError: If material is not found.
+            Dict[str, Any]: Dictionary containing material properties.
         """
-        # Default material properties
-        default_materials = {
-            "default": {
-                "density": 1000.0,  # kg/m³
-                "young_modulus": 1e6,  # Pa
-                "poisson_ratio": 0.4,
-                "damping_coefficient": 0.1,
-            }
+        default_material = {
+            "density": 1000.0,
+            "young_modulus": 1e6,
+            "poisson_ratio": 0.45,
+            "color": [255, 255, 255, 1],
         }
 
-        # Try to find the material
-        material = default_materials.get(material_name.lower())
-        
-        if material is None:
-            logger.warning(f"Material '{material_name}' not found. Using default material.")
-            material = default_materials["default"]
+        if not self.config or "materials" not in self.config:
+            logger.warning("No materials configuration found. Using default material properties.")
+            return default_material
 
-        return material
+        for material in self.config.materials:
+            if material.get("name") == material_name:
+                return {
+                    "density": material.get("density", default_material["density"]),
+                    "young_modulus": material.get(
+                        "young_modulus", default_material["young_modulus"]
+                    ),
+                    "poisson_ratio": material.get(
+                        "poisson_ratio", default_material["poisson_ratio"]
+                    ),
+                    "color": material.get("color", default_material["color"]),
+                }
 
+        logger.warning(f"Material '{material_name}' not found. Using default material properties.")
+        return default_material
 
-    def load_transform_properties(self, input_entry: Dict[str, Any]) -> Tuple[Union[float, List[float]], List[float], List[float]]:
-        """Load transformation properties from input configuration.
+    def load_transform_properties(
+        self, input_entry: Optional[Dict[str, Any]] = None
+    ) -> Tuple[Union[float, List[float]], List[float], List[float]]:
+        """Load transformation properties from input entry or configuration.
 
         Args:
-            input_entry (Dict[str, Any]): Input configuration dictionary.
+            input_entry (Optional[Dict[str, Any]]): Input entry containing transform properties.
 
         Returns:
-            Tuple[Union[float, List[float]], List[float], List[float]]: 
-                - Scale factor (scalar or list)
-                - Rotation angles (degrees)
-                - Translation vector
+            Tuple[Union[float, List[float]], List[float], List[float]]: Tuple containing scale, rotation, and translation.
         """
-        # Default transformation values
-        scale = input_entry.get("transform", {}).get("scale", 1.0)
-        rotation = input_entry.get("transform", {}).get("rotation", [0.0, 0.0, 0.0, 1.0])  # Updated to match test
-        translation = input_entry.get("transform", {}).get("translation", [0.0, 0.0, 0.0])
+        default_transform = {
+            "scale": [1.0, 1.0, 1.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "translation": [0.0, 0.0, 0.0],
+        }
 
-        # Ensure rotation is a list of 4 elements (quaternion)
-        if len(rotation) != 4:
-            rotation = [0.0, 0.0, 0.0, 1.0]
+        if not input_entry or "transform" not in input_entry:
+            logger.warning("No transform configuration found. Using default transform properties.")
+            return (
+                default_transform["scale"],
+                default_transform["rotation"],
+                default_transform["translation"],
+            )
 
-        logger.debug(f"Transform properties - Scale: {scale}, Rotation: {rotation}, Translation: {translation}")
-
-        return scale, rotation, translation
-
+        transform = input_entry["transform"]
+        return (
+            transform.get("scale", default_transform["scale"]),
+            transform.get("rotation", default_transform["rotation"]),
+            transform.get("translation", default_transform["translation"]),
+        )
 
     def load_simulation_parameters(self) -> Dict[str, Any]:
         """Load simulation parameters from configuration.
@@ -370,7 +271,7 @@ class ConfigManager(metaclass=SingletonMeta):
         """
         sim_config = self.config.get("simulation", {})
         return {
-            "dt": sim_config.get("dt", 1/60),
+            "dt": sim_config.get("dt", 1 / 60),
             "total_time": sim_config.get("total_time", 10.0),
             "output_frequency": sim_config.get("output_frequency", 60),
             "gravity": sim_config.get("gravity", [0.0, -9.81, 0.0]),
@@ -474,16 +375,26 @@ class ConfigManager(metaclass=SingletonMeta):
             "visualization": {
                 "enabled": output_config.get("visualization", {}).get("enabled", True),
                 "backend": output_config.get("visualization", {}).get("backend", "opengl"),
-                "window_size": output_config.get("visualization", {}).get("window_size", [1024, 768]),
+                "window_size": output_config.get("visualization", {}).get(
+                    "window_size", [1024, 768]
+                ),
                 "camera": {
-                    "position": output_config.get("visualization", {}).get("camera", {}).get("position", [0, 0, 5]),
-                    "target": output_config.get("visualization", {}).get("camera", {}).get("target", [0, 0, 0]),
-                    "up": output_config.get("visualization", {}).get("camera", {}).get("up", [0, 1, 0]),
+                    "position": output_config.get("visualization", {})
+                    .get("camera", {})
+                    .get("position", [0, 0, 5]),
+                    "target": output_config.get("visualization", {})
+                    .get("camera", {})
+                    .get("target", [0, 0, 0]),
+                    "up": output_config.get("visualization", {})
+                    .get("camera", {})
+                    .get("up", [0, 1, 0]),
                 },
             },
             "metrics": {
                 "enabled": output_config.get("metrics", {}).get("enabled", True),
-                "types": output_config.get("metrics", {}).get("types", ["timing", "memory", "convergence"]),
+                "types": output_config.get("metrics", {}).get(
+                    "types", ["timing", "memory", "convergence"]
+                ),
                 "log_file": output_config.get("metrics", {}).get("log_file", "performance.log"),
             },
         }
@@ -497,8 +408,8 @@ class ConfigManager(metaclass=SingletonMeta):
             DictConfig: Board configuration section.
         """
         # If board configuration doesn't exist, create a default
-        if 'board' not in self.config:
-            self.config['board'] = {
+        if "board" not in self.config:
+            self.config["board"] = {
                 "type": "tensorboard",  # Default board type
                 "enabled": True,
                 "log_level": "INFO",
@@ -510,154 +421,46 @@ class ConfigManager(metaclass=SingletonMeta):
                     "max_queue": 10,
                     "flush_secs": 120,
                     "filename_suffix": "",
-                }
+                },
             }
-        return self.config['board']
-
-    # Standalone functions for material and transform properties
-    def load_material_properties(material_name: str) -> Dict[str, Any]:
-        """Load material properties for a given material name.
-
-        Args:
-            material_name (str): Name of the material.
-
-        Returns:
-            Dict[str, Any]: Material properties dictionary.
-
-        Raises:
-            ValueError: If material is not found.
-        """
-        # Default material properties
-        default_materials = {
-            "default": {
-                "density": 1000.0,  # kg/m³
-                "young_modulus": 1e6,  # Pa
-                "poisson_ratio": 0.4,
-                "damping_coefficient": 0.1,
-            }
-        }
-
-        # Try to find the material
-        material = default_materials.get(material_name.lower())
-        
-        if material is None:
-            logger.warning(f"Material '{material_name}' not found. Using default material.")
-            material = default_materials["default"]
-
-        return material
-
-
-    def load_transform_properties(input_entry: Dict[str, Any]) -> Tuple[Union[float, List[float]], List[float], List[float]]:
-        """Load transformation properties from input configuration.
-
-        Args:
-            input_entry (Dict[str, Any]): Input configuration dictionary.
-
-        Returns:
-            Tuple[Union[float, List[float]], List[float], List[float]]: 
-                - Scale factor (scalar or list)
-                - Rotation angles (degrees)
-                - Translation vector
-        """
-        # Default transformation values
-        scale = input_entry.get("transform", {}).get("scale", 1.0)
-        rotation = input_entry.get("transform", {}).get("rotation", [0.0, 0.0, 0.0, 1.0])  
-        translation = input_entry.get("transform", {}).get("translation", [0.0, 0.0, 0.0])
-
-        # Ensure rotation is a list of 4 elements (quaternion)
-        if len(rotation) != 4:
-            rotation = [0.0, 0.0, 0.0, 1.0]
-
-        logger.debug(f"Transform properties - Scale: {scale}, Rotation: {rotation}, Translation: {translation}")
-
-        return scale, rotation, translation
-
+        return self.config["board"]
 
     @classmethod
-    def quick_init(cls, config_dict: Optional[Dict[str, Any]] = None) -> 'ConfigManager':
+    def quick_init(cls, config_dict: Optional[Dict[str, Any]] = None) -> "ConfigManager":
         """Quick initialization method for testing purposes.
-        
+
         Args:
-            config_dict (Optional[Dict[str, Any]], optional): Custom configuration dictionary. 
+            config_dict (Optional[Dict[str, Any]], optional): Custom configuration dictionary.
                                                               Defaults to None.
-        
+
         Returns:
             ConfigManager: Initialized configuration manager
         """
         # Reset the singleton instance
-        if hasattr(cls, '_instance'):
-            delattr(cls, '_instance')
-        
+        if hasattr(cls, "_instance"):
+            delattr(cls, "_instance")
+
         # Create a new instance
         instance = cls()
-        
+
         # Use provided config or generate default
         if config_dict is not None:
             instance.config = OmegaConf.create(config_dict)
         else:
             instance.config = OmegaConf.create(instance.generate_default_config())
-        
+
         return instance
 
     @classmethod
     def reset(cls):
         """Reset the singleton instance for testing purposes."""
-        if hasattr(cls, '_instance'):
-            delattr(cls, '_instance')
+        if hasattr(cls, "_instance"):
+            delattr(cls, "_instance")
 
     @classmethod
-    def get_instance(cls) -> 'ConfigManager':
+    def get_instance(cls) -> "ConfigManager":
         """Get or create the singleton instance."""
-        if not hasattr(cls, '_instance'):
+        if not hasattr(cls, "_instance"):
             cls._instance = cls()
             cls._instance.config = OmegaConf.create(cls._instance.generate_default_config())
         return cls._instance
-
-    def load_transform_properties(self, config_path: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Load transformation properties from a configuration file.
-
-        Parameters
-        ----------
-        config_path : Optional[str], optional
-            Path to the configuration file containing transform properties.
-            If not provided, uses the default configuration.
-
-        Returns
-        -------
-        Dict[str, Any]
-            Dictionary containing transformation properties.
-        """
-        config_manager = self.get_instance()
-        
-        # If a specific config path is provided, try to load from that path
-        if config_path:
-            try:
-                with open(config_path, 'r') as f:
-                    transform_config = yaml.safe_load(f)
-                    return transform_config.get('transform_properties', {})
-            except (FileNotFoundError, IOError) as e:
-                logger.warning(f"Could not load transform properties from {config_path}: {e}")
-        
-        # Fallback to default configuration
-        transform_properties = config_manager.config.get('transform_properties', {})
-        
-        return transform_properties
-
-def load_transform_properties(config_path: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Load transformation properties from a configuration file.
-
-    Parameters
-    ----------
-    config_path : Optional[str], optional
-        Path to the configuration file containing transform properties.
-        If not provided, uses the default configuration.
-
-    Returns
-    -------
-    Dict[str, Any]
-        Dictionary containing transformation properties.
-    """
-    config_manager = ConfigManager.get_instance()
-    return config_manager.load_transform_properties(config_path)

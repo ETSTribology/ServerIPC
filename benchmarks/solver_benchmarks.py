@@ -1,18 +1,19 @@
 import numpy as np
-import time
+
+from simulation.core.solvers.line_search import LineSearch
 from simulation.core.solvers.linear import LinearSolverBase
 from simulation.core.solvers.optimizer import OptimizerBase
-from simulation.core.solvers.line_search import LineSearch
+
 
 class LinearSolverBenchmarks:
     """Benchmarks for linear solvers."""
-    
+
     def setup(self):
         # Generate test matrices of different sizes
         self.small_matrix = np.random.rand(100, 100)
         self.medium_matrix = np.random.rand(500, 500)
         self.large_matrix = np.random.rand(1000, 1000)
-        
+
         self.small_vector = np.random.rand(100)
         self.medium_vector = np.random.rand(500)
         self.large_vector = np.random.rand(1000)
@@ -32,17 +33,18 @@ class LinearSolverBenchmarks:
         solver = LinearSolverBase()
         solver.solve(self.large_matrix, self.large_vector)
 
+
 class OptimizerBenchmarks:
     """Benchmarks for optimization algorithms."""
-    
+
     def setup(self):
         # Create test optimization problems
         def quadratic_function(x):
             return np.sum(x**2)
-        
+
         def rosenbrock_function(x):
-            return np.sum(100.0 * (x[1:] - x[:-1]**2.0)**2.0 + (1 - x[:-1])**2.0)
-        
+            return np.sum(100.0 * (x[1:] - x[:-1] ** 2.0) ** 2.0 + (1 - x[:-1]) ** 2.0)
+
         self.quadratic_problem = quadratic_function
         self.rosenbrock_problem = rosenbrock_function
         self.initial_guess = np.random.rand(10)
@@ -57,9 +59,10 @@ class OptimizerBenchmarks:
         optimizer = OptimizerBase()
         optimizer.optimize(self.rosenbrock_problem, self.initial_guess)
 
+
 class LineSearchBenchmarks:
     """Benchmarks for line search algorithms."""
-    
+
     def setup(self):
         self.x0 = np.random.rand(10)
         self.direction = np.random.rand(10)
@@ -77,19 +80,16 @@ class LineSearchBenchmarks:
         """Benchmark line search algorithm."""
         line_search = LineSearch()
         line_search.search(
-            self.test_objective,
-            self.test_gradient,
-            self.x0,
-            self.direction,
-            self.alpha
+            self.test_objective, self.test_gradient, self.x0, self.direction, self.alpha
         )
+
 
 class MemorySolverBenchmarks:
     """Memory usage benchmarks for solvers."""
-    
+
     def complex_function(self, x):
         """Complex objective function for memory testing."""
-        return np.sum(np.sin(x)**2 + np.cos(x)**2)
+        return np.sum(np.sin(x) ** 2 + np.cos(x) ** 2)
 
     def mem_linear_solver(self):
         """Measure memory of linear solver with large matrix."""

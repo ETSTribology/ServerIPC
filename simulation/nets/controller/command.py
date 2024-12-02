@@ -39,9 +39,7 @@ class CommandRegistry:
 
             # Register primary name
             cls._command_registry[name.lower()] = command_cls
-            logger.debug(
-                f"Registered command '{name.lower()}' with class {command_cls.__name__}."
-            )
+            logger.debug(f"Registered command '{name.lower()}' with class {command_cls.__name__}.")
 
             # Register aliases
             if aliases:

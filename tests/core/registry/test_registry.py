@@ -1,20 +1,23 @@
 import logging
+
 import pytest
 
-from simulation.core.registry.registry import Registry
 from simulation.core.registry.container import RegistryContainer
 from simulation.core.registry.decorators import register
+from simulation.core.registry.registry import Registry
 
 
 # Base classes for testing
 class BaseComponent:
     """A base class for testing registry functionality."""
+
     def __init__(self, name):
         self.name = name
 
 
 class BaseService:
     """Another base class for testing registry functionality."""
+
     def __init__(self, config):
         self.config = config
 
@@ -51,6 +54,7 @@ class TestRegistry:
 
         # Attempt to register another class with the same name
         with pytest.raises(KeyError):
+
             @registry.register("test_component")
             class TestComponent2(BaseComponent):
                 pass
@@ -60,6 +64,7 @@ class TestRegistry:
         registry = Registry(BaseComponent)
 
         with pytest.raises(TypeError):
+
             @registry.register("invalid_component")
             class InvalidComponent:
                 pass
@@ -115,14 +120,14 @@ class TestRegistryContainer:
         """Test adding a duplicate registry does not create a new one."""
         container = RegistryContainer()
         container.add_registry("test_registry", "tests.core.registry.test_registry.BaseComponent")
-        
+
         # Adding the same registry again should not raise an error
         container.add_registry("test_registry", "tests.core.registry.test_registry.BaseComponent")
 
     def test_registry_container_invalid_base_class(self):
         """Test adding a registry with an invalid base class raises an ImportError."""
         container = RegistryContainer()
-        
+
         with pytest.raises(ImportError):
             container.add_registry("invalid_registry", "non.existent.module.NonExistentClass")
 
@@ -138,7 +143,7 @@ class TestRegistryContainer:
     def test_registry_container_get_nonexistent_registry(self):
         """Test getting a non-existent registry raises a KeyError."""
         container = RegistryContainer()
-        
+
         with pytest.raises(KeyError):
             container.get_registry("non_existent_registry")
 
@@ -180,6 +185,7 @@ class TestRegistryDecorator:
     def test_register_decorator_invalid_type(self):
         """Test registering with an invalid registry type raises an AttributeError."""
         with pytest.raises(AttributeError):
+
             @register(type="non_existent_type", name="test_component")
             class InvalidComponent:
                 pass
@@ -191,6 +197,7 @@ class TestRegistryDecorator:
         container.add_registry("test_service", "tests.core.registry.test_registry.BaseService")
 
         with pytest.raises(ValueError):
+
             @register(type="test_service", name="")
             class InvalidServiceImpl(BaseService):
                 pass
@@ -217,8 +224,9 @@ class TestRegistryDecorator:
         """Test exception handling in the register decorator."""
         # Simulate a scenario where registry creation fails
         container = RegistryContainer()
-        
+
         with pytest.raises(AttributeError):
+
             @register(type="test_service", name="test_service_impl")
             class TestServiceImpl:
                 pass  # No base registry exists

@@ -1,5 +1,6 @@
 from .config import ConfigManager
 
+
 def get_config():
     """
     Get the global configuration instance.

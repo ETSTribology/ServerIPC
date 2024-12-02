@@ -2,13 +2,13 @@
 
 Many of the problems solved by FEM are defined by integration over the domain $\Omega$. For example, we have seen that PDEs can be solved with a Galerkin projection, which involves computing $\int_{\Omega} L(\Phi^T u) \phi_i(X) \partial \Omega$, where $L(\cdot)$ is a PDE. Spatial integration also arises when we wish to minimize some quantity "everywhere" in the domain, a very common scenario. For example, suppose we have a function $h(X)$ which measures temperature in the domain $\Omega$, and suppose that there is a heat source in some region $\Omega_h \subset \Omega$. Maybe we want to minimize the temperature everywhere in $\Omega$, in the presence of such a heat source. Mathematically, we would thus want to minimize the energy $\int_{\Omega} h(X) \partial \Omega$ subject to $h(\Omega_h) = h_D$, where $h_D$ is the temperature of the heat source.
 
-Thanks to the [separability of definite integrals](https://en.wikipedia.org/wiki/Integral#Conventions), integrals over the domain $\Omega$ can be broken up into a sum of integrals over element domains $\Omega^e$, since elements are non-overlapping and cover the domain. In other words, given some integrand $F(X)$, 
+Thanks to the [separability of definite integrals](https://en.wikipedia.org/wiki/Integral#Conventions), integrals over the domain $\Omega$ can be broken up into a sum of integrals over element domains $\Omega^e$, since elements are non-overlapping and cover the domain. In other words, given some integrand $F(X)$,
 
 $$
 \int_{\Omega} F(X) \partial \Omega = \sum_{e \in E} \int_{\Omega^e} F(X) \partial \Omega .
 $$
 
-As such, if we know how to compute an element integral, then we know how to compute integrals over the whole domain by summation. However, elements can have many different configurations depending on the problem. Fortunately, we can leverage the method of [integration by substitution](https://en.wikipedia.org/wiki/Integration_by_substitution#Substitution_for_multiple_variables) (i.e. change of variables), our fixed reference element with known bounds, and the map $X(\xi)$ to compute domain element integrals by integrating in the reference element. Mathematically, 
+As such, if we know how to compute an element integral, then we know how to compute integrals over the whole domain by summation. However, elements can have many different configurations depending on the problem. Fortunately, we can leverage the method of [integration by substitution](https://en.wikipedia.org/wiki/Integration_by_substitution#Substitution_for_multiple_variables) (i.e. change of variables), our fixed reference element with known bounds, and the map $X(\xi)$ to compute domain element integrals by integrating in the reference element. Mathematically,
 
 $$
 \int_{\Omega^e} F(X) \partial \Omega = \int_{\Omega^\text{ref}} F(X(\xi)) |\det \nabla_\xi X| \partial \Omega^\text{ref} ,

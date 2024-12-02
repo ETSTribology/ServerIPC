@@ -138,4 +138,3 @@ classDiagram
 ::: simulation.core.solvers.optimizer
 
 ---
-

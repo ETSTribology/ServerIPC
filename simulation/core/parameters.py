@@ -6,6 +6,7 @@ import ipctk
 import numpy as np
 import pbatoolkit as pbat
 import scipy as sp
+
 from simulation.core.registry.container import RegistryContainer
 from simulation.core.registry.decorators import register
 from simulation.core.utils.modifier.mesh import to_surface
@@ -76,19 +77,21 @@ class Parameters(ParametersBase):
         self.gF = None
         self.materials = materials or []
         self.element_materials = element_materials or []
-        
+
         # Create BarrierPotential with dhat parameter
         self.barrier_potential = (
-            barrier_potential if barrier_potential is not None 
+            barrier_potential
+            if barrier_potential is not None
             else ipctk.BarrierPotential(dhat=dhat)
         )
-        
+
         # Create FrictionPotential with eps_v parameter
         self.friction_potential = (
-            friction_potential if friction_potential is not None 
+            friction_potential
+            if friction_potential is not None
             else ipctk.FrictionPotential(eps_v=epsv)
         )
-        
+
         self.broad_phase_method = broad_phase_method
 
         logger.info("Parameters initialized.")
@@ -142,9 +145,7 @@ class ParametersFactory:
             logger.error(str(ve))
             raise
         except Exception as e:
-            logger.error(
-                f"Failed to create Parameters configuration '{type_lower}': {e}"
-            )
+            logger.error(f"Failed to create Parameters configuration '{type_lower}': {e}")
             raise RuntimeError(
                 f"Error during Parameters initialization for method '{type_lower}': {e}"
             ) from e

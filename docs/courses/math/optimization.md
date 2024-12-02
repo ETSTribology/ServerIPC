@@ -499,25 +499,25 @@ In optimizing the shape of an aerodynamic body, nonlinear optimization technique
 
 To deepen your understanding of optimization techniques in physics simulations, consider the following reference books:
 
-1. **"Engineering Optimization: Theory and Practice" by Xin-She Yang**  
+1. **"Engineering Optimization: Theory and Practice" by Xin-She Yang**
    This book provides a comprehensive introduction to engineering optimization methods, covering both theoretical foundations and practical applications. It includes discussions on evolutionary algorithms, gradient-based methods, and more, making it highly relevant for physics simulations.
 
-2. **"Numerical Optimization" by Jorge Nocedal and Stephen J. Wright**  
+2. **"Numerical Optimization" by Jorge Nocedal and Stephen J. Wright**
    A detailed resource on numerical optimization techniques, this book covers a wide range of methods including unconstrained and constrained optimization, optimality conditions, and algorithmic strategies. It's particularly useful for implementing optimization algorithms in simulations.
 
-3. **"Practical Optimization: Algorithms and Engineering Applications" by Andreas Antoniou and Wu-Sheng Lu**  
+3. **"Practical Optimization: Algorithms and Engineering Applications" by Andreas Antoniou and Wu-Sheng Lu**
    This book bridges the gap between theory and practice, offering algorithms and real-world applications in engineering. It includes sections on linear and nonlinear programming, making it suitable for physics simulation contexts.
 
-4. **"Convex Optimization" by Stephen Boyd and Lieven Vandenberghe**  
+4. **"Convex Optimization" by Stephen Boyd and Lieven Vandenberghe**
    Focused on convex optimization, this book is essential for understanding the properties of convex functions and their applications in optimization. It provides a strong theoretical background with practical examples relevant to simulations.
 
-5. **"Optimization by Vector Space Methods" by David G. Luenberger**  
+5. **"Optimization by Vector Space Methods" by David G. Luenberger**
    This classic text explores optimization in the context of vector spaces, offering insights into linear and nonlinear optimization techniques. It's beneficial for those looking to understand the mathematical underpinnings of optimization methods used in simulations.
 
-6. **"Engineering Optimization: Theory and Practice" by Singiresu S. Rao**  
+6. **"Engineering Optimization: Theory and Practice" by Singiresu S. Rao**
    Another excellent resource on engineering optimization, this book covers a variety of optimization techniques including classical methods, evolutionary algorithms, and multi-objective optimization, all of which are applicable to physics simulations.
 
-7. **"Numerical Recipes: The Art of Scientific Computing" by William H. Press et al.**  
+7. **"Numerical Recipes: The Art of Scientific Computing" by William H. Press et al.**
    While not exclusively focused on optimization, this book provides practical algorithms for scientific computing, including sections on optimization methods. It's valuable for implementing optimization algorithms efficiently in simulation software.
 
 ---

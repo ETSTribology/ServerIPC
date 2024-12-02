@@ -6,6 +6,7 @@ import pickle
 from typing import Dict, Optional
 
 import bson
+
 from simulation.nets.serialization.serializer import Serializer
 
 logger = logging.getLogger(__name__)
@@ -68,9 +69,7 @@ class BSONSerializer(Serializer):
             logger.debug("BSON serialization successful.")
             return encoded
         except ImportError:
-            logger.error(
-                "BSON library not installed. Install it using 'pip install bson'."
-            )
+            logger.error("BSON library not installed. Install it using 'pip install bson'.")
             return None
         except Exception as e:
             logger.error(f"BSON serialization failed: {e}")
@@ -83,9 +82,7 @@ class BSONSerializer(Serializer):
             logger.debug("BSON deserialization successful.")
             return data
         except ImportError:
-            logger.error(
-                "BSON library not installed. Install it using 'pip install bson'."
-            )
+            logger.error("BSON library not installed. Install it using 'pip install bson'.")
             return None
         except Exception as e:
             logger.error(f"BSON deserialization failed: {e}")

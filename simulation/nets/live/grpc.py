@@ -5,12 +5,14 @@ import threading
 from typing import Any, Dict, Optional
 
 import grpc
+
 import simulation.nets.live.proto.simulation_pb2 as simulation_pb2
 import simulation.nets.live.proto.simulation_pb2_grpc as simulation_grpc
 from simulation.nets.nets import Nets
 from simulation.nets.serialization.factory import SerializerFactory
 
 logger = logging.getLogger(__name__)
+
 
 class GRPC(Nets):
     def __init__(
@@ -38,16 +40,12 @@ class GRPC(Nets):
             self.stub = simulation_grpc.SimulationServiceStub(self.channel)
             logger.info(f"Connected to gRPC server at {self.host}:{self.port}")
         except Exception as e:
-            logger.error(
-                f"Failed to connect to gRPC server at {self.host}:{self.port}: {e}"
-            )
+            logger.error(f"Failed to connect to gRPC server at {self.host}:{self.port}: {e}")
             raise
 
     async def listen_async(self):
         try:
-            async for command_msg in self.stub.SubscribeCommands(
-                simulation_pb2.Empty()
-            ):
+            async for command_msg in self.stub.SubscribeCommands(simulation_pb2.Empty()):
                 command = command_msg.command.strip().lower()
                 logger.info(f"Received command from gRPC: {command}")
                 self.command_queue.put(command)
@@ -71,31 +69,23 @@ class GRPC(Nets):
 
     def set_data(self, key: str, data: str) -> None:
         # Implement as needed based on your gRPC service definitions
-        raise NotImplementedError(
-            "set_data is not implemented for GRPCCommunicationClient."
-        )
+        raise NotImplementedError("set_data is not implemented for GRPCCommunicationClient.")
 
     def get_data(self, key: str) -> Optional[Any]:
         # Implement as needed based on your gRPC service definitions
-        raise NotImplementedError(
-            "get_data is not implemented for GRPCCommunicationClient."
-        )
+        raise NotImplementedError("get_data is not implemented for GRPCCommunicationClient.")
 
     def publish_data(self, channel: str, data: str) -> None:
         try:
             logger.info(f"Sending data to gRPC server: {data}")
             asyncio.run(
-                self.stub.PublishData(
-                    simulation_pb2.DataRequest(channel=channel, data=data)
-                )
+                self.stub.PublishData(simulation_pb2.DataRequest(channel=channel, data=data))
             )
             logger.debug("Data sent successfully to gRPC server.")
         except Exception as e:
             logger.error(f"Failed to send data to gRPC server: {e}")
 
-    def serialize_data(
-        self, data: Dict[str, Any], method: str = "pickle"
-    ) -> Optional[str]:
+    def serialize_data(self, data: Dict[str, Any], method: str = "pickle") -> Optional[str]:
         try:
             logger.info("Serializing data using SerializerFactory.")
             serializer = self.serializer_factory.get_serializer(method)

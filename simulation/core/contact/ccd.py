@@ -4,6 +4,7 @@ from functools import lru_cache
 
 import ipctk
 import numpy as np
+
 from simulation.core.parameters import ParametersBase
 from simulation.core.registry.container import RegistryContainer
 from simulation.core.registry.decorators import register
@@ -48,9 +49,7 @@ class CCD(CCDBase):
         dmin = self.params.dmin
         broad_phase_method = self.params.broad_phase_method
 
-        self.logger.debug(
-            f"Computing CCD stepsize with broad_phase_method={broad_phase_method}"
-        )
+        self.logger.debug(f"Computing CCD stepsize with broad_phase_method={broad_phase_method}")
 
         BXt0 = to_surface(x, mesh, cmesh)
         BXt1 = to_surface(x + dx, mesh, cmesh)
@@ -91,6 +90,4 @@ class CCDFactory:
             raise
         except Exception as e:
             logger.error(f"Failed to create CCD implementation '{type}': {e}")
-            raise RuntimeError(
-                f"Error during CCD initialization for method '{type}': {e}"
-            ) from e
+            raise RuntimeError(f"Error during CCD initialization for method '{type}': {e}") from e

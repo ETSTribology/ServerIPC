@@ -40,9 +40,7 @@ def apply_scaling(vertices: np.ndarray, scale: Union[float, List[float]]) -> np.
         scale = [scale, scale, scale]
 
     if len(scale) != 3:
-        raise ValueError(
-            f"Scale must be a list of three elements, got {len(scale)} elements."
-        )
+        raise ValueError(f"Scale must be a list of three elements, got {len(scale)} elements.")
 
     scaling_matrix = np.diag(scale)
     scaled_vertices = vertices @ scaling_matrix
@@ -94,7 +92,7 @@ def apply_rotation(vertices: np.ndarray, rotation: List[float]) -> np.ndarray:
 
     # Compute centroid with high precision
     centroid = vertices.mean(axis=0, dtype=np.float64)
-    
+
     # Center vertices and rotate with high precision
     centered_vertices = vertices - centroid
     rotated_vertices = np.dot(centered_vertices, R.T)
@@ -199,9 +197,7 @@ def apply_transformations(
 
     # Validate input lengths
     if len(scale) != 3:
-        raise ValueError(
-            f"Scale must be a list of three elements, got {len(scale)} elements."
-        )
+        raise ValueError(f"Scale must be a list of three elements, got {len(scale)} elements.")
     if len(rotation) != 4:
         raise ValueError(
             f"Rotation must be a list of four elements representing a quaternion, got {len(rotation)} elements."

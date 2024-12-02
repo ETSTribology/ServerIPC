@@ -6,7 +6,7 @@ Although our motivating example shows how, armed with basis functions $\phi_i$, 
 3. $`\phi_i(X) = \begin{cases}N_i^e(X) & X \in \Omega^e, \text{node} \;i\; \text{and element} \;e\; \text{are adjacent}\\ 0 & \text{otherwise}\end{cases}`$
 
 The third property introduces $\Omega^e$, which refers to the domain of element $e$, i.e. the space it occupies. Naturally, meshes are made of non-overlapping geometric primitives (i.e. the "elements" $\Omega^e$), connected through their boundaries. This means that evaluating $\phi_i(X)$ is achieved by the following steps.
-1. Find which element $e$ contains the point $X$. 
+1. Find which element $e$ contains the point $X$.
 2. Evaluate $N_i^e(X)$.
 
 Fortunately, our shape functions have $C^0$ continuity at element boundaries, meaning $N_i^e(X) = N_i^{e'}(X)$ on the boundary between adjacent elements $e$ and $e'$ (due to uniqueness of interpolating polynomials). Hence, if a point $X$ lies on the boundary between 2 or more elements, we can pick any of these elements in step 1.
@@ -31,15 +31,15 @@ $$
 
 where we have conveniently numbered the nodes of element $e$ as $l=1,2,\dots,n^e$. This numbering choice is often referred to as the "local" indexing of the nodes of element $e$. The "global" indexing of these same nodes refers to the actual nodal indices $i$ corresponding to local nodal indices $l$.
 
-The polynomial basis generally has a quite simple analytical form. For example, taking the monomial basis in 1D for a quadratic polynomial yields $P_1(X) = 1, P_2(X) = X, P_3(X) = X^2$. A linear monomial basis in 3D yields $P_1(X)=1, P_2(X) = X_1, P_3(X) = X_2, P_4(X)=X_3$. These basis polynomials are thus super easy to evaluate, differentiate or integrate in code. What we really need is to find the coefficients $\alpha_{ij}$ that will finalize our definition of the shape functions $N_i^e(X)$. Fortunately, solving the Kronecker equation above amounts to computing the inverse of the transposed matrix of polynomials $P^T$ 
+The polynomial basis generally has a quite simple analytical form. For example, taking the monomial basis in 1D for a quadratic polynomial yields $P_1(X) = 1, P_2(X) = X, P_3(X) = X^2$. A linear monomial basis in 3D yields $P_1(X)=1, P_2(X) = X_1, P_3(X) = X_2, P_4(X)=X_3$. These basis polynomials are thus super easy to evaluate, differentiate or integrate in code. What we really need is to find the coefficients $\alpha_{ij}$ that will finalize our definition of the shape functions $N_i^e(X)$. Fortunately, solving the Kronecker equation above amounts to computing the inverse of the transposed matrix of polynomials $P^T$
 
 $$
 \alpha = P^{-T} .
-$$ 
+$$
 
 Armed with each matrix $A$ stored for its corresponding element in an FEM computer program, we can easily evaluate $\phi_i(X)$ by finding an element $e$ containing point $X$, converting global node index $i$ into its corresponding local index $l$, and returning $P(X)^T \alpha_{l}$. Fortunately, these polynomial coefficient matrices $A$ are to be precomputed only once, in parallel, for each element.
 
-Unfortunately, $P^T$ can easily become [ill-conditioned](https://en.wikipedia.org/wiki/Condition_number), which makes its inversion [numerically unstable](https://en.wikipedia.org/wiki/Numerical_stability), especially for higher-order polynomial basis'. This phenomenon depends on the geometry of the mesh elements, i.e. the positions of the nodes $X_i$. Intuitively, ill-conditioning of $P^T$ means that some of its cofficients are really large (in magnitude), and some of them are really small (in magnitude). Taking as an example the 1D quadratic monomial evaluated at some element's node with position $X=1000$, we get that its corresponding row in $P^T$ would be $`\begin{bmatrix}1 & 1000 & 1000000\end{bmatrix}`$. Clearly, this is ill-conditioned. 
+Unfortunately, $P^T$ can easily become [ill-conditioned](https://en.wikipedia.org/wiki/Condition_number), which makes its inversion [numerically unstable](https://en.wikipedia.org/wiki/Numerical_stability), especially for higher-order polynomial basis'. This phenomenon depends on the geometry of the mesh elements, i.e. the positions of the nodes $X_i$. Intuitively, ill-conditioning of $P^T$ means that some of its cofficients are really large (in magnitude), and some of them are really small (in magnitude). Taking as an example the 1D quadratic monomial evaluated at some element's node with position $X=1000$, we get that its corresponding row in $P^T$ would be $`\begin{bmatrix}1 & 1000 & 1000000\end{bmatrix}`$. Clearly, this is ill-conditioned.
 
 To address this issue, it is common in practice to define some map $X(\xi)$ that takes points in some *reference* space to the domain $\Omega$, and its inverse $\xi(X) = X^{-1}(\xi)$ such that we can construct shape functions in the reference space, where the geometry of the elements will yield well-conditioned $P^T$. In fact, this concept leads to defining the so-called *reference elements*. The maps $X(\xi)$ and $\xi(X)$ are then defined per-element, and always map from and to the reference element, respectively. Reference shape functions are subsequently defined on the reference element and constructed only once. Evaluating a basis function $\phi_i(X)$ on element $e$ thus amounts to mapping $X$ to $\xi$ using element $e$'s inverse map $\xi(X)$, and then evaluating the reference shape function associated with node $i$ of element $e$. Mathematically, assuming that $N_l(\xi)$ is the reference shape function for domain node $i$ associated with reference node $l$ on the reference element, we have that
 
@@ -72,7 +72,7 @@ $$
 X(\xi) = X^e N(\xi) ,
 $$
 
-where $`X^e = \begin{bmatrix} X_1 & \dots & X_{n^e} \end{bmatrix} \in \mathbb{R}^{d \times n^e}`$ are element $e$'s nodes' positions $X_i$, $`N(\xi) = \begin{bmatrix} N_1(\xi) & \dots & N_{n^e}(\xi) \end{bmatrix}^T \in \mathbb{R}^{n^e}`$ are the reference shape functions evaluated at $\xi$, and $d$ is the number of embedding dimensions for $X_i$. 
+where $`X^e = \begin{bmatrix} X_1 & \dots & X_{n^e} \end{bmatrix} \in \mathbb{R}^{d \times n^e}`$ are element $e$'s nodes' positions $X_i$, $`N(\xi) = \begin{bmatrix} N_1(\xi) & \dots & N_{n^e}(\xi) \end{bmatrix}^T \in \mathbb{R}^{n^e}`$ are the reference shape functions evaluated at $\xi$, and $d$ is the number of embedding dimensions for $X_i$.
 
 The inverse map $\xi(X)$ is, however, not so trivial in the general case. One way to obtain $\xi(X)$ numerically is by solving the non-linear least-squares problem
 
@@ -80,7 +80,7 @@ $$
 \min_{\xi} || X - X(\xi) ||_2^2 ,
 $$
 
-for which we can use a [Gauss-Newton algorithm](https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm). If the map $X(\xi)$ is linear, however, its jacobian $J$ must be constant. We can choose an arbitrary point around which to perform a Taylor expansion of $X(\xi)$, for example, the reference space's origin $\xi_1 = 0$, which we know is mapped to $X_1$ in Lagrange elements, revealing 
+for which we can use a [Gauss-Newton algorithm](https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm). If the map $X(\xi)$ is linear, however, its jacobian $J$ must be constant. We can choose an arbitrary point around which to perform a Taylor expansion of $X(\xi)$, for example, the reference space's origin $\xi_1 = 0$, which we know is mapped to $X_1$ in Lagrange elements, revealing
 
 $$
 X(\xi) = X_1 + J \xi .
@@ -100,21 +100,21 @@ $$
 
 #### Derivatives
 
-Computing derivatives of basis functions $\phi_i(X)$ also amounts to computing derivatives of shape functions $N_i^e(X)$. Because our shape functions are now defined in reference space, we must use the [chain rule of differentiation](https://en.wikipedia.org/wiki/Chain_rule) to compute $\nabla_X N_i^e(X) = \nabla_X N_l(\xi(X))$, such that 
+Computing derivatives of basis functions $\phi_i(X)$ also amounts to computing derivatives of shape functions $N_i^e(X)$. Because our shape functions are now defined in reference space, we must use the [chain rule of differentiation](https://en.wikipedia.org/wiki/Chain_rule) to compute $\nabla_X N_i^e(X) = \nabla_X N_l(\xi(X))$, such that
 
 $$
-\nabla_X \phi_i(X) = \nabla_X N_i^e(X) = \nabla_\xi N_l(\xi(X)) \nabla_X \xi(X) 
+\nabla_X \phi_i(X) = \nabla_X N_i^e(X) = \nabla_\xi N_l(\xi(X)) \nabla_X \xi(X)
 $$
 
 for $X \in \Omega^e$.
 
-The gradient of the reference shape functions with respect to reference positions is easy enough to compute, since we just need to differentiate polynomials $\xi_x^a \xi_y^b \xi_z^c$. The jacobian $\nabla_X \xi(X)$ of the inverse map is, again, not so trivial in the general case. If a Gauss-Newton algorithm is used to compute $\xi(X)$ as described above, we need to compute and accumulate gradients of the Gauss-Newton iterations by chain rule. Once again, though, if the map is linear, we can use the previous derivations of the linear inverse map to get $\nabla_X \xi(X)$ as 
+The gradient of the reference shape functions with respect to reference positions is easy enough to compute, since we just need to differentiate polynomials $\xi_x^a \xi_y^b \xi_z^c$. The jacobian $\nabla_X \xi(X)$ of the inverse map is, again, not so trivial in the general case. If a Gauss-Newton algorithm is used to compute $\xi(X)$ as described above, we need to compute and accumulate gradients of the Gauss-Newton iterations by chain rule. Once again, though, if the map is linear, we can use the previous derivations of the linear inverse map to get $\nabla_X \xi(X)$ as
 
 $$
 \nabla_X \xi(X) = J^{-1}
 $$
 
-for a square jacobian $J$, and 
+for a square jacobian $J$, and
 
 $$
 \nabla_X \xi(X) = (J^T J)^{-1} J^T

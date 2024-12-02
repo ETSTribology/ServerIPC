@@ -1,0 +1,19 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Screenshot Configuration",
+    "type": "object",
+    "version": "1.0.0",
+    "required": ["enabled", "directory"],
+    "properties": {
+        "enabled": {
+            "type": "boolean",
+            "description": "Enable or disable screenshot processing.",
+            "default": false
+        },
+        "directory": {
+            "type": "string",
+            "description": "The directory where screenshots will be saved.",
+            "default": "screenshots"
+        }
+    }
+}

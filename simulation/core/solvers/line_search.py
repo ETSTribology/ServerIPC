@@ -1,10 +1,10 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 import numpy as np
-import torch
+
 from simulation.core.registry.container import RegistryContainer
 from simulation.core.registry.decorators import register
 
@@ -23,20 +23,17 @@ class LineSearchBase:
         self.grad_f = grad_f
         self.maxiters = maxiters
 
-    def search(
-        self, alpha0: float, xk: np.ndarray, dx: np.ndarray, gk: np.ndarray
-    ) -> float:
+    def search(self, alpha0: float, xk: np.ndarray, dx: np.ndarray, gk: np.ndarray) -> float:
         raise NotImplementedError("This method should be overridden by subclasses")
 
 
 # Ensure the line_search registry is initialized
 def _ensure_line_search_registry():
     registry_container = RegistryContainer()
-    if not hasattr(registry_container, 'line_search'):
+    if not hasattr(registry_container, "line_search"):
         logger.warning("Initializing line_search registry manually")
         registry_container.add_registry(
-            "line_search", 
-            "simulation.core.solvers.line_search.LineSearchBase"
+            "line_search", "simulation.core.solvers.line_search.LineSearchBase"
         )
 
 
@@ -62,9 +59,7 @@ class BacktrackingLineSearch(LineSearchBase):
         self.alpha_threshold = alpha_threshold
         self.grad_threshold = grad_threshold
 
-    def search(
-        self, alpha0: float, xk: np.ndarray, dx: np.ndarray, gk: np.ndarray
-    ) -> float:
+    def search(self, alpha0: float, xk: np.ndarray, dx: np.ndarray, gk: np.ndarray) -> float:
         logger.debug(f"Running Backtracking Line Search with alpha0={alpha0}")
         alphaj = alpha0
         Dfk = np.dot(gk, dx)
@@ -107,15 +102,13 @@ class WolfeLineSearch(LineSearchBase):
         self.c1 = c1
         self.c2 = c2
 
-    def search(
-        self, alpha0: float, xk: np.ndarray, dx: np.ndarray, gk: np.ndarray
-    ) -> float:
+    def search(self, alpha0: float, xk: np.ndarray, dx: np.ndarray, gk: np.ndarray) -> float:
         self.logger.debug(f"Running Wolfe Line Search with alpha0={alpha0}")
         alphaj = alpha0
         fk = self.f(xk)
         Dfk = np.dot(gk, dx)
 
-        for j in range(self.maxiters):
+        for _j in range(self.maxiters):
             x_new = xk + alphaj * dx
             f_new = self.f(x_new)
 
@@ -150,9 +143,7 @@ class StrongWolfeLineSearch(LineSearchBase):
         self.c1 = c1
         self.c2 = c2
 
-    def search(
-        self, alpha0: float, xk: np.ndarray, dx: np.ndarray, gk: np.ndarray
-    ) -> float:
+    def search(self, alpha0: float, xk: np.ndarray, dx: np.ndarray, gk: np.ndarray) -> float:
         self.logger.debug(f"Running Strong Wolfe Line Search with alpha0={alpha0}")
         alphaj = alpha0
         fk = self.f(xk)
@@ -196,9 +187,7 @@ class ParallelLineSearch(BacktrackingLineSearch):
         super().__init__(f, grad_f, maxiters, c, tau, alpha_threshold, grad_threshold)
         self.n_jobs = n_jobs
 
-    def search(
-        self, alpha0: float, xk: np.ndarray, dx: np.ndarray, gk: np.ndarray
-    ) -> float:
+    def search(self, alpha0: float, xk: np.ndarray, dx: np.ndarray, gk: np.ndarray) -> float:
         self.logger.debug(f"Running Parallel Line Search with alpha0={alpha0}")
         alphaj = alpha0
         Dfk = np.dot(gk, dx)
@@ -206,9 +195,7 @@ class ParallelLineSearch(BacktrackingLineSearch):
 
         # Early exit if directional derivative is near zero
         if np.abs(Dfk) < self.grad_threshold:
-            self.logger.debug(
-                "Directional derivative is near zero. Exiting line search."
-            )
+            self.logger.debug("Directional derivative is near zero. Exiting line search.")
             return 0.0
 
         def evaluate(alpha):
@@ -220,9 +207,7 @@ class ParallelLineSearch(BacktrackingLineSearch):
         # Parallel evaluation
         if self.n_jobs > 1:
             with ThreadPoolExecutor(max_workers=self.n_jobs) as executor:
-                futures = {
-                    executor.submit(evaluate, alpha): alpha for alpha in alpha_values
-                }
+                futures = {executor.submit(evaluate, alpha): alpha for alpha in alpha_values}
 
                 for future in as_completed(futures):
                     fx = future.result()

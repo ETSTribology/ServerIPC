@@ -11,9 +11,7 @@ logger = logging.getLogger(__name__)
 
 @CommandRegistry.register("start", aliases=["run", "begin"])
 class StartCommand(Command):
-    def execute(
-        self, simulation_state: SimulationState, request_id: str
-    ) -> ResponseMessage:
+    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
         """Starts the simulation if it's not already running."""
         if not simulation_state.running:
             simulation_state.running = True
@@ -33,9 +31,7 @@ class StartCommand(Command):
 
 @CommandRegistry.register("pause", aliases=["suspend"])
 class PauseCommand(Command):
-    def execute(
-        self, simulation_state: SimulationState, request_id: str
-    ) -> ResponseMessage:
+    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
         """Pauses the simulation if it's currently running."""
         if simulation_state.running:
             simulation_state.running = False
@@ -55,9 +51,7 @@ class PauseCommand(Command):
 
 @CommandRegistry.register("stop", aliases=["halt", "terminate"])
 class StopCommand(Command):
-    def execute(
-        self, simulation_state: SimulationState, request_id: str
-    ) -> ResponseMessage:
+    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
         """Stops the simulation if it's currently running."""
         if simulation_state.running:
             simulation_state.running = False
@@ -77,9 +71,7 @@ class StopCommand(Command):
 
 @CommandRegistry.register("resume", aliases=["continue"])
 class ResumeCommand(Command):
-    def execute(
-        self, simulation_state: SimulationState, request_id: str
-    ) -> ResponseMessage:
+    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
         """Resumes the simulation if it's paused."""
         if not simulation_state.running:
             simulation_state.running = True
@@ -99,9 +91,7 @@ class ResumeCommand(Command):
 
 @CommandRegistry.register("play", aliases=["continue"])
 class PlayCommand(Command):
-    def execute(
-        self, simulation_state: SimulationState, request_id: str
-    ) -> ResponseMessage:
+    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
         """Plays the simulation if it's not already playing."""
         if not simulation_state.running:
             simulation_state.running = True
@@ -121,9 +111,7 @@ class PlayCommand(Command):
 
 @CommandRegistry.register("kill", aliases=["exit", "terminate"])
 class KillCommand(Command):
-    def execute(
-        self, simulation_state: SimulationState, request_id: str
-    ) -> ResponseMessage:
+    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
         """Kills the simulation and exits the application."""
         logger.info("Killing simulation.")
         simulation_state.communication_client.close()
@@ -146,9 +134,7 @@ class ResetCommand(Command):
         """
         self.reset_function = reset_function
 
-    def execute(
-        self, simulation_state: SimulationState, request_id: str
-    ) -> ResponseMessage:
+    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
         """Resets the simulation state.
 
         Args:

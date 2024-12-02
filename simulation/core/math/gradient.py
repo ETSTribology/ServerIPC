@@ -62,9 +62,7 @@ class Gradient(GradientBase):
 
         # Cannot compute gradient without barrier stiffness
         if self.params.kB is None:
-            logger.debug(
-                "Barrier stiffness not initialized. Initializing barrier parameters."
-            )
+            logger.debug("Barrier stiffness not initialized. Initializing barrier parameters.")
             binit = BarrierInitializer(self.params)
             binit(x, gU, gB)
             kB = self.params.kB

@@ -4,6 +4,7 @@ from functools import lru_cache
 
 import ipctk
 import numpy as np
+
 from simulation.core.parameters import ParametersBase
 from simulation.core.registry.container import RegistryContainer
 from simulation.core.registry.decorators import register
@@ -52,9 +53,7 @@ class BarrierUpdater(BarrierUpdaterBase):
 
         BX = to_surface(xk, mesh, cmesh)
         dcurrent = cconstraints.compute_minimum_distance(cmesh, BX)
-        kB_new = ipctk.update_barrier_stiffness(
-            dprev, dcurrent, maxkB, kB, bboxdiag, dmin=dmin
-        )
+        kB_new = ipctk.update_barrier_stiffness(dprev, dcurrent, maxkB, kB, bboxdiag, dmin=dmin)
         self.params.kB = kB_new
         self.params.dprev = dcurrent
 

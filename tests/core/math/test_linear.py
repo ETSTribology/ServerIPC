@@ -1,17 +1,18 @@
-import pytest
-import numpy as np
-import scipy.sparse as sp
 import logging
 
+import numpy as np
+import pytest
+import scipy.sparse as sp
+
 from simulation.core.solvers.linear import (
-    LinearSolverBase,
-    LDLTSolver,
-    CholeskySolver,
     CGSolver,
-    LUSolver,
+    CholeskySolver,
     DirectSolver,
+    LDLTSolver,
+    LinearSolverBase,
     LinearSolverFactory,
-    RegistryContainer
+    LUSolver,
+    RegistryContainer,
 )
 
 
@@ -19,7 +20,7 @@ def create_sparse_matrix(n=10):
     """Create a symmetric positive definite sparse matrix."""
     # Create a diagonal matrix with random positive values
     diag = np.random.rand(n) + 1.0
-    A = sp.diags(diag, format='csc')
+    A = sp.diags(diag, format="csc")
     return A
 
 
@@ -43,35 +44,38 @@ class TestLinearSolvers:
         dofs = np.arange(n)
         return A, b, x_true, dofs
 
-    @pytest.mark.parametrize("solver_class,solver_name", [
-        (LDLTSolver, 'ldlt'),
-        (CholeskySolver, 'chol'),
-        (CGSolver, 'cg'),
-        (LUSolver, 'lu'),
-        (DirectSolver, 'direct')
-    ])
+    @pytest.mark.parametrize(
+        "solver_class,solver_name",
+        [
+            (LDLTSolver, "ldlt"),
+            (CholeskySolver, "chol"),
+            (CGSolver, "cg"),
+            (LUSolver, "lu"),
+            (DirectSolver, "direct"),
+        ],
+    )
     def test_linear_solvers(self, matrix_and_vector, solver_class, solver_name, caplog):
         """Test various linear solvers."""
         caplog.set_level(logging.DEBUG)
-        
+
         A, b, x_true, dofs = matrix_and_vector
-        
+
         # Create solver
         solver = solver_class(dofs)
-        
+
         # Solve the system
         x_solved = solver.solve(A, b)
-        
+
         # Check logging
-        assert any(f'{solver_name.upper()}' in record.message for record in caplog.records)
-        
+        assert any(f"{solver_name.upper()}" in record.message for record in caplog.records)
+
         # Check solution
         np.testing.assert_allclose(x_solved[dofs], x_true, rtol=1e-5)
 
     def test_solver_with_different_matrix_sizes(self):
         """Test solvers with different matrix sizes."""
         solver_classes = [LDLTSolver, CholeskySolver, CGSolver, LUSolver, DirectSolver]
-        
+
         sizes = [5, 10, 20]
         for size in sizes:
             for solver_class in solver_classes:
@@ -80,11 +84,11 @@ class TestLinearSolvers:
                 x_true = np.random.rand(size)
                 b = A.dot(x_true)
                 dofs = np.arange(size)
-                
+
                 # Create and solve
                 solver = solver_class(dofs)
                 x_solved = solver.solve(A, b)
-                
+
                 # Check solution
                 np.testing.assert_allclose(x_solved[dofs], x_true, rtol=1e-5)
 
@@ -92,22 +96,18 @@ class TestLinearSolvers:
 class TestLinearSolverFactory:
     def test_linear_solver_factory_create_default(self):
         """Test creating linear solvers through the factory."""
-        linear_solver_methods = [
-            'default', 'ldlt', 
-            'chol', 'cg', 
-            'lu', 'direct'
-        ]
-        
+        linear_solver_methods = ["default", "ldlt", "chol", "cg", "lu", "direct"]
+
         dofs = np.arange(10)
         A = create_sparse_matrix(10)
         b = np.random.rand(10)
-        
+
         for method in linear_solver_methods:
             linear_solver = LinearSolverFactory.create(method, dofs)
-            
+
             # Validate linear solver instance
-            assert hasattr(linear_solver, 'solve')
-            
+            assert hasattr(linear_solver, "solve")
+
             # Solve the system
             x_solved = linear_solver.solve(A, b)
             assert x_solved.shape == b.shape
@@ -116,7 +116,7 @@ class TestLinearSolverFactory:
         """Test creating a linear solver with an invalid type raises an exception."""
         dofs = np.arange(10)
         with pytest.raises(Exception):
-            LinearSolverFactory.create('non_existent_linear_solver', dofs)
+            LinearSolverFactory.create("non_existent_linear_solver", dofs)
 
     def test_linear_solver_registry(self):
         """Test that linear solver methods are correctly registered."""
@@ -124,12 +124,8 @@ class TestLinearSolverFactory:
         linear_solver_registry = registry.linear_solver
 
         # Check that methods are registered
-        expected_methods = [
-            'default', 'ldlt', 
-            'chol', 'cg', 
-            'lu', 'direct'
-        ]
-        
+        expected_methods = ["default", "ldlt", "chol", "cg", "lu", "direct"]
+
         for method in expected_methods:
             assert method in linear_solver_registry
 
@@ -149,14 +145,14 @@ class TestCustomLinearSolverRegistration:
         registry = RegistryContainer()
         linear_solver_registry = registry.linear_solver
 
-        assert 'custom_linear_solver' in linear_solver_registry
-        assert linear_solver_registry['custom_linear_solver'] is CustomLinearSolver
+        assert "custom_linear_solver" in linear_solver_registry
+        assert linear_solver_registry["custom_linear_solver"] is CustomLinearSolver
 
         # Test creating through factory
         dofs = np.arange(10)
-        custom_linear_solver = LinearSolverFactory.create('custom_linear_solver', dofs)
+        custom_linear_solver = LinearSolverFactory.create("custom_linear_solver", dofs)
         assert isinstance(custom_linear_solver, CustomLinearSolver)
-        
+
         # Verify custom behavior
         A = create_sparse_matrix(10)
         b = np.random.rand(10)

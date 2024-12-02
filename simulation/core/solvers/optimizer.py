@@ -3,11 +3,11 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
-from typing import Callable, Optional, Type, Union
+from typing import Optional, Type
 
 import numpy as np
 import scipy as sp
-import torch
+
 from simulation.core.registry.container import RegistryContainer
 from simulation.core.registry.decorators import register
 from simulation.core.solvers.line_search import LineSearchFactory
@@ -120,9 +120,7 @@ class NewtonOptimizer(OptimizerBase):
                 gk = grad(xk)
                 gnorm = np.linalg.norm(gk, np.inf)
                 if gnorm < rtol:
-                    self.logger.info(
-                        f"Converged at iteration {k} with gradient norm {gnorm}"
-                    )
+                    self.logger.info(f"Converged at iteration {k} with gradient norm {gnorm}")
                     break
 
                 Hk = hess(xk)
@@ -145,9 +143,7 @@ class NewtonOptimizer(OptimizerBase):
                     gk = future_grad.result()
                     gnorm = np.linalg.norm(gk, np.inf)
                     if gnorm < rtol:
-                        self.logger.info(
-                            f"Converged at iteration {k} with gradient norm {gnorm}"
-                        )
+                        self.logger.info(f"Converged at iteration {k} with gradient norm {gnorm}")
                         break
 
                     if Hk_cache is None:
@@ -233,9 +229,7 @@ class BFGSOptimizer(OptimizerBase):
         for k in range(maxiters):
             gnorm = np.linalg.norm(gk, np.inf)
             if gnorm < rtol:
-                self.logger.info(
-                    f"BFGS converged at iteration {k} with gradient norm {gnorm}"
-                )
+                self.logger.info(f"BFGS converged at iteration {k} with gradient norm {gnorm}")
                 break
 
             pk = -Hk @ gk
@@ -305,9 +299,7 @@ class LBFGSOptimizer(OptimizerBase):
         for k in range(maxiters):
             gnorm = np.linalg.norm(gk, np.inf)
             if gnorm < rtol:
-                self.logger.info(
-                    f"L-BFGS converged at iteration {k} with gradient norm {gnorm}"
-                )
+                self.logger.info(f"L-BFGS converged at iteration {k} with gradient norm {gnorm}")
                 break
 
             # Two-loop recursion
@@ -405,9 +397,7 @@ class OptimizerFactory(metaclass=SingletonMeta):
                     dofs=kwargs.get("dofs"),
                     **linear_solver_kwargs,
                 )
-                logger.info(
-                    f"Linear solver '{linear_solver_method}' created successfully."
-                )
+                logger.info(f"Linear solver '{linear_solver_method}' created successfully.")
             except Exception as e:
                 logger.error(f"Failed to create linear solver: {e}")
                 raise
@@ -429,9 +419,7 @@ class OptimizerFactory(metaclass=SingletonMeta):
 
         if type_lower == "default":  # NewtonOptimizer
             if lsolver is None:
-                raise ValueError(
-                    "Linear solver 'lsolver' is required for Newton's method."
-                )
+                raise ValueError("Linear solver 'lsolver' is required for Newton's method.")
             optimizer_args.update(
                 {
                     "lsolver": lsolver,

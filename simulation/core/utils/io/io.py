@@ -4,11 +4,9 @@ from typing import Dict, List, Optional, Tuple
 import meshio
 import numpy as np
 import pbatoolkit as pbat
-from simulation.core.config.config import (
-    ConfigManager
-)
-from simulation.core.utils.modifier.transformation import apply_transformations
 
+from simulation.core.config.config import ConfigManager
+from simulation.core.utils.modifier.transformation import apply_transformations
 
 logger = logging.getLogger(__name__)
 
@@ -29,24 +27,22 @@ def load_mesh(path: str) -> Tuple[np.ndarray, np.ndarray]:
     try:
         imesh = meshio.read(path)
         V = imesh.points.astype(np.float64, order="C")
-        
+
         # Check for tetrahedral cells, including different possible keys
-        tetra_keys = ['tetra', 'tetrahedron', 'tetrahedral']
+        tetra_keys = ["tetra", "tetrahedron", "tetrahedral"]
         C = None
         for key in tetra_keys:
             C = imesh.cells_dict.get(key)
             if C is not None:
                 break
-        
+
         if C is None:
             logger.error(f"No tetrahedral cells found in the mesh file: {path}")
             raise ValueError(f"No tetrahedral cells found in the mesh file: {path}")
-        
+
         logger.info(f"Loaded mesh from {path}.")
-        logger.info(
-            f"Mesh contains {V.shape[0]} vertices and {C.shape[0]} tetrahedral cells."
-        )
-        
+        logger.info(f"Mesh contains {V.shape[0]} vertices and {C.shape[0]} tetrahedral cells.")
+
         C = C.astype(np.int64, order="C")
         return V, C
     except Exception as e:
@@ -90,9 +86,7 @@ def load_individual_meshes(
             material["percent_fixed"] = percent_fixed
 
             # Load transformation properties
-            scale, rotation, translation = ConfigManager().load_transform_properties(
-                input_entry
-            )
+            scale, rotation, translation = ConfigManager().load_transform_properties(input_entry)
 
             # Load mesh data (vertices and connectivity)
             V, C = load_mesh(path)
@@ -104,27 +98,19 @@ def load_individual_meshes(
             all_meshes.append((V_transformed, C))
             materials_list.append(material)
 
-            logger.info(
-                f"Mesh {idx + 1} loaded, transformed, and processed from {path}."
-            )
+            logger.info(f"Mesh {idx + 1} loaded, transformed, and processed from {path}.")
 
         except ValueError as ve:
-            logger.error(
-                f"Validation error for entry {idx + 1}: {ve}. Skipping this entry."
-            )
+            logger.error(f"Validation error for entry {idx + 1}: {ve}. Skipping this entry.")
         except Exception as e:
-            logger.error(
-                f"Unexpected error for entry {idx + 1}: {e}. Skipping this entry."
-            )
+            logger.error(f"Unexpected error for entry {idx + 1}: {e}. Skipping this entry.")
 
     return all_meshes, materials_list
 
 
 def combine_meshes(
     all_meshes: List[Tuple[np.ndarray, np.ndarray]], materials: List[Dict]
-) -> Tuple[
-    pbat.fem.Mesh, np.ndarray, np.ndarray, np.ndarray, List[int], Optional[List[Dict]]
-]:
+) -> Tuple[pbat.fem.Mesh, np.ndarray, np.ndarray, np.ndarray, List[int], Optional[List[Dict]]]:
     """Combines multiple meshes into a single mesh, optionally deduplicating vertices.
 
     Args:
@@ -158,9 +144,7 @@ def combine_meshes(
         # Update vertex offset for the next mesh
         vertex_offset += num_nodes
 
-        logger.debug(
-            f"Mesh {idx + 1}: {num_nodes} nodes, {num_elements} elements added."
-        )
+        logger.debug(f"Mesh {idx + 1}: {num_nodes} nodes, {num_elements} elements added.")
 
     # Stack all vertices and connectivity
     V = np.vstack(V_list)
@@ -183,9 +167,7 @@ def combine_meshes(
     )
 
     # Create pbatoolkit mesh
-    mesh = pbat.fem.Mesh(
-        unique_V.T, C_remapped.T, element=pbat.fem.Element.Tetrahedron, order=1
-    )
+    mesh = pbat.fem.Mesh(unique_V.T, C_remapped.T, element=pbat.fem.Element.Tetrahedron, order=1)
     V_combined, C_combined = mesh.X.T, mesh.E.T
 
     # Validate remapped connectivity

@@ -9,11 +9,11 @@ from functools import lru_cache
 from threading import Lock, Thread
 from typing import Any, Dict
 
-from simulation.core.registry.container import RegistryContainer
-from simulation.core.registry.decorators import register
-from simulation.core.utils.logs.message import *
 from minio import Minio
 from minio.error import S3Error
+
+from simulation.core.registry.container import RegistryContainer
+from simulation.core.registry.decorators import register
 from simulation.nets.db.db import DatabaseBase
 
 logger = logging.getLogger(__name__)
@@ -101,9 +101,9 @@ class DatabaseLogHandler(LogHandlerBase):
         except Exception as e:
             self.handleError(record)
             self.logger.error(
-                "Failed to emit log record to database: %s", 
-                e, 
-                extra={"handler_name": self.HANDLER_NAME}
+                "Failed to emit log record to database: %s",
+                e,
+                extra={"handler_name": self.HANDLER_NAME},
             )
 
 
@@ -225,9 +225,7 @@ class MinIOHandler(LogHandlerBase):
             # Retrieve existing logs if any
             existing_logs = []
             try:
-                response = self.minio_client.get_object(
-                    self.bucket_name, self.object_name
-                )
+                response = self.minio_client.get_object(self.bucket_name, self.object_name)
                 existing_logs = json.loads(response.read().decode("utf-8"))
                 response.close()
                 response.release_conn()
@@ -260,9 +258,7 @@ class MinIOHandler(LogHandlerBase):
             )
             self.log_buffer.clear()
         except Exception as e:
-            self.logger.error(
-                MINIO_FLUSH_FAILURE, e, extra={"handler_name": self.HANDLER_NAME}
-            )
+            self.logger.error(MINIO_FLUSH_FAILURE, e, extra={"handler_name": self.HANDLER_NAME})
 
     def close(self):
         """Flushes any remaining logs and stops the background thread."""

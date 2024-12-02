@@ -6,6 +6,7 @@ import threading
 from typing import Any, Dict, Optional
 
 import redis
+
 from simulation.nets.messages import RequestMessage, ResponseMessage
 from simulation.nets.nets import Nets
 from simulation.nets.serialization.factory import SerializerFactory
@@ -76,15 +77,11 @@ class Redis(Nets):
     def start_listener(self) -> None:
         """Starts a listener thread for incoming Redis messages."""
         self.pubsub = self.redis_client.pubsub()
-        self.pubsub.subscribe(
-            "simulation_commands"
-        )  # Subscribe to the simulation_commands channel
+        self.pubsub.subscribe("simulation_commands")  # Subscribe to the simulation_commands channel
         self.pubsub.subscribe(
             "simulation_responses"
         )  # Subscribe to the simulation_responses channel
-        self.listener_thread = threading.Thread(
-            target=self.listen_commands, daemon=True
-        )
+        self.listener_thread = threading.Thread(target=self.listen_commands, daemon=True)
         self.listener_thread.start()
         logger.info("RedisClient listener thread started.")
 
@@ -184,9 +181,7 @@ class Redis(Nets):
         except redis.RedisError as e:
             logger.error(f"Failed to publish data to Redis channel '{channel}': {e}")
 
-    def serialize_data(
-        self, data: Dict[str, Any], method: str = "json"
-    ) -> Optional[str]:
+    def serialize_data(self, data: Dict[str, Any], method: str = "json") -> Optional[str]:
         """Serializes data using the specified serializer."""
         try:
             logger.info("Serializing data.")

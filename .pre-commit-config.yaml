@@ -1,58 +1,91 @@
 repos:
+  # Linting with ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.1
+    hooks:
+      - id: ruff
+        language_version: python3.10
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: ^extern/
+
   # Python code formatting
   - repo: https://github.com/psf/black
-    rev: 24.2.0
+    rev: 24.10.0
     hooks:
       - id: black
-        language_version: python3.12
+        language_version: python3.10
         args: [--line-length=100]
+        exclude: ^extern/
 
   # Python import sorting
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
       - id: isort
+        language_version: python3.10
         args: ["--profile", "black", "--line-length=100"]
+        exclude: ^extern/
 
-  # Linting with flake8
+  # Static type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        language_version: python3.10
+        args: [
+          --ignore-missing-imports,
+          --allow-untyped-defs,
+          --check-untyped-defs
+        ]
+        exclude: ^extern/
+        stages: [manual]
+
+  # Optional linting with flake8
   - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
+    rev: 7.1.1
     hooks:
       - id: flake8
+        language_version: python3.10
         additional_dependencies: [
           'flake8-docstrings',
           'flake8-bugbear',
           'flake8-comprehensions',
         ]
         args: [
-          '--max-line-length=100', 
+          '--max-line-length=100',
           '--docstring-convention=google',
           '--ignore=D100,D101,D102,D103,D104,D105,D106,D107,E203,W503'
         ]
+        exclude: ^extern/
+        stages: [manual]
 
-  # Type checking with mypy
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-all]
-        args: [--ignore-missing-imports, --allow-untyped-defs]
-
-  # Security checks
+  # Optional security checks
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.7
+    rev: 1.8.0
     hooks:
       - id: bandit
+        language_version: python3.10
         args: ['-c', 'pyproject.toml']
         additional_dependencies: ['bandit[toml]']
+        stages: [manual]
 
-  # Prevent committing large files
+  # Python syntax validation
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
-      - id: check-added-large-files
-        args: ['--maxkb=500']
-      - id: trailing-whitespace
+      - id: check-ast
+      - id: debug-statements
       - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-added-large-files
+      - id: trailing-whitespace
+
+  # Error-prone code detection
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.19.0
+    hooks:
+      - id: pyupgrade
+        language_version: python3.10
+        args: [--py38-plus]
+        stages: [manual]
+
+default_language_version:
+  python: python3.10

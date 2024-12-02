@@ -2,26 +2,20 @@ import logging
 import sys
 import time
 from typing import Optional
-
-from core.contact.barrier_updater import BarrierUpdater, BarrierUpdaterFactory
-from core.contact.ccd import CCDBase, CCDFactory
-from core.math.gradient import GradientBase, GradientFactory
-from core.math.hessian import HessianBase, HessianFactory
-from core.math.potential import PotentialBase, PotentialFactory
-from core.parameters import Parameters, ParametersBase
-from core.solvers.line_search import LineSearchBase, LineSearchFactory
-from core.solvers.linear import LinearSolverBase, LinearSolverFactory
-from core.solvers.optimizer import OptimizerBase, OptimizerFactory
-from core.states.state import SimulationState
-from core.utils.modifier.mesh import to_surface
-from init import SimulationInitializer
-from nets.controller.factory import CommandDispatcher
-from nets.messages import RequestMessage, ResponseMessage
-
-# Add connection factories
-from core.connection.network import NetworkConnectionFactory
-from core.connection.storage import StorageConnectionFactory
-from core.connection.database import DatabaseConnectionFactory
+from simulation.core.contact.barrier_updater import BarrierUpdater, BarrierUpdaterFactory
+from simulation.core.contact.ccd import CCDBase, CCDFactory
+from simulation.core.math.gradient import GradientBase, GradientFactory
+from simulation.core.math.hessian import HessianBase, HessianFactory
+from simulation.core.math.potential import PotentialBase, PotentialFactory
+from simulation.core.parameters import Parameters, ParametersBase
+from simulation.core.solvers.line_search import LineSearchBase, LineSearchFactory
+from simulation.core.solvers.linear import LinearSolverBase, LinearSolverFactory
+from simulation.core.solvers.optimizer import OptimizerBase, OptimizerFactory
+from simulation.core.states.state import SimulationState
+from simulation.core.utils.modifier.mesh import to_surface
+from simulation.init import SimulationInitializer
+from simulation.nets.controller.factory import CommandDispatcher
+from simulation.nets.messages import RequestMessage, ResponseMessage
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +26,10 @@ class SimulationManager:
         self.simulation_state = self.initialize_simulation()
 
         # Add connection factories
-        self.network_factory = NetworkConnectionFactory()
-        self.storage_factory = StorageConnectionFactory()
-        self.database_factory = DatabaseConnectionFactory()
+        self.network_factory = NetsFactory()
+        self.storage_factory = StorageFactory()
+        self.database_factory = DatabaseFactory()
 
-        # Add factories to simulation state
-        self.simulation_state.set_attribute('network_factory', self.network_factory)
-        self.simulation_state.set_attribute('storage_factory', self.storage_factory)
-        self.simulation_state.set_attribute('database_factory', self.database_factory)
 
         # Existing factories
         self.line_search_factory = LineSearchFactory()
@@ -69,11 +59,7 @@ class SimulationManager:
         line_searcher = self.line_search_factory.create(
             type=line_search_method,
             f=self.simulation_state.get_attribute("hep"),
-            grad_f=(
-                self.simulation_state.get_attribute("gradient")
-                if grad_f_required
-                else None
-            ),
+            grad_f=(self.simulation_state.get_attribute("gradient") if grad_f_required else None),
             maxiters=config.get("line_search_maxiters", 20),
             c=config.get("c", 1e-4),
             tau=config.get("tau", 0.5),
@@ -165,12 +151,8 @@ class SimulationManager:
             mu=self.simulation_state.get_attribute("mu"),
             epsv=self.simulation_state.get_attribute("epsv"),
             barrier_potential=self.simulation_state.get_attribute("barrier_potential"),
-            friction_potential=self.simulation_state.get_attribute(
-                "friction_potential"
-            ),
-            broad_phase_method=self.simulation_state.get_attribute(
-                "broad_phase_method"
-            ),
+            friction_potential=self.simulation_state.get_attribute("friction_potential"),
+            broad_phase_method=self.simulation_state.get_attribute("broad_phase_method"),
         )
 
     def setup_potentials(self, params: ParametersBase) -> PotentialBase:
@@ -218,13 +200,11 @@ class SimulationManager:
                 "BX": BX.tolist(),
                 "faces": self.simulation_state.cmesh.faces.tolist(),
                 "face_materials": self.simulation_state.face_materials.tolist(),
-                "materials": [
-                    material.to_dict() for material in self.simulation_state.materials
-                ],
+                "materials": [material.to_dict() for material in self.simulation_state.materials],
             }
 
-            mesh_data_serialized = (
-                self.simulation_state.communication_client.serialize_data(mesh_data)
+            mesh_data_serialized = self.simulation_state.communication_client.serialize_data(
+                mesh_data
             )
 
             if mesh_data_serialized:
@@ -238,9 +218,7 @@ class SimulationManager:
                     f"Step {step}: Published mesh data to 'simulation_updates' channel."
                 )
                 return mesh_data_serialized
-            self.logger.warning(
-                f"Serialization failed at step {step}. Mesh data not published."
-            )
+            self.logger.warning(f"Serialization failed at step {step}. Mesh data not published.")
             return None
         except Exception as e:
             self.logger.error(f"Failed to prepare mesh data at step {step}: {e}")
@@ -248,9 +226,7 @@ class SimulationManager:
 
     def handle_command(self, dispatcher: CommandDispatcher) -> None:
         # Check for incoming commands
-        request_data = self.simulation_state.get_attribute(
-            "communication_client"
-        ).get_command()
+        request_data = self.simulation_state.get_attribute("communication_client").get_command()
         if request_data:
             try:
                 if isinstance(request_data, dict):
@@ -268,9 +244,7 @@ class SimulationManager:
         self.logger.info("Initializing simulation setup.")
         params = self.setup_parameters()
 
-        dispatcher = CommandDispatcher(
-            self.simulation_state, reset_function=self.reset_simulation
-        )
+        dispatcher = CommandDispatcher(self.simulation_state, reset_function=self.reset_simulation)
 
         self.logger.info("Starting simulation loop.")
         max_iters = 100000
@@ -284,9 +258,7 @@ class SimulationManager:
 
             # Check if simulation is running
             if not self.simulation_state.get_attribute("running"):
-                self.logger.debug(
-                    "Simulation is paused or not started. Waiting for commands."
-                )
+                self.logger.debug("Simulation is paused or not started. Waiting for commands.")
                 time.sleep(1)
                 continue
 
@@ -323,14 +295,10 @@ class SimulationManager:
             try:
                 params.vt = (xtp1 - params.xt) / params.dt
                 params.xt = xtp1
-                params.xtilde = (
-                    params.xt + params.dt * params.vt + (params.dt**2 * params.a)
-                )
+                params.xtilde = params.xt + params.dt * params.vt + (params.dt**2 * params.a)
                 self.logger.debug(f"Updated simulation state at step {step}.")
             except Exception as e:
-                self.logger.error(
-                    f"Failed to update simulation state at step {step}: {e}"
-                )
+                self.logger.error(f"Failed to update simulation state at step {step}: {e}")
                 continue
 
             # Prepare mesh data and publish updates
@@ -343,9 +311,7 @@ class SimulationManager:
         """Shuts down the simulation."""
         self.logger.info("Shutting down simulation.")
         try:
-            communication_client = self.simulation_state.get_attribute(
-                "communication_client"
-            )
+            communication_client = self.simulation_state.get_attribute("communication_client")
             if communication_client:
                 communication_client.close()
                 self.logger.info("Communication client closed successfully.")

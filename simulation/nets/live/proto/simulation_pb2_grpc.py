@@ -2,6 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 
 import grpc
+
 import simulation.nets.live.proto.simulation_pb2 as simulation__pb2
 
 GRPC_GENERATED_VERSION = "1.68.0"
@@ -11,9 +12,7 @@ _version_not_supported = False
 try:
     from grpc._utilities import first_version_is_lower
 
-    _version_not_supported = first_version_is_lower(
-        GRPC_VERSION, GRPC_GENERATED_VERSION
-    )
+    _version_not_supported = first_version_is_lower(GRPC_VERSION, GRPC_GENERATED_VERSION)
 except ImportError:
     _version_not_supported = True
 
@@ -27,7 +26,7 @@ if _version_not_supported:
     )
 
 
-class SimulationServiceStub(object):
+class SimulationServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -57,7 +56,7 @@ class SimulationServiceStub(object):
         )
 
 
-class SimulationServiceServicer(object):
+class SimulationServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def SendCommand(self, request, context):
@@ -101,13 +100,11 @@ def add_SimulationServiceServicer_to_server(servicer, server):
         "simulation.SimulationService", rpc_method_handlers
     )
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers(
-        "simulation.SimulationService", rpc_method_handlers
-    )
+    server.add_registered_method_handlers("simulation.SimulationService", rpc_method_handlers)
 
 
 # This class is part of an EXPERIMENTAL API.
-class SimulationService(object):
+class SimulationService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

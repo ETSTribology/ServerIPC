@@ -9,25 +9,18 @@ import ipctk
 import numpy as np
 import pbatoolkit as pbat
 import scipy as sp
-from core.states.state import SimulationState
-from core.utils.io.io import combine_meshes, load_individual_meshes
-from core.utils.logs.log import LoggingManager
-from core.utils.modifier.mesh import (
-    compute_face_to_element_mapping,
-    find_codim_vertices,
-)
-from nets.factory import (
+from simulation.core.states.state import SimulationState
+from simulation.core.utils.io.io import combine_meshes, load_individual_meshes
+from simulation.core.utils.logs.log import LoggingManager
+from simulation.core.utils.modifier.mesh import compute_face_to_element_mapping, find_codim_vertices
+from simulation.nets.factory import (
+    DatabaseConnectionFactory,
     NetsFactory,
     NetworkConnectionFactory,
     StorageConnectionFactory,
-    DatabaseConnectionFactory
 )
 
-from simulation.core.config.config import (
-    generate_default_config,
-    get_config_value,
-    load_config,
-)
+from simulation.core.config.config import generate_default_config, get_config_value, load_config
 
 logger = logging.getLogger(__name__)
 
@@ -94,9 +87,7 @@ class SimulationInitializer:
             self.logger.info("Logging has been initialized.")
 
             # Load simulation configuration
-            self.config = load_config(
-                config_file_path, generate_default_config(self.args)
-            )
+            self.config = load_config(config_file_path, generate_default_config(self.args))
             self.logger.info("Simulation configuration loaded successfully.")
             self.logger.debug(f"Configuration details: {self.config}")
 
@@ -145,9 +136,7 @@ class SimulationInitializer:
             self.logger.error(f"Failed to set up mass matrix: {e}")
             sys.exit(1)
 
-    def setup_external_forces(
-        self, mesh, materials, element_materials, Minv, gravity=9.81
-    ):
+    def setup_external_forces(self, mesh, materials, element_materials, Minv, gravity=9.81):
         self.logger.info("Setting up external forces.")
         try:
             g = np.zeros(mesh.dims)
@@ -168,9 +157,7 @@ class SimulationInitializer:
             Y = np.array([materials[i]["young_modulus"] for i in element_materials])
             nu = np.array([materials[i]["poisson_ratio"] for i in element_materials])
             psi = pbat.fem.HyperElasticEnergy.StableNeoHookean
-            hep, _, _, GNeU = pbat.fem.hyper_elastic_potential(
-                mesh, Y=Y, nu=nu, energy=psi
-            )
+            hep, _, _, GNeU = pbat.fem.hyper_elastic_potential(mesh, Y=Y, nu=nu, energy=psi)
             return hep, Y, nu, psi, detJeU, GNeU
         except Exception as e:
             self.logger.error(f"Failed to set up hyperelastic potential: {e}")
@@ -184,17 +171,13 @@ class SimulationInitializer:
             codim_vertices = find_codim_vertices(mesh, edges)
 
             if not codim_vertices:
-                collision_mesh = ipctk.CollisionMesh.build_from_full_mesh(
-                    V, edges, boundary_faces
-                )
+                collision_mesh = ipctk.CollisionMesh.build_from_full_mesh(V, edges, boundary_faces)
             else:
                 num_vertices = mesh.X.shape[1]
                 is_on_surface = ipctk.CollisionMesh.construct_is_on_surface(
                     num_vertices, edges, codim_vertices
                 )
-                collision_mesh = ipctk.CollisionMesh(
-                    is_on_surface, edges, boundary_faces
-                )
+                collision_mesh = ipctk.CollisionMesh(is_on_surface, edges, boundary_faces)
 
             normal_collisions = ipctk.NormalCollisions()
             tangential_collisions = ipctk.TangentialCollisions()
@@ -217,7 +200,7 @@ class SimulationInitializer:
         dirichlet_bc_list = []
         node_offset = 0
         try:
-            for idx, (material, num_nodes) in enumerate(zip(materials, num_nodes_list)):
+            for _idx, (material, num_nodes) in enumerate(zip(materials, num_nodes_list)):
                 percent_fixed = material.get("percent_fixed", 0.0)
                 if percent_fixed > 0.0:
                     node_indices = slice(node_offset, node_offset + num_nodes)
@@ -227,13 +210,12 @@ class SimulationInitializer:
                     dX = Xmax - Xmin
                     fix_threshold = Xmin[-1] + percent_fixed * dX[-1]
                     fixed_nodes = (
-                        np.where(mesh.X[-1, node_indices] <= fix_threshold)[0]
-                        + node_offset
+                        np.where(mesh.X[-1, node_indices] <= fix_threshold)[0] + node_offset
                     )
                     if fixed_nodes.size > 0:
-                        dirichlet_bc = np.repeat(
-                            fixed_nodes, mesh.dims
-                        ) * mesh.dims + np.tile(np.arange(mesh.dims), len(fixed_nodes))
+                        dirichlet_bc = np.repeat(fixed_nodes, mesh.dims) * mesh.dims + np.tile(
+                            np.arange(mesh.dims), len(fixed_nodes)
+                        )
                         dirichlet_bc_list.append(dirichlet_bc)
                 node_offset += num_nodes
 
@@ -242,9 +224,7 @@ class SimulationInitializer:
             else:
                 all_dirichlet_bc = np.array([])
 
-            total_dofs = np.setdiff1d(
-                np.arange(mesh.X.shape[1] * mesh.dims), all_dirichlet_bc
-            )
+            total_dofs = np.setdiff1d(np.arange(mesh.X.shape[1] * mesh.dims), all_dirichlet_bc)
             return total_dofs, all_dirichlet_bc
         except Exception as e:
             self.logger.error(f"Failed to set up boundary conditions: {e}")
@@ -391,9 +371,7 @@ class SimulationInitializer:
             logger.info(f"Loaded {len(all_meshes)} meshes.")
 
             # Combine all meshes into a single mesh
-            mesh, V, C, element_materials, num_nodes_list = combine_meshes(
-                all_meshes, materials
-            )
+            mesh, V, C, element_materials, num_nodes_list = combine_meshes(all_meshes, materials)
             logger.info("Meshes combined into a single mesh.")
 
             # Setup initial conditions
@@ -410,8 +388,8 @@ class SimulationInitializer:
             )
 
             # Setup hyperelastic potential
-            hep, Y_array, nu_array, psi, detJeU, GNeU = (
-                self.setup_hyperelastic_potential(mesh, materials, element_materials)
+            hep, Y_array, nu_array, psi, detJeU, GNeU = self.setup_hyperelastic_potential(
+                mesh, materials, element_materials
             )
 
             # Setup collision mesh and constraints
@@ -425,8 +403,8 @@ class SimulationInitializer:
             ) = self.setup_collision_mesh(mesh, V, C, element_materials)
 
             # Setup boundary conditions
-            degrees_of_freedom, dirichlet_boundary_conditions = (
-                self.setup_boundary_conditions(mesh, materials, num_nodes_list)
+            degrees_of_freedom, dirichlet_boundary_conditions = self.setup_boundary_conditions(
+                mesh, materials, num_nodes_list
             )
 
             # Setup collision potentials
@@ -490,9 +468,9 @@ class SimulationInitializer:
             )
 
             # Add connections to simulation state
-            self.simulation_state.set_attribute('network_connection', network_connection)
-            self.simulation_state.set_attribute('storage_connection', storage_connection)
-            self.simulation_state.set_attribute('database_connection', database_connection)
+            self.simulation_state.set_attribute("network_connection", network_connection)
+            self.simulation_state.set_attribute("storage_connection", storage_connection)
+            self.simulation_state.set_attribute("database_connection", database_connection)
 
             logger.info("Simulation state initialized successfully.")
 

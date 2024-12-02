@@ -1,0 +1,18 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Extensions Configuration",
+    "type": "object",
+    "version": "1.0.0",
+    "required": [],
+    "properties": {
+        "screenshot": {
+            "$ref": "extension/screenshot.json"
+        },
+        "mesh:": {
+            "$ref": "extension/mesh.json"
+        },
+        "board": {
+            "$ref": "extension/board.json"
+        }
+    }
+}

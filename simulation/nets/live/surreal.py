@@ -46,9 +46,7 @@ class SurrealStreaming(SurrealStreamingNets):
 
     def start_listener(self) -> None:
         """Starts a listener thread for incoming SurrealDB messages."""
-        self.listener_thread = threading.Thread(
-            target=self.listen_commands, daemon=True
-        )
+        self.listener_thread = threading.Thread(target=self.listen_commands, daemon=True)
         self.listener_thread.start()
         self.logger.info("SurrealDB listener thread started.")
 

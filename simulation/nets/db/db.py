@@ -5,11 +5,12 @@ from functools import lru_cache
 from typing import Any, Dict, List, Type
 
 import psycopg2
-from simulation.core.registry.container import RegistryContainer
-from simulation.core.registry.decorators import register
 from psycopg2 import sql
 from surrealdb import SurrealDB as SurrealClient
 from surrealdb import SurrealDbError
+
+from simulation.core.registry.container import RegistryContainer
+from simulation.core.registry.decorators import register
 from simulation.core.utils.singleton import SingletonMeta
 
 
@@ -45,6 +46,7 @@ class DatabaseBase(ABC):
 registry_container = RegistryContainer()
 registry_container.add_registry("database", "simulation.nets.db.db.DatabaseBase")
 
+
 @register(type="database", name="surrealdb")
 class SurrealDB(DatabaseBase):
     """SurrealDB implementation of DatabaseBase."""
@@ -67,9 +69,7 @@ class SurrealDB(DatabaseBase):
             self.logger.error(f"Failed to initialize SurrealDB client: {e}")
             raise
         except Exception as e:
-            self.logger.error(
-                f"Unexpected error during SurrealDB client initialization: {e}"
-            )
+            self.logger.error(f"Unexpected error during SurrealDB client initialization: {e}")
             raise
 
     def create_record(self, table: str, record: dict) -> dict:
@@ -88,23 +88,17 @@ class SurrealDB(DatabaseBase):
             self.logger.info(f"Record retrieved from table '{table}': {result}")
             return result
         except SurrealDbError as e:
-            self.logger.error(
-                f"Failed to retrieve record '{record_id}' from table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to retrieve record '{record_id}' from table '{table}': {e}")
             raise
 
     def update_record(self, table: str, record_id: str, updates: dict) -> dict:
         try:
             record_key = f"{table}:{record_id}"
             result = self.db.update(record_key, updates).result()
-            self.logger.info(
-                f"Record '{record_id}' updated in table '{table}': {result}"
-            )
+            self.logger.info(f"Record '{record_id}' updated in table '{table}': {result}")
             return result
         except SurrealDbError as e:
-            self.logger.error(
-                f"Failed to update record '{record_id}' in table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to update record '{record_id}' in table '{table}': {e}")
             raise
 
     def delete_record(self, table: str, record_id: str) -> None:
@@ -113,9 +107,7 @@ class SurrealDB(DatabaseBase):
             self.db.delete(record_key).result()
             self.logger.info(f"Record '{record_id}' deleted from table '{table}'.")
         except SurrealDbError as e:
-            self.logger.error(
-                f"Failed to delete record '{record_id}' from table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to delete record '{record_id}' from table '{table}': {e}")
             raise
 
     def query(self, query: str) -> List[Dict[str, Any]]:
@@ -199,14 +191,10 @@ class Postgres(DatabaseBase):
             if result:
                 self.logger.info(f"Record retrieved from table '{table}': {result}")
                 return {"id": result[0], "config": result[1]}
-            self.logger.warning(
-                f"No record found with ID '{record_id}' in table '{table}'."
-            )
+            self.logger.warning(f"No record found with ID '{record_id}' in table '{table}'.")
             return {}
         except psycopg2.Error as e:
-            self.logger.error(
-                f"Failed to retrieve record '{record_id}' from table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to retrieve record '{record_id}' from table '{table}': {e}")
             raise
 
     def update_record(self, table: str, record_id: str, updates: dict) -> dict:
@@ -223,18 +211,14 @@ class Postgres(DatabaseBase):
             self.cursor.execute(update_query, [json.dumps(updates), record_id])
             result = self.cursor.fetchone()
             if result:
-                self.logger.info(
-                    f"Record '{record_id}' updated in table '{table}': {result}"
-                )
+                self.logger.info(f"Record '{record_id}' updated in table '{table}': {result}")
                 return {"id": result[0], "config": result[1]}
             self.logger.warning(
                 f"No record found with ID '{record_id}' to update in table '{table}'."
             )
             return {}
         except psycopg2.Error as e:
-            self.logger.error(
-                f"Failed to update record '{record_id}' in table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to update record '{record_id}' in table '{table}': {e}")
             raise
 
     def delete_record(self, table: str, record_id: str) -> None:
@@ -248,9 +232,7 @@ class Postgres(DatabaseBase):
             self.cursor.execute(delete_query, [record_id])
             self.logger.info(f"Record '{record_id}' deleted from table '{table}'.")
         except psycopg2.Error as e:
-            self.logger.error(
-                f"Failed to delete record '{record_id}' from table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to delete record '{record_id}' from table '{table}': {e}")
             raise
 
     def query(self, query: str) -> List[Dict[str, Any]]:
@@ -342,14 +324,10 @@ class MySQL(DatabaseBase):
                 config = json.loads(config_json)
                 self.logger.info(f"Record retrieved from table '{table}': {result}")
                 return {"id": record_id, "config": config}
-            self.logger.warning(
-                f"No record found with ID '{record_id}' in table '{table}'."
-            )
+            self.logger.warning(f"No record found with ID '{record_id}' in table '{table}'.")
             return {}
         except Error as e:
-            self.logger.error(
-                f"Failed to retrieve record '{record_id}' from table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to retrieve record '{record_id}' from table '{table}': {e}")
             raise
 
     def update_record(self, table: str, record_id: str, updates: dict) -> dict:
@@ -360,9 +338,7 @@ class MySQL(DatabaseBase):
             self.cursor.execute(select_query, (record_id,))
             result = self.cursor.fetchone()
             if not result:
-                self.logger.warning(
-                    f"No record found with ID '{record_id}' in table '{table}'."
-                )
+                self.logger.warning(f"No record found with ID '{record_id}' in table '{table}'.")
                 return {}
             current_config = json.loads(result[0])
             # Update config
@@ -375,14 +351,10 @@ class MySQL(DatabaseBase):
             """
             self.cursor.execute(update_query, (updated_config_json, record_id))
             self.connection.commit()
-            self.logger.info(
-                f"Record '{record_id}' updated in table '{table}'."
-            )
+            self.logger.info(f"Record '{record_id}' updated in table '{table}'.")
             return {"id": record_id, "config": current_config}
         except Error as e:
-            self.logger.error(
-                f"Failed to update record '{record_id}' in table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to update record '{record_id}' in table '{table}': {e}")
             raise
 
     def delete_record(self, table: str, record_id: str) -> None:
@@ -395,9 +367,7 @@ class MySQL(DatabaseBase):
             self.connection.commit()
             self.logger.info(f"Record '{record_id}' deleted from table '{table}'.")
         except Error as e:
-            self.logger.error(
-                f"Failed to delete record '{record_id}' from table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to delete record '{record_id}' from table '{table}': {e}")
             raise
 
     def query(self, query: str) -> List[Dict[str, Any]]:
@@ -416,6 +386,7 @@ class MySQL(DatabaseBase):
         except Error as e:
             self.logger.error(f"Failed to execute query '{query}': {e}")
             raise
+
 
 @register(type="database", name="sqlite")
 class SQLite(DatabaseBase):
@@ -478,19 +449,15 @@ class SQLite(DatabaseBase):
             self.cursor.execute(select_query, (record_id,))
             result = self.cursor.fetchone()
             if result:
-                record_id = result['id']
-                config_json = result['config']
+                record_id = result["id"]
+                config_json = result["config"]
                 config = json.loads(config_json)
                 self.logger.info(f"Record retrieved from table '{table}' with ID {record_id}.")
                 return {"id": record_id, "config": config}
-            self.logger.warning(
-                f"No record found with ID '{record_id}' in table '{table}'."
-            )
+            self.logger.warning(f"No record found with ID '{record_id}' in table '{table}'.")
             return {}
         except sqlite3.Error as e:
-            self.logger.error(
-                f"Failed to retrieve record '{record_id}' from table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to retrieve record '{record_id}' from table '{table}': {e}")
             raise
 
     def update_record(self, table: str, record_id: str, updates: dict) -> dict:
@@ -501,11 +468,9 @@ class SQLite(DatabaseBase):
             self.cursor.execute(select_query, (record_id,))
             result = self.cursor.fetchone()
             if not result:
-                self.logger.warning(
-                    f"No record found with ID '{record_id}' in table '{table}'."
-                )
+                self.logger.warning(f"No record found with ID '{record_id}' in table '{table}'.")
                 return {}
-            current_config = json.loads(result['config'])
+            current_config = json.loads(result["config"])
             # Update config
             current_config.update(updates)
             updated_config_json = json.dumps(current_config)
@@ -516,14 +481,10 @@ class SQLite(DatabaseBase):
             """
             self.cursor.execute(update_query, (updated_config_json, record_id))
             self.connection.commit()
-            self.logger.info(
-                f"Record '{record_id}' updated in table '{table}'."
-            )
+            self.logger.info(f"Record '{record_id}' updated in table '{table}'.")
             return {"id": record_id, "config": current_config}
         except sqlite3.Error as e:
-            self.logger.error(
-                f"Failed to update record '{record_id}' in table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to update record '{record_id}' in table '{table}': {e}")
             raise
 
     def delete_record(self, table: str, record_id: str) -> None:
@@ -536,9 +497,7 @@ class SQLite(DatabaseBase):
             self.connection.commit()
             self.logger.info(f"Record '{record_id}' deleted from table '{table}'.")
         except sqlite3.Error as e:
-            self.logger.error(
-                f"Failed to delete record '{record_id}' from table '{table}': {e}"
-            )
+            self.logger.error(f"Failed to delete record '{record_id}' from table '{table}': {e}")
             raise
 
     def query(self, query: str) -> List[Dict[str, Any]]:
@@ -563,6 +522,7 @@ class SQLite(DatabaseBase):
         self.connection.close()
         self.logger.info(f"SQLite database '{self.database}' connection closed.")
 
+
 class DatabaseFactory(metaclass=SingletonMeta):
     """Factory for creating database instances."""
 
@@ -576,9 +536,7 @@ class DatabaseFactory(metaclass=SingletonMeta):
         """Retrieve and cache the database class from the registry."""
         db_cls = self.registry_container.get_database_class(type_lower)
         if not db_cls:
-            self.logger.error(
-                f"No database class registered under name '{type_lower}'."
-            )
+            self.logger.error(f"No database class registered under name '{type_lower}'.")
             raise ValueError(f"No database class registered under name '{type_lower}'.")
         return db_cls
 
@@ -597,6 +555,4 @@ class DatabaseFactory(metaclass=SingletonMeta):
             return db_instance
         except Exception as e:
             self.logger.error(f"Failed to create database '{type_lower}': {e}")
-            raise RuntimeError(
-                f"Error during database initialization for type '{type_lower}': {e}"
-            )
+            raise RuntimeError(f"Error during database initialization for type '{type_lower}': {e}")

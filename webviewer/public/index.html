@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Mesh Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <!-- Controls Panel -->
+    <div id="controls" class="absolute top-4 left-4 bg-white p-4 rounded-lg shadow-md max-w-sm overflow-y-auto max-h-screen">
+        <!-- Simulation Controls -->
+        <h2 class="text-lg font-bold mb-2">Simulation Controls</h2>
+        <div class="space-y-2">
+            <button id="startSimulation" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 w-full">Start</button>
+            <button id="stopSimulation" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full">Stop</button>
+            <button id="pauseSimulation" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 w-full">Pause</button>
+            <button id="playSimulation" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full">Play</button>
+        </div>
+        
+        <!-- Light Controls -->
+        <h2 class="text-lg font-bold mt-4 mb-2">Light Controls</h2>
+        <div class="space-y-2">
+            <label class="block">
+                <span class="text-gray-700">Ambient Light:</span>
+                <input type="range" id="ambientLight" min="0" max="1" step="0.1" class="w-full">
+            </label>
+            <label class="block">
+                <span class="text-gray-700">Directional Light:</span>
+                <input type="range" id="directionalLight" min="0" max="1" step="0.1" class="w-full">
+            </label>
+        </div>
+        
+        <!-- Renderer Controls -->
+        <h2 class="text-lg font-bold mt-4 mb-2">Renderer Controls</h2>
+        <div class="space-y-2">
+            <label class="flex items-center">
+                <input type="checkbox" id="showVertices" class="mr-2">
+                <span class="text-gray-700">Show Vertices</span>
+            </label>
+            <label class="flex items-center">
+                <input type="checkbox" id="showWireframe" class="mr-2">
+                <span class="text-gray-700">Show Wireframe</span>
+            </label>
+            <label class="flex items-center">
+                <input type="checkbox" id="showFPS" class="mr-2">
+                <span class="text-gray-700">Show FPS</span>
+            </label>
+            <label class="flex items-center">
+                <input type="checkbox" id="infiniteGrid" class="mr-2" checked>
+                <span class="text-gray-700">Infinite Grid</span>
+            </label>
+        </div>
+  
+        <!-- Scene Controls -->
+        <h2 class="text-lg font-bold mt-4 mb-2">Scene Controls</h2>
+        <div class="space-y-2">
+            <label class="block">
+                <span class="text-gray-700">Background Color:</span>
+                <input type="color" id="backgroundColor" class="mt-1">
+            </label>
+            <label class="block">
+                <span class="text-gray-700">Bloom Strength:</span>
+                <input type="range" id="bloomStrength" min="0" max="3" step="0.1" class="w-full">
+            </label>
+            <label class="flex items-center">
+                <input type="checkbox" id="shadowToggle" class="mr-2">
+                <span class="text-gray-700">Enable Shadows</span>
+            </label>
+            <label class="flex items-center">
+                <input type="checkbox" id="ssaoToggle" class="mr-2">
+                <span class="text-gray-700">Enable SSAO</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- FPS Display -->
+    <div id="fps" class="absolute top-4 right-4 bg-white p-2 rounded-lg shadow-md hidden"></div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/bundle.js"></script>
+</body>
+</html>

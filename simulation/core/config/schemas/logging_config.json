@@ -43,7 +43,7 @@
                     "default": true
                 },
                 "color_enabled": {
-                    "type": "boolean", 
+                    "type": "boolean",
                     "default": true
                 }
             }

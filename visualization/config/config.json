@@ -1,0 +1,43 @@
+{
+    "backend": {
+      "backend": "redis",
+      "config": {
+        "host": "localhost",
+        "port": 6379,
+        "db": 0
+      }
+    },
+    "visualization": {
+      "colorScheme": "dark",
+      "interactiveMode": true,
+      "loggingLevel": "INFO",
+      "performanceTracking": true,
+      "screenWidth": 1024,
+      "screenHeight": 768
+    },
+    "extensions": {
+      "screenshot": {
+        "enabled": true,
+        "directory": "/screenshots"
+      },
+      "mesh": {
+        "enabled": true,
+        "directory": "/meshes"
+      },
+      "board": {
+        "enabled": true,
+        "name": "tensorboard",
+        "directory": "/boards",
+        "host": "localhost",
+        "port": 6006
+      }
+    },
+    "storage": {
+        "backend": "local",
+        "config": {
+          "host": "localhost",
+          "port": 9000
+        }
+      }
+  }
+  

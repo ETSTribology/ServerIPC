@@ -4,6 +4,7 @@ from functools import lru_cache
 
 import ipctk
 import numpy as np
+
 from simulation.core.parameters import ParametersBase
 from simulation.core.registry.container import RegistryContainer
 from simulation.core.registry.decorators import register
@@ -68,9 +69,7 @@ class BarrierInitializer(BarrierInitializerBase):
         params.maxkB = maxkB
         params.dprev = dprev
 
-        logger.info(
-            f"Initialized barrier stiffness: kB={kB}, maxkB={maxkB}, dprev={dprev}"
-        )
+        logger.info(f"Initialized barrier stiffness: kB={kB}, maxkB={maxkB}, dprev={dprev}")
 
 
 class BarrierInitializerFactory(metaclass=SingletonMeta):

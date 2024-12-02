@@ -34,9 +34,7 @@ class Nets(ABC):
         pass
 
     @abstractmethod
-    def serialize_data(
-        self, data: Dict[str, Any], method: str = "pickle"
-    ) -> Optional[str]:
+    def serialize_data(self, data: Dict[str, Any], method: str = "pickle") -> Optional[str]:
         """Serializes data using the specified method."""
         pass
 

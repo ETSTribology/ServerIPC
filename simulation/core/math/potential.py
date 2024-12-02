@@ -89,9 +89,7 @@ class PotentialFactory:
         :return: A potential energy computation object.
         """
         type_lower = type.lower()
-        logger.debug(
-            f"Creating potential energy computation object of type '{type_lower}'."
-        )
+        logger.debug(f"Creating potential energy computation object of type '{type_lower}'.")
         try:
             # Retrieve the Potential class from the generalized registry
             registry_container = RegistryContainer()

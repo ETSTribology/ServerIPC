@@ -11,9 +11,7 @@ MINIO_FLUSH_UPLOAD = "Uploaded %d log records to MinIO as '%s'."
 MINIO_FLUSH_FAILURE = "Failed to upload log records to MinIO: %s"
 
 # HandlerFactory Log Messages
-HANDLER_FACTORY_INITIALIZED = (
-    "HandlerFactory initialized with provided HandlerRegistry."
-)
+HANDLER_FACTORY_INITIALIZED = "HandlerFactory initialized with provided HandlerRegistry."
 HANDLER_FACTORY_CREATION_SUCCESS = "Created handler '%s' with config: %s"
 HANDLER_FACTORY_CREATION_FAILURE = "Failed to create handler '%s': %s"
 

@@ -1,185 +1,107 @@
 # 3D Elastic Simulation with IPC
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/YourUsername/YourRepo/build.yml?branch=main)](https://github.com/YourUsername/YourRepo/actions)
-[![License](https://img.shields.io/github/license/YourUsername/YourRepo)](LICENSE)
-[![Python Version](https://img.shields.io/pypi/pyversions/your-package-name)](https://pypi.org/project/your-package-name/)
-[![Documentation Status](https://readthedocs.org/projects/your-project-name/badge/?version=latest)](https://your-project-name.readthedocs.io/en/latest/?badge=latest)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/ETSTribology/ServerIPC/build.yml?branch=main)](https://github.com/ETSTribology/ServerIPC/actions)
+[![License](https://img.shields.io/github/license/ETSTribology/ServerIPC)](LICENSE)
+[![Python Version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/)
+[![Documentation Status](https://readthedocs.org/projects/serverIPC/badge/?version=latest)](https://serverIPC.readthedocs.io/en/latest/?badge=latest)
 
-## Overview
+## Project Overview
 
-This project simulates 3D elastic bodies using linear Finite Element Method (FEM) with tetrahedral elements and Incremental Potential Contact (IPC). It integrates with Redis and MinIO for real-time communication, control, and data storage, enabling interactive simulations and data persistence.
+ServerIPC is an advanced 3D elastic simulation framework designed for precise mechanical behavior modeling. Leveraging Finite Element Method (FEM) and Incremental Potential Contact (IPC), this project enables high-fidelity simulation of complex material interactions.
 
-## Features
+### Scientific Context
 
-- **Finite Element Method (FEM)**: Simulates elastic deformations using tetrahedral meshes.
-- **Incremental Potential Contact (IPC)**: Handles collision detection and response efficiently.
-- **Real-time Communication Network**: Utilizes Redis for real-time communication between the simulation server and visualization client.
-- **Modular Design**: Organized into multiple modules for scalability and maintainability.
-- **Configurable**: Utilizes Hydra-Core for flexible configuration management.
+This simulation framework is specifically developed for tribological research, focusing on calculating friction coefficients between different material interfaces. It provides a computational platform for understanding mechanical interactions at microscopic scales.
+
+## Key Features
+
+### Computational Mechanics
+- **Finite Element Method (FEM)**: Advanced tetrahedral mesh-based elastic deformation simulation
+- **Incremental Potential Contact (IPC)**: Robust collision detection and response mechanism
+- **Multi-material Support**: Comprehensive material property database
+- **High-Performance Computing**: CUDA acceleration for GPU-enabled simulations
+
+### Networking and Data Management
+- **Real-time Communication**: Redis-powered communication infrastructure
+- **Distributed Storage**: MinIO integration for simulation data persistence
+- **Flexible Configuration**: Hydra-Core based dynamic configuration management
+
+### Technical Capabilities
+- Simulate complex material interactions
+- Calculate friction coefficients
+- Model non-linear material behaviors
+- Support for various material types (metals, polymers, composites)
 
 ## Installation
 
 ### Prerequisites
+- Python 3.8+
+- CUDA Toolkit (optional, for GPU acceleration)
+- CMake
+- Docker (recommended)
 
-- **Python 3.8+**
-- **CUDA Toolkit** (if using CUDA acceleration)
-- **CMake** (for building native extensions)
-- **Docker** (for running the simulation server in a container)
-
-
-
-### Create a Virtual Environment
+### Quick Setup
 
 ```bash
+# Clone the repository
+git clone https://github.com/ETSTribology/ServerIPC.git
+cd ServerIPC
+
+# Create virtual environment
 python3 -m venv venv
-source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-```
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-### Install Dependencies
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-### Install the Package
-
-To install the package with CUDA support and build the necessary C++ extensions, run:
-
-```bash
+# Install with CUDA support
 cd extern/ipc-toolkit
-pip install . --config-settings=cmake.args="-DCMAKE_BUILD_TYPE=Release -DIPC_TOOLKIT_WITH_CUDA=ON -DIPC_TOOLKIT_BUILD_PYTHON=ON -DCMAKE_CUDA_ARCHITECTURES=native"
+pip install . --config-settings=cmake.args="-DCMAKE_BUILD_TYPE=Release -DIPC_TOOLKIT_WITH_CUDA=ON"
 ```
 
+## Supported Materials
 
-## Usage
+The simulation supports a wide range of material properties, including:
+- Metals: Steel, Aluminum, Copper, Titanium
+- Polymers: PLA, ABS, PETG
+- Composites: Concrete, Glass
+- Elastomers: Rubber
 
-### Running the Simulation Server
+## Usage Example
 
-Use the `server.py` script to start the simulation server. The server can be configured via command-line arguments or a JSON/YAML configuration file.
+```python
+from simulation import SimulationManager
 
-### Controlling the Simulation via Redis
-
-The simulation listens to the `simulation_commands` channel in Redis. You can send commands to control the simulation:
-
-- **Start the Simulation**:
-
-  ```bash
-  redis-cli publish simulation_commands '{"command": "start"}'
-  ```
-
-- **Pause the Simulation**:
-
-  ```bash
-  redis-cli publish simulation_commands '{"command": "pause"}'
-  ```
-
-- **Resume the Simulation**:
-
-  ```bash
-  redis-cli publish simulation_commands '{"command": "resume"}'
-  ```
-
-- **Stop the Simulation**:
-
-  ```bash
-  redis-cli publish simulation_commands '{"command": "stop"}'
-  ```
-
-- **Kill the Simulation**:
-
-  ```bash
-  redis-cli publish simulation_commands '{"command": "kill"}'
-  ```
-
-### Receiving Simulation Updates
-
-Subscribe to the `simulation_updates` channel in Redis to receive real-time updates:
-
-```bash
-redis-cli subscribe simulation_updates
-```
-
-### Running the Visualization Client
-
-Use the `client.py` script to run the visualization client, which connects to the simulation server and displays the simulation in real-time.
-
-```bash
-python simulation/visualization/client.py \
-  --redis-host localhost \
-  --redis-port 6379 \
-  --redis-db 0
-```
-
-### Client Controls
-
-Within the visualization window, you can interact with the simulation:
-
-- **Start**: Start the simulation.
-- **Pause**: Pause the simulation.
-- **Resume**: Resume the simulation.
-- **Stop**: Stop the simulation and reset to the initial state.
-- **Reset**: Reset the visualization to the initial mesh state.
-- **Navigate Steps**: Use the step slider to navigate through simulation steps.
-
-## Example JSON Configuration
-
-Alternatively, you can use a JSON configuration file. Below is an example:
-
-```json
-{
-  "simulation": {
-    "input": "meshes/input_mesh.msh",
-    "percent_fixed": 0.1,
-    "mass_density": 1000.0,
-    "young_modulus": 6e9,
-    "poisson_ratio": 0.45,
-    "copies": 2
-  },
-  "communication": {
-    "redis": {
-      "host": "localhost",
-      "port": 6379,
-      "db": 0
+# Initialize simulation
+sim_manager = SimulationManager()
+sim_manager.configure(
+    material_a='steel',
+    material_b='rubber',
+    contact_parameters={
+        'friction_model': 'coulomb',
+        'normal_stiffness': 1e5
     }
-  },
-  "storage": {
-    "minio": {
-      "endpoint": "localhost:9000",
-      "access_key": "minioadmin",
-      "secret_key": "minioadminpassword",
-      "bucket": "simulation-data"
-    }
-  }
-}
+)
+
+# Run simulation
+results = sim_manager.run()
+print(f"Friction Coefficient: {results.friction_coefficient}")
 ```
 
-Run the simulation with the JSON config:
+## Documentation
 
-```bash
-python simulation/server.py --config config.json
-```
+Comprehensive documentation is available at [ServerIPC Documentation](https://serverIPC.readthedocs.io/)
 
-## Docker Compose Setup
+## Contributing
 
-Start the services:
-
-```bash
-docker-compose up -d
-```
+We welcome contributions! Please see our [Contributing Guidelines](docs/contributing.md)
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### Additional Improvements
+## Acknowledgements
 
-- **Configuration Management**: The project now uses Hydra-Core for flexible configuration management, allowing you to override configurations via command-line or environment variables.
-- **Logging**: Enhanced logging configuration for better debugging and monitoring.
-- **Error Handling**: Improved error handling for more robust execution.
-
-### References
-
-- **Hydra Documentation**: [https://hydra.cc/docs/intro/](https://hydra.cc/docs/intro/)
-- **Redis Documentation**: [https://redis.io/documentation](https://redis.io/documentation)
-- **MinIO Documentation**: [https://docs.min.io/](https://docs.min.io/)
-- **IPC Toolkit**: [https://ipc-sim.github.io/](https://ipc-sim.github.io/)
+- Tribology Research Group, École de Technologie Supérieure
+- IPC-Toolkit Contributors
+- NVIDIA CUDA Platform

@@ -4,6 +4,9 @@
 [submodule "ipc-toolkit"]
 	path = extern/ipc-toolkit
 	url = https://github.com/ipc-sim/ipc-toolkit.git
+[submodule "fTetWild"]
+	path = extern/fTetWild
+	url = https://github.com/wildmeshing/fTetWild
 [submodule "vcpkg"]
 	path = extern/vcpkg
 	url = https://github.com/microsoft/vcpkg.git

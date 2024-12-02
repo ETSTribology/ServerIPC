@@ -108,9 +108,7 @@ class HessianFactory:
             logger.error(str(ve))
             raise
         except Exception as e:
-            logger.error(
-                f"Failed to create Hessian computation method '{type_lower}': {e}"
-            )
+            logger.error(f"Failed to create Hessian computation method '{type_lower}': {e}")
             raise RuntimeError(
                 f"Error during Hessian computation initialization for method '{type_lower}': {e}"
             ) from e

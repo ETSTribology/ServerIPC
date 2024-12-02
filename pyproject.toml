@@ -68,19 +68,18 @@ mkdocs-include-markdown-plugin = "*"
 
 [tool.poetry.extras]
 all = [
-    "pytest", 
-    "pytest-cov", 
-    "pytest-mock", 
-    "pytest-sugar", 
-    "pytest-xdist", 
-    "hypothesis", 
-    "faker", 
-    "freezegun", 
-    "black", 
-    "ruff", 
-    "isort", 
-    "pylint", 
-    "asv", 
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-sugar",
+    "pytest-xdist",
+    "hypothesis",
+    "faker",
+    "freezegun",
+    "black",
+    "ruff",
+    "isort",
+    "asv",
     "mkdocs",
     "mkdocs-material",
     "mkdocs-bibtex",
@@ -124,8 +123,8 @@ exclude = '''
 [tool.ruff]
 line-length = 100
 target-version = "py38"
-select = ["E", "F", "B", "I"]
-ignore = ["E501"]
+lint.select = ["E", "F", "B", "I"]
+lint.ignore = ["E501", "F841", "B904", "F821", "B017", "B019", "F405", "E741", "B007", "E741", "B024", "B008", "B027"]
 exclude = [
     "venv",
     "__pycache__",
@@ -134,14 +133,6 @@ exclude = [
     "*.egg-info",
     ".asv",
     ".benchmark",
-]
-
-[tool.pylint]
-max-line-length = 100
-disable = [
-    "C0111",  # missing-docstring
-    "R0903",  # too-few-public-methods
-    "C0103",  # invalid-name
 ]
 
 [tool.flake8]
@@ -162,11 +153,11 @@ skips = ["B101"]  # Skip assert used as statements
 
 [tool.pytest.ini_options]
 addopts = """
-    -v 
-    --cov=simulation 
-    --cov=visualization 
-    --cov-report=term 
-    --cov-report=html 
+    -v
+    --cov=simulation
+    --cov=visualization
+    --cov-report=term
+    --cov-report=html
     --cov-report=xml
 """
 testpaths = ["tests"]

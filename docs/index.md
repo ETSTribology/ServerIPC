@@ -1,177 +1,107 @@
 # 3D Elastic Simulation with IPC
 
-## Overview
+[![Build Status](https://img.shields.io/github/actions/workflow/status/ETSTribology/ServerIPC/build.yml?branch=main)](https://github.com/ETSTribology/ServerIPC/actions)
+[![License](https://img.shields.io/github/license/ETSTribology/ServerIPC)](LICENSE)
+[![Python Version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/)
+[![Documentation Status](https://readthedocs.org/projects/serverIPC/badge/?version=latest)](https://serverIPC.readthedocs.io/en/latest/?badge=latest)
 
-This project simulates 3D elastic bodies using linear FEM tetrahedra and Incremental Potential Contact (IPC). It leverages Redis for communication and control, enabling real-time interaction with the simulation.
+## Project Overview
 
-## Features
+ServerIPC is an advanced 3D elastic simulation framework designed for precise mechanical behavior modeling. Leveraging Finite Element Method (FEM) and Incremental Potential Contact (IPC), this project enables high-fidelity simulation of complex material interactions.
 
-- **Finite Element Method (FEM)**: Simulates elastic deformations using tetrahedral meshes.
-- **Incremental Potential Contact (IPC)**: Handles collision detection and response.
-- **Redis Integration**: Allows controlling the simulation (start, pause, stop, etc.) and streaming simulation data.
-- **Modular Design**: Organized into multiple modules for scalability and maintainability.
+### Scientific Context
+
+This simulation framework is specifically developed for tribological research, focusing on calculating friction coefficients between different material interfaces. It provides a computational platform for understanding mechanical interactions at microscopic scales.
+
+## Key Features
+
+### Computational Mechanics
+- **Finite Element Method (FEM)**: Advanced tetrahedral mesh-based elastic deformation simulation
+- **Incremental Potential Contact (IPC)**: Robust collision detection and response mechanism
+- **Multi-material Support**: Comprehensive material property database
+- **High-Performance Computing**: CUDA acceleration for GPU-enabled simulations
+
+### Networking and Data Management
+- **Real-time Communication**: Redis-powered communication infrastructure
+- **Distributed Storage**: MinIO integration for simulation data persistence
+- **Flexible Configuration**: Hydra-Core based dynamic configuration management
+
+### Technical Capabilities
+- Simulate complex material interactions
+- Calculate friction coefficients
+- Model non-linear material behaviors
+- Support for various material types (metals, polymers, composites)
 
 ## Installation
 
-1. **Clone the Repository**
+### Prerequisites
+- Python 3.8+
+- CUDA Toolkit (optional, for GPU acceleration)
+- CMake
+- Docker (recommended)
 
-   ```bash
-   git clone https://github.com/ETSTribology/ServerIPC.git
-   cd elastic-simulation-ipc
-   ```
-
-2. **Create a Virtual Environment**
-
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-
-3. **Install Dependencies**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Available Materials
-
-| Material        | Young's Modulus (Pa) | Poisson's Ratio | Density (kg/m³) |
-|-----------------|----------------------|-----------------|-----------------|
-| **Wood**        | 1.0e10               | 0.35            | 600             |
-| **Steel**       | 2.1e11               | 0.30            | 7850            |
-| **Aluminum**    | 6.9e10               | 0.33            | 2700            |
-| **Concrete**    | 3.0e10               | 0.20            | 2400            |
-| **Rubber**      | 1.0e7                | 0.48            | 1100            |
-| **Copper**      | 1.1e11               | 0.34            | 8960            |
-| **Glass**       | 5.0e10               | 0.22            | 2500            |
-| **Titanium**    | 1.16e11              | 0.32            | 4500            |
-| **Brass**       | 1.0e11               | 0.34            | 8500            |
-| **PLA**         | 4.4e9                | 0.30            | 1250            |
-| **ABS**         | 2.3e9                | 0.35            | 1050            |
-| **PETG**        | 2.59e9               | 0.40            | 1300            |
-| **Hydrogel**    | 1.0e6                | 0.35            | 1000            |
-| **Polyacrylamide** | 1.0e6               | 0.45            | 1050            |
-
-## Usage
-
-Run the simulation using the main.py script with appropriate arguments.
+### Quick Setup
 
 ```bash
-python simulation/server.py -i meshes/input_mesh.msh --percent-fixed 0.1 -m 1000.0 -Y 6e9 -n 0.45 -c 2 --redis-host localhost --redis-port 6379 --redis-db 0
+# Clone the repository
+git clone https://github.com/ETSTribology/ServerIPC.git
+cd ServerIPC
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install with CUDA support
+cd extern/ipc-toolkit
+pip install . --config-settings=cmake.args="-DCMAKE_BUILD_TYPE=Release -DIPC_TOOLKIT_WITH_CUDA=ON"
 ```
 
-### Arguments
+## Supported Materials
 
-- `-i`, `--input`: Path to the input mesh file.
-- `--percent-fixed`: Percentage of the input mesh's bottom to fix (default: 0.1).
-- `-m`, `--mass-density`: Mass density (default: 1000.0).
-- `-Y`, `--young-modulus`: Young's modulus (default: 6e9).
-- `-n`, `--poisson-ratio`: Poisson's ratio (default: 0.45).
-- `-c`, `--copy`: Number of copies of the input model (default: 1).
-- `--redis-host`: Redis host address (default: localhost).
-- `--redis-port`: Redis port (default: 6379).
-- `--redis-db`: Redis database number (default: 0).
+The simulation supports a wide range of material properties, including:
+- Metals: Steel, Aluminum, Copper, Titanium
+- Polymers: PLA, ABS, PETG
+- Composites: Concrete, Glass
+- Elastomers: Rubber
 
-### Redis Commands
+## Usage Example
 
-The simulation listens to the `simulation_commands` channel in Redis. You can send commands like `start`, `pause`, `resume`, `stop`, `play`, and `kill` to control the simulation.
+```python
+from simulation import SimulationManager
 
-```bash
-# Start the simulation
-redis-cli publish simulation_commands start
-
-# Pause the simulation
-redis-cli publish simulation_commands pause
-
-# Resume the simulation
-redis-cli publish simulation_commands resume
-
-# Stop the simulation
-redis-cli publish simulation_commands stop
-
-# Kill the simulation
-redis-cli publish simulation_commands kill
-```
-
-### Simulation Updates
-
-The simulation publishes mesh updates to the `simulation_updates` channel in Redis. You can subscribe to this channel to receive real-time updates.
-
-```bash
-redis-cli subscribe simulation_updates
-```
-
-## Client Application Controls
-
-Within the Polyscope visualization window, you can interact with the simulation using the UI:
-
-- **Pause**: Pauses the simulation.
-- **Play**: Resumes the simulation.
-- **Stop**: Stops the simulation and resets the mesh to the initial state.
-- **Start**: Starts the simulation.
-- **Kill Simulation**: Terminates the simulation server.
-- **Reset to Initial State**: Resets the visualization to the initial mesh state.
-- **Select Step**: Navigate through different simulation steps.
-
-```bash
-python simulation/visualization/client.py --redis-host localhost --redis-port 6379 --redis-db 0
-```
-
-## Example JSON Configuration
-
-The simulation can also be controlled through a JSON configuration file. Below is an example configuration:
-
-```json
-{
-  "name": "Sample Simulation Configuration",
-  "inputs": [
-    {
-      "path": "meshes/input_mesh.msh",
-      "percent_fixed": 0.1,
-      "material": {
-        "density": 1000.0,
-        "young_modulus": 6e9,
-        "poisson_ratio": 0.45,
-        "color": [255, 255, 255, 1]
-      },
-      "transform": {
-        "scale": [1.0, 1.0, 1.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "translation": [0.0, 0.0, 0.0]
-      },
-      "force": {
-        "gravity": 9.81,
-        "top_force": 10,
-        "side_force": 0
-      }
+# Initialize simulation
+sim_manager = SimulationManager()
+sim_manager.configure(
+    material_a='steel',
+    material_b='rubber',
+    contact_parameters={
+        'friction_model': 'coulomb',
+        'normal_stiffness': 1e5
     }
-  ],
-  "friction": {
-    "friction_coefficient": 0.3,
-    "damping_coefficient": 1e-4
-  },
-  "simulation": {
-    "dhat": 1e-3,
-    "dmin": 1e-4,
-    "dt": 0.016
-  },
-  "server": {
-    "redis_host": "localhost",
-    "redis_port": 6379,
-    "redis_db": 0
-  },
-  "initial_conditions": {
-    "gravity": 9.81
-  }
-}
+)
+
+# Run simulation
+results = sim_manager.run()
+print(f"Friction Coefficient: {results.friction_coefficient}")
 ```
 
-### How to Use the JSON Config
+## Documentation
 
-To run the simulation using the JSON config file, you can provide the path to the file using the `--json` argument:
+Comprehensive documentation is available at [ServerIPC Documentation](https://serverIPC.readthedocs.io/)
 
-```bash
-python simulation/server.py --json config.json
-```
+## Contributing
 
-This configuration file defines the mesh input, material properties, transformation settings, external forces, friction parameters, and server details.
+We welcome contributions! Please see our [Contributing Guidelines](docs/contributing.md)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+- Tribology Research Group, École de Technologie Supérieure
+- IPC-Toolkit Contributors
+- NVIDIA CUDA Platform

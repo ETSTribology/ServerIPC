@@ -1,153 +1,101 @@
 # ServerIPC Installation Guide
 
-This guide is split into **Server Setup** and **Client Setup** for simplicity.
+## Prerequisites
 
----
+### System Requirements
+- **Operating System**: Linux, macOS, or Windows (WSL2)
+- **Python**: 3.9 - 3.11
+- **RAM**: 16 GB recommended
+- **Disk Space**: 10 GB
 
-## Server Setup
+### Software Dependencies
+- Python 3.9+
+- Git
+- Docker (optional)
+- CUDA Toolkit (optional, for GPU acceleration)
 
-### 1. Prerequisites
+## Quick Installation
 
-Ensure you have the following installed:
-
-- **Python**: Version 3.9 or higher
-- **Git**: For cloning the repository
-- **Docker**: For running external services
-
-### 2. Clone the Repository
-
-Open your terminal and run:
-
+### 1. Clone Repository
 ```bash
 git clone https://github.com/ETSTribology/ServerIPC.git
 cd ServerIPC
 ```
 
-### 3. Install Poetry
-
-Poetry manages the dependencies for the project. Install it with:
-
+### 2. Set Up Virtual Environment
 ```bash
+# Create virtual environment
+python3 -m venv serverIPC_env
+source serverIPC_env/bin/activate  # On Windows: serverIPC_env\Scripts\activate
+```
+
+### 3. Install Dependencies
+```bash
+# Install Poetry
 curl -sSL https://install.python-poetry.org | python3 -
-```
 
-Add Poetry to your `PATH`:
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Reload your shell configuration:
-
-```bash
-source ~/.bashrc  # or source ~/.zshrc
-```
-
-Verify installation:
-
-```bash
-poetry --version
-```
-
-### 4. Install Dependencies
-
-Run the following to install all server dependencies:
-
-```bash
+# Install project dependencies
 poetry install
+
+# Optional: Install with development tools
+poetry install --extras dev
 ```
 
-Activate the virtual environment:
-
+### 4. Optional: CUDA Setup
 ```bash
+# Install with CUDA support
+poetry run pip install . --config-settings=cmake.args="-DCUDA_TOOLKIT_ROOT_DIR=/path/to/cuda"
+```
+
+## Verification
+```bash
+# Check ServerIPC installation
+poetry run python -c "import simulation; print(simulation.__version__)"
+```
+
+## Troubleshooting
+
+### Common Issues
+1. **Dependency Conflicts**
+   ```bash
+   poetry update
+   poetry cache clear pypi --all
+   ```
+
+2. **Python Version**
+   - Ensure Python 3.9+ is installed
+   - Check `python3 --version`
+
+## Environment Management
+
+### Activate Environment
+```bash
+# Using Poetry
 poetry shell
+
+# Manually
+source serverIPC_env/bin/activate
 ```
 
-# ServerIPC Docker Setup
-
-This guide explains the Docker-based setup for the **ServerIPC** project, including a table of services and a Mermaid diagram for visualization.
-
----
-
-## Docker Services
-
-The project uses the following services, which can be configured via `docker-compose.yml`:
-
-| Service      | Description                                 | Ports         | Environment Variables                        | Volumes        |
-|--------------|---------------------------------------------|---------------|----------------------------------------------|----------------|
-| **Dragonfly** | Fast in-memory key-value store (Redis)      | `6379:6379`   | N/A                                          | `dragonfly-data:/data` |
-| **MinIO**    | Object storage system                       | `9000:9000`, `9001:9001` | `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`     | `minio_data:/data`, `minio_config:/root/.minio` |
-| **SurrealDB**| Advanced database for the simulation server | `8000:8000`   | `SURREALDB_USER`, `SURREALDB_PASSWORD`       | `surrealdb_data:/data` |
-
----
-
-## Mermaid Diagram
-
-```mermaid
-graph TD
-    A[Client Application] -->|Commands/Updates| B[Dragonfly (Redis)]
-    B -->|Pub/Sub Channel| C[ServerIPC Simulation]
-    C -->|Stores Mesh Data| D[MinIO (Object Storage)]
-    C -->|Stores Simulation Data| E[SurrealDB (Database)]
-```
-
----
-
-## Steps to Deploy Docker Services
-
-### 2. Start Docker Services
-
-Run the following command in your terminal to start all services:
-
+### Deactivate Environment
 ```bash
-docker-compose up -d
+# Exit Poetry shell
+exit
+
+# Manually deactivate
+deactivate
 ```
 
-### 3. Check the Status
+## Additional Resources
+- [Poetry Documentation](https://python-poetry.org/docs/)
+- [ServerIPC GitHub Repository](https://github.com/ETSTribology/ServerIPC)
 
-Verify that all services are running:
-
-```bash
-docker-compose ps
-```
+## Support
+For installation issues:
+1. Check [GitHub Issues](https://github.com/ETSTribology/ServerIPC/issues)
+2. Consult [Documentation](https://serverIPC.readthedocs.io/)
+3. Open a new issue with detailed error logs
 
 ---
 
-## Summary
-
-This setup uses **Dragonfly**, **MinIO**, and **SurrealDB** to handle the simulation's data and communication needs. Use the table to understand each service's purpose and the Mermaid diagram to visualize their interaction.
-
-Happy simulating! 🚀
-
-Start the services:
-
-```bash
-docker-compose up -d
-```
-
----
-
-## Client Setup
-
-### 1. Prerequisites
-
-Ensure you have the following installed:
-
-- **Python**: Version 3.9 or higher
-- **Redis CLI**: For sending commands to the server
-
-### 2. Connect to the Server
-
-Make sure the server is running and accessible at the appropriate Redis host (`localhost` by default).
-
-### 3. Run the Client
-
-Run the client to interact with the simulation:
-
-```bash
-python simulation/visualization/client.py --redis-host localhost --redis-port 6379 --redis-db 0
-```
-
----
-
-You're now ready to use **ServerIPC**!
+**Happy Simulating!** 🚀🔬

@@ -2,12 +2,7 @@ import logging
 import signal
 import sys
 
-from loop import SimulationManager
-from nets.factory import (
-    NetworkConnectionFactory, 
-    StorageConnectionFactory, 
-    DatabaseConnectionFactory
-)
+from simulation.loop import SimulationManager
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -53,9 +48,9 @@ def main():
         sys.exit(1)
 
     # Retrieve connection factories from simulation state
-    network_factory = simulation_manager.simulation_state.get_attribute('network_factory')
-    storage_factory = simulation_manager.simulation_state.get_attribute('storage_factory')
-    database_factory = simulation_manager.simulation_state.get_attribute('database_factory')
+    network_factory = simulation_manager.simulation_state.get_attribute("network_factory")
+    storage_factory = simulation_manager.simulation_state.get_attribute("storage_factory")
+    database_factory = simulation_manager.simulation_state.get_attribute("database_factory")
 
     # Create connection instances
     network_connection = network_factory.create_connection()
@@ -63,22 +58,18 @@ def main():
     database_connection = database_factory.create_connection()
 
     # Add connections to simulation state
-    simulation_manager.simulation_state.set_attribute('network_connection', network_connection)
-    simulation_manager.simulation_state.set_attribute('storage_connection', storage_connection)
-    simulation_manager.simulation_state.set_attribute('database_connection', database_connection)
+    simulation_manager.simulation_state.set_attribute("network_connection", network_connection)
+    simulation_manager.simulation_state.set_attribute("storage_connection", storage_connection)
+    simulation_manager.simulation_state.set_attribute("database_connection", database_connection)
 
     # Retrieve the communication client from the simulation state
-    communication_client = simulation_manager.simulation_state.get_attribute(
-        "communication_client"
-    )
+    communication_client = simulation_manager.simulation_state.get_attribute("communication_client")
     if communication_client is None:
         logger.error("SimulationState does not contain a communication client.")
         sys.exit(1)
 
     # Register signal handlers for graceful shutdown
-    signal.signal(
-        signal.SIGINT, lambda sig, frame: signal_handler(sig, frame, simulation_manager)
-    )
+    signal.signal(signal.SIGINT, lambda sig, frame: signal_handler(sig, frame, simulation_manager))
     signal.signal(
         signal.SIGTERM,
         lambda sig, frame: signal_handler(sig, frame, simulation_manager),

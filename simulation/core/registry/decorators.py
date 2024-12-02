@@ -14,20 +14,18 @@ def register(type: str, name: str):
         type_lower = type.lower()
         try:
             # Debug logging
-            logger.debug(f"Attempting to register '{cls.__name__}' as '{name}' in '{type_lower}' registry")
+            logger.debug(
+                f"Attempting to register '{cls.__name__}' as '{name}' in '{type_lower}' registry"
+            )
             logger.debug(f"Available registries: {list(registry_container._registries.keys())}")
-            
+
             # Access the appropriate registry based on the component type
             registry = getattr(registry_container, type_lower)
             if registry is None:
-                raise AttributeError(
-                    f"No registry found for component type '{type_lower}'."
-                )
+                raise AttributeError(f"No registry found for component type '{type_lower}'.")
             # Register the class using the registry's register method
             registry.register(name)(cls)
-            logger.info(
-                f"Registered '{cls.__name__}' as '{name}' in '{type_lower}' registry."
-            )
+            logger.info(f"Registered '{cls.__name__}' as '{name}' in '{type_lower}' registry.")
             return cls
         except AttributeError as ae:
             logger.error(f"AttributeError: {str(ae)}")

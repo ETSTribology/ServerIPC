@@ -6,10 +6,11 @@ from typing import Type
 import numpy as np
 import pbatoolkit as pbat
 import scipy as sp
+from scipy.sparse.linalg import cg, splu, spsolve
+
 from simulation.core.registry.container import RegistryContainer
 from simulation.core.registry.decorators import register
 from simulation.core.utils.singleton import SingletonMeta
-from scipy.sparse.linalg import cg, splu, spsolve
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -92,9 +93,7 @@ class CholeskySolver(LinearSolverBase):
             bd = b[dofs]
 
             # Perform Cholesky decomposition using pbatoolkit
-            Add_chol = pbat.math.linalg.chol(
-                Add, solver=pbat.math.linalg.SolverBackend.SuiteSparse
-            )
+            Add_chol = pbat.math.linalg.chol(Add, solver=pbat.math.linalg.SolverBackend.SuiteSparse)
             Add_chol.compute(
                 sp.sparse.tril(Add),
                 pbat.math.linalg.Cholmod.SparseStorage.SymmetricLowerTriangular,
@@ -131,9 +130,7 @@ class CGSolver(LinearSolverBase):
                 self.logger.debug("CG method converged successfully.")
             else:
                 self.logger.warning(f"CG did not converge. Info: {info}.")
-                raise sp.sparse.linalg.ConvergenceError(
-                    f"CG did not converge. Info: {info}"
-                )
+                raise sp.sparse.linalg.ConvergenceError(f"CG did not converge. Info: {info}")
 
             # Assemble full solution
             x = np.zeros_like(b)
@@ -250,6 +247,4 @@ class LinearSolverFactory(metaclass=SingletonMeta):
             raise
         except Exception as e:
             logger.error(f"Failed to create solver '{type_lower}': {e}")
-            raise RuntimeError(
-                f"Error during solver initialization for method '{type_lower}': {e}"
-            )
+            raise RuntimeError(f"Error during solver initialization for method '{type_lower}': {e}")

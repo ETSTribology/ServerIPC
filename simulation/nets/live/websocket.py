@@ -5,6 +5,7 @@ import threading
 from typing import Any, Dict, Optional
 
 import websockets
+
 from simulation.nets.nets import Nets
 from simulation.nets.serialization.factory import SerializerFactory
 
@@ -58,14 +59,10 @@ class WebSocket(Nets):
             return None
 
     def set_data(self, key: str, data: str) -> None:
-        raise NotImplementedError(
-            "set_data is not implemented for WebSocketCommunicationClient."
-        )
+        raise NotImplementedError("set_data is not implemented for WebSocketCommunicationClient.")
 
     def get_data(self, key: str) -> Optional[Any]:
-        raise NotImplementedError(
-            "get_data is not implemented for WebSocketCommunicationClient."
-        )
+        raise NotImplementedError("get_data is not implemented for WebSocketCommunicationClient.")
 
     def publish_data(self, channel: str, data: str) -> None:
         # WebSocket doesn't inherently support channels; handle as per your protocol
@@ -76,9 +73,7 @@ class WebSocket(Nets):
         except Exception as e:
             logger.error(f"Failed to send data over WebSocket: {e}")
 
-    def serialize_data(
-        self, data: Dict[str, Any], method: str = "pickle"
-    ) -> Optional[str]:
+    def serialize_data(self, data: Dict[str, Any], method: str = "pickle") -> Optional[str]:
         try:
             logger.info("Serializing data using SerializerFactory.")
             serializer = self.serializer_factory.get_serializer(method)

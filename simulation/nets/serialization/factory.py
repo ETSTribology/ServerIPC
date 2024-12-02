@@ -1,10 +1,10 @@
+from simulation.core.utils.singleton import SingletonMeta
 from simulation.nets.serialization.serialization import (
     BSONSerializer,
     JSONSerializer,
     PickleSerializer,
     Serializer,
 )
-from simulation.core.utils.singleton import SingletonMeta
 
 
 class SerializerFactory(metaclass=SingletonMeta):

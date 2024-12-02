@@ -1,19 +1,12 @@
 from __future__ import annotations
 
-from typing import (
-    Any,
-    Dict,
-    Generic,
-    Type,
-    TypeVar,
-    Callable
-)
-
 import logging
+from typing import Callable, Generic, TypeVar
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")  # Generic type variable
+
 
 class Registry(Generic[T]):
     """A generic registry class to register and retrieve classes.
@@ -25,7 +18,7 @@ class Registry(Generic[T]):
 
     """
 
-    def __init__(self, base_class: Type[T]):
+    def __init__(self, base_class: type[T]):
         """Initialize the registry with a base class.
 
         Parameters
@@ -37,10 +30,8 @@ class Registry(Generic[T]):
         if not isinstance(base_class, type):
             raise TypeError("base_class must be a class type.")
         self.base_class = base_class
-        self._registry: Dict[str, Callable[..., T]] = {}
-        logger.debug(
-            f"Initialized registry for base class '{self.base_class.__name__}'."
-        )
+        self._registry: dict[str, Callable[..., T]] = {}
+        logger.debug(f"Initialized registry for base class '{self.base_class.__name__}'.")
 
     def register(self, name: str):
         """Decorator to register a class with a given name.
@@ -52,7 +43,7 @@ class Registry(Generic[T]):
 
         """
 
-        def decorator(cls: Type[T]):
+        def decorator(cls: type[T]):
             if not isinstance(name, str) or not name.strip():
                 raise ValueError("Registration name must be a non-empty string.")
             if not issubclass(cls, self.base_class):
@@ -70,7 +61,7 @@ class Registry(Generic[T]):
 
         return decorator
 
-    def get(self, name: str) -> Type[T]:
+    def get(self, name: str) -> type[T]:
         """Retrieve a class from the registry by name.
 
         Parameters
@@ -94,12 +85,8 @@ class Registry(Generic[T]):
         name_lower = name.lower()
         if name_lower not in self._registry:
             available = ", ".join(self._registry.keys())
-            logger.error(
-                f"Unsupported type: '{name_lower}'. Available types: {available}."
-            )
-            raise ValueError(
-                f"Unsupported type: '{name_lower}'. Available types: {available}."
-            )
+            logger.error(f"Unsupported type: '{name_lower}'. Available types: {available}.")
+            raise ValueError(f"Unsupported type: '{name_lower}'. Available types: {available}.")
         cls = self._registry[name_lower]
         logger.debug(f"Retrieved class '{cls.__name__}' for type '{name_lower}'.")
         return cls
@@ -143,7 +130,7 @@ class Registry(Generic[T]):
         return iter(self._registry.keys())
 
     @property
-    def registry(self) -> Dict[str, Callable[..., T]]:
+    def registry(self) -> dict[str, Callable[..., T]]:
         """Expose the internal registry dictionary.
 
         Returns
