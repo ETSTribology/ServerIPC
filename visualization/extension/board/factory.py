@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict
+
 from visualization.core.utils.singleton import SingletonMeta
-from visualization.extension.board.board import Board
 from visualization.extension.board.tensorboard import TensorBoard
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class BoardFactory(metaclass=SingletonMeta):
                 board_instance = TensorBoard(config)
             else:
                 raise ValueError(f"Unknown board type: {board_type}")
-            
+
             BoardFactory._instances[board_type] = board_instance
-        
+
         return BoardFactory._instances[board_type]

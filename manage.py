@@ -11,7 +11,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import typer
 from rich.console import Console
@@ -22,9 +22,7 @@ console = Console()
 
 # Create Typer app
 app = typer.Typer(
-    help="ServerIPC Project Management CLI",
-    add_completion=True,
-    rich_markup_mode="rich"
+    help="ServerIPC Project Management CLI", add_completion=True, rich_markup_mode="rich"
 )
 
 # Configure logging
@@ -82,10 +80,9 @@ class DependencyManager:
 
             cmake_args = ["-DCMAKE_BUILD_TYPE='Release'"]
             if with_cuda:
-                cmake_args.extend([
-                    "-DIPC_TOOLKIT_WITH_CUDA='ON'",
-                    "-DCMAKE_CUDA_ARCHITECTURES='native'"
-                ])
+                cmake_args.extend(
+                    ["-DIPC_TOOLKIT_WITH_CUDA='ON'", "-DCMAKE_CUDA_ARCHITECTURES='native'"]
+                )
             else:
                 cmake_args.append("-DIPC_TOOLKIT_WITH_CUDA='OFF'")
 
@@ -115,7 +112,7 @@ class DependencyManager:
     ):
         """Install project dependencies."""
         detected_env = method or DependencyManager.detect_environment()
-        
+
         try:
             # Install dependencies based on environment
             if detected_env == "conda":

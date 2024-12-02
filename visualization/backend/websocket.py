@@ -1,6 +1,9 @@
+from typing import Any, Dict
+
 import websocket
-from typing import Dict, Any
+
 from visualization.backend.backend import Backend
+
 
 class WebSocketBackend(Backend):
     def __init__(self, config: Dict[str, Any]):

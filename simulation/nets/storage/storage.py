@@ -5,11 +5,12 @@ from abc import ABC, abstractmethod
 from functools import lru_cache
 from typing import List, Type
 
+from minio import Minio
+from minio.error import S3Error
+
 from simulation.core.registry.container import RegistryContainer
 from simulation.core.registry.decorators import register
 from simulation.core.utils.singleton import SingletonMeta
-from minio import Minio
-from minio.error import S3Error
 
 logger = logging.getLogger(__name__)
 

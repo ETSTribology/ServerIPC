@@ -1,5 +1,6 @@
+from typing import Any, Dict
+
 import grpc
-from typing import Dict, Any
 
 from visualization.backend.backend import Backend
 
@@ -14,12 +15,20 @@ class GrpcBackend(Backend):
         try:
             credentials = None
             if self.config["credentials"].get("certificate"):
-                with open(self.config["credentials"]["certificate"], "rb") as cert, \
-                        open(self.config["credentials"]["privateKey"], "rb") as key:
+                with (
+                    open(self.config["credentials"]["certificate"], "rb") as cert,
+                    open(self.config["credentials"]["privateKey"], "rb") as key,
+                ):
                     credentials = grpc.ssl_channel_credentials(cert.read(), key.read())
             target = f"{self.config['host']}:{self.config['port']}"
-            self.channel = grpc.secure_channel(target, credentials) if credentials else grpc.insecure_channel(target)
-            self.stub = getattr(__import__(self.config["service"]), self.config["service"]).Stub(self.channel)
+            self.channel = (
+                grpc.secure_channel(target, credentials)
+                if credentials
+                else grpc.insecure_channel(target)
+            )
+            self.stub = getattr(__import__(self.config["service"]), self.config["service"]).Stub(
+                self.channel
+            )
             self.connected = True
             logger.info("Connected to gRPC backend.")
         except Exception as e:

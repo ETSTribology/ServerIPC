@@ -9,6 +9,8 @@ import ipctk
 import numpy as np
 import pbatoolkit as pbat
 import scipy as sp
+
+from simulation.core.config.config import generate_default_config, get_config_value, load_config
 from simulation.core.states.state import SimulationState
 from simulation.core.utils.io.io import combine_meshes, load_individual_meshes
 from simulation.core.utils.logs.log import LoggingManager
@@ -19,8 +21,6 @@ from simulation.nets.factory import (
     NetworkConnectionFactory,
     StorageConnectionFactory,
 )
-
-from simulation.core.config.config import generate_default_config, get_config_value, load_config
 
 logger = logging.getLogger(__name__)
 

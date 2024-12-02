@@ -1,8 +1,10 @@
 import json
-import yaml
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+import yaml
 from jsonschema import Draft7Validator, RefResolver, ValidationError
+
 from visualization.core.utils.singleton import SingletonMeta
 
 CURRENT_DIR = Path(__file__).parent
@@ -28,7 +30,7 @@ class VisualizationConfigManager(metaclass=SingletonMeta):
             self.schema = self.load_schema(schema_name)
             self._validator = Draft7Validator(
                 self.schema,
-                resolver=RefResolver(base_uri=f"file://{SCHEMAS_DIR}/", referrer=self.schema)
+                resolver=RefResolver(base_uri=f"file://{SCHEMAS_DIR}/", referrer=self.schema),
             )
             self._config = self.load_config()
 
@@ -48,7 +50,7 @@ class VisualizationConfigManager(metaclass=SingletonMeta):
         """
         schema_path = SCHEMAS_DIR / f"{schema_name}.json"
         try:
-            with open(schema_path, 'r') as f:
+            with open(schema_path, "r") as f:
                 return json.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(f"Schema file not found at {schema_path}")
@@ -69,10 +71,10 @@ class VisualizationConfigManager(metaclass=SingletonMeta):
             ValueError: If the file format is unsupported.
         """
         filepath_str = str(filepath)
-        with open(filepath, 'r') as f:
-            if filepath_str.endswith('.json'):
+        with open(filepath, "r") as f:
+            if filepath_str.endswith(".json"):
                 return json.load(f)
-            elif filepath_str.endswith(('.yaml', '.yml')):
+            elif filepath_str.endswith((".yaml", ".yml")):
                 return yaml.safe_load(f)
             else:
                 raise ValueError("Unsupported file format: only JSON and YAML are supported")
@@ -122,7 +124,7 @@ class VisualizationConfigManager(metaclass=SingletonMeta):
             ValidationError: If the updated configuration is invalid.
         """
         for key, value in kwargs.items():
-            keys = key.split('.')
+            keys = key.split(".")
             target = self._config
             for k in keys[:-1]:
                 target = target.get(k, {})
@@ -131,7 +133,7 @@ class VisualizationConfigManager(metaclass=SingletonMeta):
             target[keys[-1]] = value
         self.validate(self._config)
 
-    def save(self, filepath: Optional[str] = None, file_format: str = 'json') -> None:
+    def save(self, filepath: Optional[str] = None, file_format: str = "json") -> None:
         """
         Save the current configuration to a file.
 
@@ -143,10 +145,10 @@ class VisualizationConfigManager(metaclass=SingletonMeta):
             ValueError: If an unsupported file format is provided.
         """
         filepath = filepath or self.config_path
-        with open(filepath, 'w') as f:
-            if file_format == 'json':
+        with open(filepath, "w") as f:
+            if file_format == "json":
                 json.dump(self._config, f, indent=4)
-            elif file_format in ('yaml', 'yml'):
+            elif file_format in ("yaml", "yml"):
                 yaml.safe_dump(self._config, f, default_flow_style=False)
             else:
                 raise ValueError("Unsupported file format: only 'json' and 'yaml' are supported")
@@ -160,7 +162,7 @@ class VisualizationConfigManager(metaclass=SingletonMeta):
         """
         return {
             "backend": self._config.get("backend"),
-            "backend_config": self._config.get("backend_config", {})
+            "backend_config": self._config.get("backend_config", {}),
         }
 
     def get(self) -> Dict[str, Any]:

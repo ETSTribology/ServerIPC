@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Dict
+
 from visualization.core.utils.singleton import SingletonMeta
 from visualization.storage.local import Local
 from visualization.storage.minio import MinIO

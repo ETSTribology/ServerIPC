@@ -1,16 +1,18 @@
-import redis
-from typing import Dict, Any, Callable
 import logging
+from typing import Any, Callable, Dict
+
+import redis
 
 from visualization.backend.backend import Backend
 
 logger = logging.getLogger(__name__)
 
+
 class RedisBackend(Backend):
     def __init__(self, config: Dict[str, Any]):
         """
         Initialize the RedisBackend with configuration.
-        
+
         Args:
             config: A dictionary containing the Redis configuration.
         """
@@ -74,6 +76,7 @@ class RedisBackend(Backend):
             callback: A callable that processes messages. It receives the message data.
         """
         try:
+
             def message_handler(message):
                 if message["type"] == "message":
                     callback(message["channel"], message["data"].decode("utf-8"))
@@ -94,7 +97,9 @@ class RedisBackend(Backend):
         try:
             for message in self.pubsub.listen():
                 if message["type"] == "message":
-                    logger.info(f"Received message on channel '{message['channel']}': {message['data'].decode('utf-8')}")
+                    logger.info(
+                        f"Received message on channel '{message['channel']}': {message['data'].decode('utf-8')}"
+                    )
         except Exception as e:
             logger.error(f"Error while listening to Pub/Sub channels: {e}")
             raise
@@ -143,4 +148,3 @@ class RedisBackend(Backend):
             value: The data to store.
         """
         self.client.set(key, value)
-        

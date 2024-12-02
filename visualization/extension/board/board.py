@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 class Board(abc.ABC):
@@ -16,12 +16,21 @@ class Board(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def log_image(self, tag: str, img_tensor: Any, global_step: Optional[int] = None, dataformats: str = "CHW") -> None:
+    def log_image(
+        self, tag: str, img_tensor: Any, global_step: Optional[int] = None, dataformats: str = "CHW"
+    ) -> None:
         """Logs an image."""
         pass
 
     @abc.abstractmethod
-    def log_figure(self, tag: str, figure: Any, global_step: Optional[int] = None, close: bool = True, walltime: Optional[float] = None) -> None:
+    def log_figure(
+        self,
+        tag: str,
+        figure: Any,
+        global_step: Optional[int] = None,
+        close: bool = True,
+        walltime: Optional[float] = None,
+    ) -> None:
         """Logs a matplotlib figure."""
         pass
 

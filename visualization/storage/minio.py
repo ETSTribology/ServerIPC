@@ -1,10 +1,12 @@
+import io
+import logging
+from typing import Any, Dict, List
+
 from minio import Minio
 from minio.error import S3Error
-from typing import Any, Dict, List
-import logging
-import io
 
 logger = logging.getLogger(__name__)
+
 
 class MinIO:
     """
@@ -23,7 +25,7 @@ class MinIO:
             endpoint=f"{config.get('storage', {}).get('host', 'localhost')}:{config.get('storage', {}).get('port', 9000)}",
             access_key=config.get("storage", {}).get("access_key", "minioadmin"),
             secret_key=config.get("storage", {}).get("secret_key", "minioadminpassword"),
-            secure=config.get("storage", {}).get("secure", False)
+            secure=config.get("storage", {}).get("secure", False),
         )
         logger.info(f"{config}")
         self.extensions = config.get("extensions", {})
@@ -49,7 +51,9 @@ class MinIO:
                         self.client.make_bucket(bucket_name)
                         logger.info(f"Bucket '{bucket_name}' created for extension '{extension}'.")
                     else:
-                        logger.info(f"Bucket '{bucket_name}' already exists for extension '{extension}'.")
+                        logger.info(
+                            f"Bucket '{bucket_name}' already exists for extension '{extension}'."
+                        )
         except S3Error as err:
             logger.error(f"Error ensuring buckets: {err}")
             raise ConnectionError("Failed to initialize MinIO buckets.")
@@ -65,15 +69,17 @@ class MinIO:
         """
         if not self.connected:
             raise ConnectionError("Storage backend is not connected.")
-        
+
         if extension not in self.extensions or not self.extensions[extension].get("enabled", False):
             raise ValueError(f"Extension '{extension}' is not enabled.")
-        
+
         bucket_name = self.extensions[extension]["directory"].strip("/")
         try:
             content_stream = io.BytesIO(content)
             self.client.put_object(bucket_name, filename, content_stream, len(content))
-            logger.info(f"File '{filename}' written to bucket '{bucket_name}' for extension '{extension}'.")
+            logger.info(
+                f"File '{filename}' written to bucket '{bucket_name}' for extension '{extension}'."
+            )
         except S3Error as err:
             logger.error(f"Error writing file '{filename}' to bucket '{bucket_name}': {err}")
             raise
@@ -91,10 +97,10 @@ class MinIO:
         """
         if not self.connected:
             raise ConnectionError("Storage backend is not connected.")
-        
+
         if extension not in self.extensions or not self.extensions[extension].get("enabled", False):
             raise ValueError(f"Extension '{extension}' is not enabled.")
-        
+
         bucket_name = self.extensions[extension]["directory"].strip("/")
         try:
             response = self.client.get_object(bucket_name, filename)
@@ -113,14 +119,16 @@ class MinIO:
         """
         if not self.connected:
             raise ConnectionError("Storage backend is not connected.")
-        
+
         if extension not in self.extensions or not self.extensions[extension].get("enabled", False):
             raise ValueError(f"Extension '{extension}' is not enabled.")
-        
+
         bucket_name = self.extensions[extension]["directory"].strip("/")
         try:
             self.client.remove_object(bucket_name, filename)
-            logger.info(f"File '{filename}' deleted from bucket '{bucket_name}' for extension '{extension}'.")
+            logger.info(
+                f"File '{filename}' deleted from bucket '{bucket_name}' for extension '{extension}'."
+            )
         except S3Error as err:
             logger.error(f"Error deleting file '{filename}' from bucket '{bucket_name}': {err}")
             raise
@@ -137,10 +145,10 @@ class MinIO:
         """
         if not self.connected:
             raise ConnectionError("Storage backend is not connected.")
-        
+
         if extension not in self.extensions or not self.extensions[extension].get("enabled", False):
             raise ValueError(f"Extension '{extension}' is not enabled.")
-        
+
         bucket_name = self.extensions[extension]["directory"].strip("/")
         try:
             objects = self.client.list_objects(bucket_name, recursive=True)

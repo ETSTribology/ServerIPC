@@ -1,13 +1,10 @@
-import os
-import torch
-from typing import Optional, Any, Dict
-from visualization.extension.board.board import Board
-from torch.utils.tensorboard import SummaryWriter
-from pathlib import Path
-import plotly.graph_objects as go
-import matplotlib.pyplot as plt
 import logging
+from typing import Any, Dict, Optional
 
+import torch
+from torch.utils.tensorboard import SummaryWriter
+
+from visualization.extension.board.board import Board
 from visualization.storage.factory import StorageFactory
 
 logger = logging.getLogger(__name__)
@@ -38,12 +35,24 @@ class TensorBoard(Board):
         self.writer.add_text(tag, text_string, global_step)
         logger.debug(f"Logged text: tag={tag}, text={text_string}, step={global_step}")
 
-    def log_histogram(self, tag: str, values: Any, global_step: Optional[int] = None, bins: Optional[str] = "tensorflow") -> None:
+    def log_histogram(
+        self,
+        tag: str,
+        values: Any,
+        global_step: Optional[int] = None,
+        bins: Optional[str] = "tensorflow",
+    ) -> None:
         """Logs a histogram of values."""
         self.writer.add_histogram(tag, values, global_step, bins=bins)
         logger.debug(f"Logged histogram: tag={tag}, step={global_step}")
 
-    def log_image(self, tag: str, img_tensor: torch.Tensor, global_step: Optional[int] = None, dataformats: str = "CHW") -> None:
+    def log_image(
+        self,
+        tag: str,
+        img_tensor: torch.Tensor,
+        global_step: Optional[int] = None,
+        dataformats: str = "CHW",
+    ) -> None:
         """
         Logs an image.
 
@@ -56,7 +65,14 @@ class TensorBoard(Board):
         self.writer.add_image(tag, img_tensor, global_step, dataformats)
         logger.debug(f"Logged image: tag={tag}, step={global_step}")
 
-    def log_figure(self, tag: str, figure: Any, global_step: Optional[int] = None, close: bool = True, walltime: Optional[float] = None) -> None:
+    def log_figure(
+        self,
+        tag: str,
+        figure: Any,
+        global_step: Optional[int] = None,
+        close: bool = True,
+        walltime: Optional[float] = None,
+    ) -> None:
         """Logs a matplotlib figure."""
         self.writer.add_figure(tag, figure, global_step, close=close, walltime=walltime)
         logger.debug(f"Logged figure: tag={tag}, step={global_step}")

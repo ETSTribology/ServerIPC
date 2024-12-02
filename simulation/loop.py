@@ -2,6 +2,7 @@ import logging
 import sys
 import time
 from typing import Optional
+
 from simulation.core.contact.barrier_updater import BarrierUpdater, BarrierUpdaterFactory
 from simulation.core.contact.ccd import CCDBase, CCDFactory
 from simulation.core.math.gradient import GradientBase, GradientFactory
@@ -29,7 +30,6 @@ class SimulationManager:
         self.network_factory = NetsFactory()
         self.storage_factory = StorageFactory()
         self.database_factory = DatabaseFactory()
-
 
         # Existing factories
         self.line_search_factory = LineSearchFactory()

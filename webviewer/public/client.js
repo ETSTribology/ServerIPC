@@ -121,11 +121,11 @@ function onWindowResize() {
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
-  
+
   if (stats.dom.style.display !== 'none') {
     stats.update();
   }
-  
+
   // Update infinite grid
   if (gridHelper) {
     gridHelper.position.set(
@@ -207,10 +207,10 @@ function updateMesh(meshData) {
 function createVertexHelper() {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', mesh.geometry.getAttribute('position'));
-  const material = new THREE.PointsMaterial({ 
-    color: 0xffff00, 
-    size: 0.05, 
-    sizeAttenuation: true 
+  const material = new THREE.PointsMaterial({
+    color: 0xffff00,
+    size: 0.05,
+    sizeAttenuation: true
   });
   vertexHelper = new THREE.Points(geometry, material);
   vertexHelper.visible = false;  // Initially invisible, controlled via UI
@@ -378,4 +378,3 @@ function setupControls() {
 
 // Initialize
 initThreeJS();
-

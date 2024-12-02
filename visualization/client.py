@@ -1,17 +1,16 @@
 import logging
 import os
+
 import typer
-from visualization.config.config import VisualizationConfigManager
 
-from visualization.storage.factory import StorageFactory
 from visualization.backend.factory import BackendFactory
+from visualization.config.config import VisualizationConfigManager
 from visualization.extension.board.factory import BoardFactory
-
 from visualization.polyscope import Polyscope
+from visualization.storage.factory import StorageFactory
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,9 @@ class VisualizationClient:
 
     def initialize_polyscope(self):
         logger.info("Initializing Polyscope...")
-        self.polyscope = Polyscope(config=self.config_manager, storage=self.storage, backend=self.backend, board=self.board)
+        self.polyscope = Polyscope(
+            config=self.config_manager, storage=self.storage, backend=self.backend, board=self.board
+        )
         self.polyscope.main()
 
     def run(self):
@@ -62,22 +63,20 @@ class VisualizationClient:
         self.initialize_polyscope()
         logger.info("Visualization client started.")
 
+
 @app.command()
 def start(
-    config: str = typer.Option(
-        CONFIG_FILE,
-        help="Path to the configuration file (JSON or YAML)"
-    ),
+    config: str = typer.Option(CONFIG_FILE, help="Path to the configuration file (JSON or YAML)"),
     backend: str = typer.Option(
-        None, 
-        help="Specify the backend to override configuration settings."
-    )
+        None, help="Specify the backend to override configuration settings."
+    ),
 ):
     """
     Start the Polyscope Visualization Client.
     """
     client = VisualizationClient(config=config)
     client.run()
+
 
 if __name__ == "__main__":
     app()

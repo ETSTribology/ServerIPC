@@ -1,11 +1,13 @@
 import logging
 from typing import Any, Dict
-from visualization.core.utils.singleton import SingletonMeta
+
+from visualization.backend.grpc import GrpcBackend
 from visualization.backend.redis import RedisBackend
 from visualization.backend.websocket import WebSocketBackend
-from visualization.backend.grpc import GrpcBackend
+from visualization.core.utils.singleton import SingletonMeta
 
 logger = logging.getLogger(__name__)
+
 
 class BackendFactory(metaclass=SingletonMeta):
     """
@@ -41,7 +43,7 @@ class BackendFactory(metaclass=SingletonMeta):
                 backend_instance = GrpcBackend(config)
             else:
                 raise ValueError(f"Unknown backend type: {backend_type}")
-            
+
             backend_instance.connect()
             BackendFactory._instances[backend_type] = backend_instance
         else:

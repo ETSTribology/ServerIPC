@@ -1,9 +1,9 @@
-import os
+import logging
 from pathlib import Path
 from typing import Any, Dict
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 class Local:
     """
@@ -52,16 +52,18 @@ class Local:
         """
         if not self.connected:
             raise ConnectionError("Storage backend is not connected.")
-        
+
         if extension not in self.extensions or not self.extensions[extension].get("enabled", False):
             logger.warning(f"{self.extensions}")
             raise ValueError(f"Extension '{extension}' is not enabled.")
-        
+
         ext_dir = self.directory / self.extensions[extension]["directory"].strip("/")
         file_path = ext_dir / filename
         with file_path.open("wb") as f:
             f.write(content)
-        logger.info(f"File '{filename}' written for extension '{extension}' in directory '{ext_dir}'.")
+        logger.info(
+            f"File '{filename}' written for extension '{extension}' in directory '{ext_dir}'."
+        )
 
     def read(self, extension: str, filename: str) -> bytes:
         """
@@ -76,15 +78,15 @@ class Local:
         """
         if not self.connected:
             raise ConnectionError("Storage backend is not connected.")
-        
+
         if extension not in self.extensions or not self.extensions[extension].get("enabled", False):
             raise ValueError(f"Extension '{extension}' is not enabled.")
-        
+
         ext_dir = self.directory / self.extensions[extension]["directory"].strip("/")
         file_path = ext_dir / filename
         if not file_path.exists():
             raise FileNotFoundError(f"File '{file_path}' does not exist.")
-        
+
         with file_path.open("rb") as f:
             return f.read()
 
@@ -98,10 +100,10 @@ class Local:
         """
         if not self.connected:
             raise ConnectionError("Storage backend is not connected.")
-        
+
         if extension not in self.extensions or not self.extensions[extension].get("enabled", False):
             raise ValueError(f"Extension '{extension}' is not enabled.")
-        
+
         ext_dir = self.directory / self.extensions[extension]["directory"].strip("/")
         file_path = ext_dir / filename
         if file_path.exists():
@@ -122,14 +124,16 @@ class Local:
         """
         if not self.connected:
             raise ConnectionError("Storage backend is not connected.")
-        
+
         if extension not in self.extensions or not self.extensions[extension].get("enabled", False):
             raise ValueError(f"Extension '{extension}' is not enabled.")
-        
+
         ext_dir = self.directory / self.extensions[extension]["directory"].strip("/")
         if not ext_dir.exists():
-            raise FileNotFoundError(f"Directory '{ext_dir}' does not exist for extension '{extension}'.")
-        
+            raise FileNotFoundError(
+                f"Directory '{ext_dir}' does not exist for extension '{extension}'."
+            )
+
         return [str(file) for file in ext_dir.iterdir() if file.is_file()]
 
     def get_directory(self, extension: str) -> str:
@@ -147,6 +151,5 @@ class Local:
 
         if extension not in self.extensions or not self.extensions[extension].get("enabled", False):
             raise ValueError(f"Extension '{extension}' is not enabled.")
-
 
         return self.directory / self.extensions[extension]["directory"].strip("/")
