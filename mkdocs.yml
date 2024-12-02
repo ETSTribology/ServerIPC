@@ -50,6 +50,7 @@ nav:
         CUDA: cuda.md
       - Quickstart: quickstart.md
       - Gallery: gallery.md
+  - Code Coverage: coverage.md
   - API:
       - Core:
           - Overview: "reference/core/index.md"

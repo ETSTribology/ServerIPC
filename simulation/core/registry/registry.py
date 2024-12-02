@@ -1,10 +1,19 @@
+from __future__ import annotations
+
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    Type,
+    TypeVar,
+    Callable
+)
+
 import logging
-from typing import Callable, Dict, Generic, Type, TypeVar
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")  # Generic type variable
-
 
 class Registry(Generic[T]):
     """A generic registry class to register and retrieve classes.
@@ -107,3 +116,39 @@ class Registry(Generic[T]):
         registered = ", ".join(self._registry.keys())
         logger.debug(f"Available registered types: {registered}.")
         return registered
+
+    def __contains__(self, name: str) -> bool:
+        """Check if a name is registered.
+
+        Parameters
+        ----------
+        name : str
+            The name to check.
+
+        Returns
+        -------
+        bool
+            True if the name is registered, False otherwise.
+        """
+        return name.lower() in self._registry
+
+    def __iter__(self):
+        """Iterate over registered names.
+
+        Returns
+        -------
+        Iterator[str]
+            An iterator over registered names.
+        """
+        return iter(self._registry.keys())
+
+    @property
+    def registry(self) -> Dict[str, Callable[..., T]]:
+        """Expose the internal registry dictionary.
+
+        Returns
+        -------
+        Dict[str, Callable[..., T]]
+            A dictionary of registered classes.
+        """
+        return self._registry

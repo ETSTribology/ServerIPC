@@ -37,6 +37,12 @@ registry_container.add_registry(
 
 
 @register(type="barrier_initializer", name="default")
+class DefaultBarrierInitializer(BarrierInitializerBase):
+    def __call__(self, x: np.ndarray, gU: np.ndarray, gB: np.ndarray) -> None:
+        # Implement a basic default initialization
+        pass
+
+
 class BarrierInitializer(BarrierInitializerBase):
     def __call__(self, x: np.ndarray, gU: np.ndarray, gB: np.ndarray) -> None:
         params = self.params

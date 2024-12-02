@@ -18,6 +18,11 @@ from init import SimulationInitializer
 from nets.controller.factory import CommandDispatcher
 from nets.messages import RequestMessage, ResponseMessage
 
+# Add connection factories
+from core.connection.network import NetworkConnectionFactory
+from core.connection.storage import StorageConnectionFactory
+from core.connection.database import DatabaseConnectionFactory
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +31,17 @@ class SimulationManager:
         self.logger = logger
         self.simulation_state = self.initialize_simulation()
 
+        # Add connection factories
+        self.network_factory = NetworkConnectionFactory()
+        self.storage_factory = StorageConnectionFactory()
+        self.database_factory = DatabaseConnectionFactory()
+
+        # Add factories to simulation state
+        self.simulation_state.set_attribute('network_factory', self.network_factory)
+        self.simulation_state.set_attribute('storage_factory', self.storage_factory)
+        self.simulation_state.set_attribute('database_factory', self.database_factory)
+
+        # Existing factories
         self.line_search_factory = LineSearchFactory()
         self.linear_solver_factory = LinearSolverFactory()
         self.optimizer_factory = OptimizerFactory()

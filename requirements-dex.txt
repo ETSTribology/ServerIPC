@@ -18,3 +18,24 @@ mkdocs-include-markdown-plugin
 mkdocs-graphviz
 mkdocs-mermaid2-plugin
 mkdocs-git-revision-date-localized-plugin
+
+pytest>=7.0.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+pytest-sugar>=1.0.0
+pytest-xdist>=3.5.0
+hypothesis>=6.98.0
+faker>=24.0.0
+freezegun>=1.4.0
+black>=24.2.0
+ruff>=0.3.0
+isort>=5.13.0
+pylint>=3.1.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.11.1
+websockets>=11.0.3
+
+# Code Coverage and Quality
+coverage>=7.4.4
+pytest-cov>=4.1.0
+codecov>=2.1.13

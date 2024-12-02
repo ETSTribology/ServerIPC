@@ -33,11 +33,11 @@ class Parameters(ParametersBase):
         M: sp.sparse.dia_array,
         hep: pbat.fem.HyperElasticPotential,
         dt: float,
-        cmesh: ipctk.CollisionMesh,
-        cconstraints: ipctk.NormalCollisions,
-        fconstraints: ipctk.TangentialCollisions,
-        materials: list,
-        element_materials: list,
+        cmesh: ipctk.CollisionMesh = None,
+        cconstraints: ipctk.NormalCollisions = None,
+        fconstraints: ipctk.TangentialCollisions = None,
+        materials: list = None,
+        element_materials: list = None,
         dhat: float = 1e-3,
         dmin: float = 1e-4,
         mu: float = 0.3,
@@ -74,10 +74,21 @@ class Parameters(ParametersBase):
         self.gU = None
         self.gB = None
         self.gF = None
-        self.materials = materials
-        self.element_materials = element_materials
-        self.barrier_potential = barrier_potential
-        self.friction_potential = friction_potential
+        self.materials = materials or []
+        self.element_materials = element_materials or []
+        
+        # Create BarrierPotential with dhat parameter
+        self.barrier_potential = (
+            barrier_potential if barrier_potential is not None 
+            else ipctk.BarrierPotential(dhat=dhat)
+        )
+        
+        # Create FrictionPotential with eps_v parameter
+        self.friction_potential = (
+            friction_potential if friction_potential is not None 
+            else ipctk.FrictionPotential(eps_v=epsv)
+        )
+        
         self.broad_phase_method = broad_phase_method
 
         logger.info("Parameters initialized.")

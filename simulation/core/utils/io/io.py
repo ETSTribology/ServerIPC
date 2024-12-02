@@ -4,12 +4,11 @@ from typing import Dict, List, Optional, Tuple
 import meshio
 import numpy as np
 import pbatoolkit as pbat
-from core.utils.modifier.transformation import apply_transformations
-
-from simulation.core.utils.config.config import (
-    load_material_properties,
-    load_transform_properties,
+from simulation.core.config.config import (
+    ConfigManager
 )
+from simulation.core.utils.modifier.transformation import apply_transformations
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +29,24 @@ def load_mesh(path: str) -> Tuple[np.ndarray, np.ndarray]:
     try:
         imesh = meshio.read(path)
         V = imesh.points.astype(np.float64, order="C")
-        C = imesh.cells_dict.get("tetra")
+        
+        # Check for tetrahedral cells, including different possible keys
+        tetra_keys = ['tetra', 'tetrahedron', 'tetrahedral']
+        C = None
+        for key in tetra_keys:
+            C = imesh.cells_dict.get(key)
+            if C is not None:
+                break
+        
+        if C is None:
+            logger.error(f"No tetrahedral cells found in the mesh file: {path}")
+            raise ValueError(f"No tetrahedral cells found in the mesh file: {path}")
+        
         logger.info(f"Loaded mesh from {path}.")
         logger.info(
             f"Mesh contains {V.shape[0]} vertices and {C.shape[0]} tetrahedral cells."
         )
-        if C is None:
-            raise ValueError(f"No tetrahedral cells found in the mesh file: {path}")
+        
         C = C.astype(np.int64, order="C")
         return V, C
     except Exception as e:
@@ -76,11 +86,13 @@ def load_individual_meshes(
                 continue
 
             # Load material properties from predefined materials
-            material = load_material_properties(material_name)
+            material = ConfigManager().load_material_properties(material_name)
             material["percent_fixed"] = percent_fixed
 
             # Load transformation properties
-            scale, rotation, translation = load_transform_properties(input_entry)
+            scale, rotation, translation = ConfigManager().load_transform_properties(
+                input_entry
+            )
 
             # Load mesh data (vertices and connectivity)
             V, C = load_mesh(path)

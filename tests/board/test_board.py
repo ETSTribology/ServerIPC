@@ -8,11 +8,17 @@ import logging
 from simulation.board.board import (
     BoardBase, 
     TensorBoardLogger, 
-    BoardFactory, 
-    RegistryContainer
+    BoardFactory
 )
 from simulation.core.registry.decorators import register
+from simulation.core.registry.container import RegistryContainer
+from simulation.core.config.config import ConfigManager
 
+# Add setup method to ensure configuration is initialized before tests
+@pytest.fixture(autouse=True)
+def initialize_config():
+    ConfigManager.reset()
+    ConfigManager.quick_init()
 
 class TestBoardBase:
     def test_board_base_abstract_methods(self):
@@ -178,19 +184,27 @@ class TestBoardFactory:
 
     def test_board_factory_registry(self):
         """Test that the board is correctly registered in the registry."""
+        from simulation.core.registry.container import RegistryContainer
+
         registry = RegistryContainer()
         board_registry = registry.board
 
         # Check that 'tensorboard' is registered
-        assert 'tensorboard' in board_registry
-        assert board_registry['tensorboard'] is TensorBoardLogger
+        assert 'tensorboard' in board_registry._registry
+        assert board_registry.get('tensorboard') is TensorBoardLogger
 
 
 class TestCustomBoardRegistration:
     def test_custom_board_registration(self):
         """Test registering and using a custom board logger."""
+        from simulation.core.registry.decorators import register
+        from simulation.core.registry.container import RegistryContainer
+
         @register(type="board", name="custom_logger")
         class CustomBoardLogger(BoardBase):
+            def __init__(self, cfg=None, **kwargs):
+                super().__init__(cfg or {}, **kwargs)
+
             def log_scalar(self, *args, **kwargs):
                 pass
             
@@ -219,8 +233,8 @@ class TestCustomBoardRegistration:
         registry = RegistryContainer()
         board_registry = registry.board
         
-        assert 'custom_logger' in board_registry
-        assert board_registry['custom_logger'] is CustomBoardLogger
+        assert 'custom_logger' in board_registry._registry
+        assert board_registry.get('custom_logger') is CustomBoardLogger
 
         # Test creating the custom logger through the factory
         factory = BoardFactory()

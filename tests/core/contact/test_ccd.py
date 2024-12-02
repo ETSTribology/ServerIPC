@@ -18,6 +18,8 @@ class MockParameters(ParametersBase):
         self.cmesh = np.array([[0, 0, 0], [1, 1, 1]])
         self.dmin = 0.01
         self.broad_phase_method = 'default'
+        self.cconstraints = ipctk.NormalCollisions()
+        self.fconstraints = ipctk.TangentialCollisions()
 
 
 class TestCCDBase:

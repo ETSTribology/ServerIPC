@@ -6,7 +6,7 @@ import pickle
 from typing import Dict, Optional
 
 import bson
-from nets.serialization.serializer import Serializer
+from simulation.nets.serialization.serializer import Serializer
 
 logger = logging.getLogger(__name__)
 

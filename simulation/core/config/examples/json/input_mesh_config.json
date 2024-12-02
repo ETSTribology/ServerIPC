@@ -1,0 +1,19 @@
+{
+    "path": "meshes/model.obj",
+    "percent_fixed": 10.0,
+    "material": "steel",
+    "transform": {
+        "scale": [1.0, 1.0, 1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "translation": [0.0, 0.0, 0.0]
+    },
+    "force": {
+        "gravity": 9.81,
+        "external_forces": [
+            {
+                "direction": [0.0, -1.0, 0.0],
+                "magnitude": 9.81
+            }
+        ]
+    }
+}

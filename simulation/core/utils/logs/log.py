@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import yaml
-from core.utils.logs.handler import HandlerFactory
-from core.utils.logs.message import *
+from simulation.core.utils.logs.handler import HandlerFactory
+from simulation.core.utils.logs.message import *
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class LoggingManager:
             handler = self.logger.handlers[0]
             self.logger.removeHandler(handler)
             handler.close()
-            logger.debug(
+            logging.getLogger().debug(
                 LOGGING_MANAGER_REMOVE_HANDLER, extra={"handler_name": "LoggingManager"}
             )
 
@@ -59,7 +59,7 @@ class LoggingManager:
         )
         console_handler.setFormatter(formatter)
         self.logger.addHandler(console_handler)
-        logger.debug(
+        logging.getLogger().debug(
             LOGGING_MANAGER_SETUP_DEFAULT, extra={"handler_name": "LoggingManager"}
         )
 
@@ -80,7 +80,7 @@ class LoggingManager:
 
         # Update root logger level
         self.logger.setLevel(log_level)
-        logger.debug(
+        logging.getLogger().debug(
             LOGGING_MANAGER_SET_LEVEL,
             log_level,
             extra={"handler_name": "LoggingManager"},
@@ -93,7 +93,7 @@ class LoggingManager:
                 "format", "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
             )
             formatters[fmt_name] = logging.Formatter(fmt_format)
-            logger.debug(
+            logging.getLogger().debug(
                 LOGGING_MANAGER_SETUP_FORMATTER,
                 fmt_name,
                 extra={"handler_name": "LoggingManager"},
@@ -107,7 +107,7 @@ class LoggingManager:
             try:
                 handler_type = handler_props.get("type")
                 if not handler_type:
-                    logger.warning(
+                    logging.getLogger().warning(
                         "Handler '%s' does not have a 'type' specified. Skipping.",
                         handler_name,
                         extra={"handler_name": "LoggingManager"},
@@ -123,7 +123,7 @@ class LoggingManager:
                 if handler_type.lower() == "surrealdb":
                     surrealdb_client = handler_clients.get("surrealdb_client")
                     if not surrealdb_client:
-                        logger.warning(
+                        logging.getLogger().warning(
                             "Handler '%s' of type 'surrealdb' requires 'surrealdb_client'. Skipping.",
                             handler_name,
                             extra={"handler_name": "LoggingManager"},
@@ -133,7 +133,7 @@ class LoggingManager:
                 elif handler_type.lower() == "minio":
                     minio_client = handler_clients.get("minio_client")
                     if not minio_client:
-                        logger.warning(
+                        logging.getLogger().warning(
                             "Handler '%s' of type 'minio' requires 'minio_client'. Skipping.",
                             handler_name,
                             extra={"handler_name": "LoggingManager"},
@@ -150,14 +150,14 @@ class LoggingManager:
 
                 # Add the handler to the root logger
                 self.logger.addHandler(handler)
-                logger.debug(
+                logging.getLogger().debug(
                     LOGGING_MANAGER_ADD_HANDLER,
                     handler_name,
                     handler_type,
                     extra={"handler_name": "LoggingManager"},
                 )
             except Exception as e:
-                logger.error(
+                logging.getLogger().error(
                     LOGGING_MANAGER_FAILED_CONFIGURE_HANDLER,
                     handler_name,
                     e,
@@ -197,7 +197,7 @@ class LoggingManager:
                     raise ValueError(
                         "Unsupported configuration file format. Use YAML or JSON."
                     )
-            logger.debug(
+            logging.getLogger().debug(
                 LOGGING_MANAGER_LOADED_CONFIG,
                 file_path,
                 extra={"handler_name": "LoggingManager"},

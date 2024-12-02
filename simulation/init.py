@@ -16,9 +16,14 @@ from core.utils.modifier.mesh import (
     compute_face_to_element_mapping,
     find_codim_vertices,
 )
-from nets.factory import NetsFactory
+from nets.factory import (
+    NetsFactory,
+    NetworkConnectionFactory,
+    StorageConnectionFactory,
+    DatabaseConnectionFactory
+)
 
-from simulation.core.utils.config.config import (
+from simulation.core.config.config import (
     generate_default_config,
     get_config_value,
     load_config,
@@ -96,6 +101,11 @@ class SimulationInitializer:
             self.logger.debug(f"Configuration details: {self.config}")
 
             self.simulation_state = None
+
+            # Add connection factories
+            self.network_factory = NetworkConnectionFactory()
+            self.storage_factory = StorageConnectionFactory()
+            self.database_factory = DatabaseConnectionFactory()
 
         except Exception as e:
             logging.error(f"Failed to initialize SimulationInitializer: {e}")
@@ -186,16 +196,16 @@ class SimulationInitializer:
                     is_on_surface, edges, boundary_faces
                 )
 
-            collision_constraints = ipctk.NormalCollisions()
-            friction_constraints = ipctk.TangentialCollisions()
+            normal_collisions = ipctk.NormalCollisions()
+            tangential_collisions = ipctk.TangentialCollisions()
             face_to_element_mapping = compute_face_to_element_mapping(C, boundary_faces)
 
             return (
                 collision_mesh,
                 edges,
                 boundary_faces,
-                collision_constraints,
-                friction_constraints,
+                normal_collisions,
+                tangential_collisions,
                 face_to_element_mapping,
             )
         except Exception as e:
@@ -409,8 +419,8 @@ class SimulationInitializer:
                 collision_mesh,
                 edges,
                 boundary_faces,
-                collision_constraints,
-                friction_constraints,
+                normal_collisions,
+                tangential_collisions,
                 face_to_element_mapping,
             ) = self.setup_collision_mesh(mesh, V, C, element_materials)
 
@@ -436,6 +446,11 @@ class SimulationInitializer:
 
             rho_array = np.array([materials[i]["density"] for i in element_materials])
 
+            # Create connection instances
+            network_connection = self.network_factory.create_connection()
+            storage_connection = self.storage_factory.create_connection()
+            database_connection = self.database_factory.create_connection()
+
             # Initialize SimulationState
             self.simulation_state = self.initialize_simulation_state(
                 self.config,
@@ -447,8 +462,8 @@ class SimulationInitializer:
                 hep,
                 dt,
                 collision_mesh,
-                collision_constraints,
-                friction_constraints,
+                normal_collisions,
+                tangential_collisions,
                 dhat,
                 dmin,
                 friction_coefficient,
@@ -473,6 +488,11 @@ class SimulationInitializer:
                 running=False,
                 broad_phase_method=ipctk.BroadPhaseMethod.SWEEP_AND_PRUNE,
             )
+
+            # Add connections to simulation state
+            self.simulation_state.set_attribute('network_connection', network_connection)
+            self.simulation_state.set_attribute('storage_connection', storage_connection)
+            self.simulation_state.set_attribute('database_connection', database_connection)
 
             logger.info("Simulation state initialized successfully.")
 

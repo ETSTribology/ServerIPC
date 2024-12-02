@@ -1,4 +1,43 @@
 services:
+  simulation:
+    build: simulation
+    container_name: simulation
+    ports:
+      - "50051:50051"
+      - "8080:8080"
+    depends_on:
+      dragonfly:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      surrealdb:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: dragonfly
+      MINIO_HOST: minio
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadminpassword
+      SURREALDB_HOST: surrealdb
+      POSTGRES_HOST: postgres
+    volumes:
+      - ./meshes:/app/meshes
+      - ./scenario:/app/scenario
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   dragonfly:
     image: docker.dragonflydb.io/dragonflydb/dragonfly
     container_name: dragonfly
@@ -6,6 +45,11 @@ services:
       - "6379:6379"
     volumes:
       - dragonfly-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   minio:
     image: minio/minio
@@ -20,7 +64,11 @@ services:
       - minio_data:/data
       - minio_config:/root/.minio
     command: server /data --console-address ":9001"
-
+    healthcheck:
+      test: ["CMD", "mc", "ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   surrealdb:
     image: surrealdb/surrealdb:latest
@@ -33,7 +81,11 @@ services:
     volumes:
       - surrealdb_data:/data
     command: start --bind all --log trace
-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   postgres:
     image: postgres:14
@@ -46,7 +98,20 @@ services:
       POSTGRES_DB: surreal_config
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
+  tensorboard:
+    image: tensorflow/tensorflow:latest
+    container_name: tensorboard
+    command: tensorboard --logdir=/logs --host=0.0.0.0
+    ports:
+      - "6006:6006"
+    volumes:
+      - ./logs:/logs
 
 volumes:
   dragonfly-data:
@@ -59,4 +124,5 @@ volumes:
     driver: local
   postgres_data:
     driver: local
-
+  tensorboard_data:
+    driver: local

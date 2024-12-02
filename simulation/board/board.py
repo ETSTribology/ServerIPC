@@ -5,11 +5,13 @@ from typing import Any, Dict, Optional
 from functools import lru_cache
 
 import torch
+import hydra
+from omegaconf import DictConfig
 from torch.utils.tensorboard import SummaryWriter
-from simulation.core.utils.singleton import SingletonMeta
 
 from simulation.core.registry.container import RegistryContainer
 from simulation.core.registry.decorators import register
+from simulation.core.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -95,42 +97,55 @@ class BoardBase(abc.ABC):
 
 
 registry_container = RegistryContainer()
-registry_container.add_registry("board", "board.board.BoardBase")
+registry_container.add_registry("board", "simulation.board.board.BoardBase")
 
 
 @register(type="board", name="tensorboard")
-class TensorBoardLogger(BoardBase, metaclass=SingletonMeta):
+class TensorBoardLogger(BoardBase):
     """A singleton logger that writes logs to TensorBoard and saves tensor data in a new directory."""
+    
+    _instance = None
+    
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(
         self,
-        log_dir: str = "./runs",
-        tensor_data_subdir: str = "tensor_data",
-        comment: str = "",
-        purge_step: Optional[int] = None,
-        max_queue: int = 10,
-        flush_secs: int = 120,
-        filename_suffix: str = "",
+        cfg: Optional[DictConfig] = None,
+        **kwargs
     ):
         """
-        Initializes the TensorBoard logger.
+        Initializes the TensorBoard logger with Hydra configuration support.
 
         Args:
-            log_dir (str): Directory where TensorBoard logs will be saved.
-            tensor_data_subdir (str): Subdirectory within log_dir to save tensor data.
-            comment (str): Comment to append to the log directory name.
-            purge_step (int, optional): Steps to purge when resuming logging.
-            max_queue (int): Size of the queue for pending events and summaries.
-            flush_secs (int): How often, in seconds, to flush the pending events and summaries.
-            filename_suffix (str): Suffix added to all event filenames.
+            cfg (DictConfig, optional): Hydra configuration dictionary
+            Additional arguments can override Hydra configuration
         """
         # Check if the instance has already been initialized to prevent re-initialization
         if hasattr(self, '_initialized') and self._initialized:
             return
 
-        self.log_dir = log_dir
-        self.tensor_data_dir = os.path.join(log_dir, tensor_data_subdir)
+        # Get board configuration from cfg or from global config
+        if cfg is None:
+            cfg = get_config().board
+
+        # Extract extra_config for TensorBoard specific settings
+        tensorboard_cfg = cfg.get('extra_config', {})
+
+        # Override configuration with explicit arguments or use defaults
+        self.log_dir = kwargs.get('log_dir', tensorboard_cfg.get('log_dir', './runs'))
+        tensor_data_subdir = kwargs.get('tensor_data_subdir', tensorboard_cfg.get('tensor_data_subdir', 'tensor_data'))
+        comment = kwargs.get('comment', tensorboard_cfg.get('comment', ''))
+        purge_step = kwargs.get('purge_step', tensorboard_cfg.get('purge_step', None))
+        max_queue = kwargs.get('max_queue', tensorboard_cfg.get('max_queue', 10))
+        flush_secs = kwargs.get('flush_secs', tensorboard_cfg.get('flush_secs', 120))
+        filename_suffix = kwargs.get('filename_suffix', tensorboard_cfg.get('filename_suffix', ''))
+
+        self.tensor_data_dir = os.path.join(self.log_dir, tensor_data_subdir)
         os.makedirs(self.tensor_data_dir, exist_ok=True)
+
         self.writer = SummaryWriter(
             log_dir=self.log_dir,
             comment=comment,
@@ -234,7 +249,7 @@ class TensorBoardLogger(BoardBase, metaclass=SingletonMeta):
         logger.info("TensorBoard logger closed.")
 
 
-class BoardFactory(metaclass=SingletonMeta):
+class BoardFactory:
     """Factory class for creating board loggers."""
 
     @staticmethod
@@ -244,11 +259,36 @@ class BoardFactory(metaclass=SingletonMeta):
         registry_container = RegistryContainer()
         return registry_container.board.get(type_lower)
 
-    def create(self, type: str, **kwargs) -> BoardBase:
+    def create(self, type: Optional[str] = None, **kwargs) -> BoardBase:
+        """
+        Create a board logger with optional Hydra configuration.
+
+        Args:
+            type (str, optional): Type of board logger. 
+                                  If not provided, uses default from configuration.
+            **kwargs: Additional configuration parameters
+        """
         try:
+            # Get configuration
+            cfg = get_config()
+            
+            # Determine board type
+            type = type or cfg.board.type
             type_lower = type.lower()
+            
+            # Check if board is enabled
+            if not cfg.board.get('enabled', True):
+                logger.warning("Board logging is disabled in configuration.")
+                return None
+
+            # Set logging level
+            log_level = cfg.board.get('log_level', 'INFO')
+            logging.getLogger().setLevel(getattr(logging, log_level.upper()))
+
+            # Retrieve board class and create instance
             board_cls = self.get_class(type_lower)
-            return board_cls(**kwargs)
+            return board_cls(cfg=cfg.board, **kwargs)
+
         except ValueError as ve:
             logger.error(str(ve))
             raise

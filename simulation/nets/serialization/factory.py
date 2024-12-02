@@ -1,4 +1,4 @@
-from nets.serialization.serialization import (
+from simulation.nets.serialization.serialization import (
     BSONSerializer,
     JSONSerializer,
     PickleSerializer,

@@ -8,8 +8,7 @@ from simulation.core.parameters import ParametersBase
 from simulation.core.registry.container import RegistryContainer
 from simulation.core.registry.decorators import register
 from simulation.core.utils.modifier.mesh import to_surface
-
-from core.utils.singleton import SingletonMeta
+from simulation.core.utils.singleton import SingletonMeta
 
 logger = logging.getLogger(__name__)
 

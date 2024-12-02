@@ -5,8 +5,8 @@ from functools import lru_cache
 from typing import Any, Dict, List, Type
 
 import psycopg2
-from core.registry.container import RegistryContainer
-from core.registry.decorators import register
+from simulation.core.registry.container import RegistryContainer
+from simulation.core.registry.decorators import register
 from psycopg2 import sql
 from surrealdb import SurrealDB as SurrealClient
 from surrealdb import SurrealDbError
@@ -41,6 +41,9 @@ class DatabaseBase(ABC):
         """Execute a SurrealQL or SQL-like query."""
         pass
 
+
+registry_container = RegistryContainer()
+registry_container.add_registry("database", "simulation.nets.db.db.DatabaseBase")
 
 @register(type="database", name="surrealdb")
 class SurrealDB(DatabaseBase):
@@ -565,6 +568,7 @@ class DatabaseFactory(metaclass=SingletonMeta):
 
     def __init__(self):
         self.registry_container = RegistryContainer()
+        self.registry_container.add_registry("database", "simulation.nets.db.db.DatabaseBase")
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @lru_cache(maxsize=None)

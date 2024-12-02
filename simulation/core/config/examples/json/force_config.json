@@ -1,0 +1,13 @@
+{
+    "gravity": 9.81,
+    "external_forces": [
+        {
+            "direction": [1.0, 0.0, 0.0],
+            "magnitude": 500.0
+        },
+        {
+            "direction": [0.0, 1.0, 0.0],
+            "magnitude": 200.0
+        }
+    ]
+}

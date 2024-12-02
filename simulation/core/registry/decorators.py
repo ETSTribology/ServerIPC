@@ -13,6 +13,10 @@ def register(type: str, name: str):
         registry_container = RegistryContainer()
         type_lower = type.lower()
         try:
+            # Debug logging
+            logger.debug(f"Attempting to register '{cls.__name__}' as '{name}' in '{type_lower}' registry")
+            logger.debug(f"Available registries: {list(registry_container._registries.keys())}")
+            
             # Access the appropriate registry based on the component type
             registry = getattr(registry_container, type_lower)
             if registry is None:
@@ -26,7 +30,8 @@ def register(type: str, name: str):
             )
             return cls
         except AttributeError as ae:
-            logger.error(str(ae))
+            logger.error(f"AttributeError: {str(ae)}")
+            logger.error(f"Attempted type: {type_lower}")
             raise AttributeError(
                 f"Component type '{type}' does not have an associated registry."
             ) from ae

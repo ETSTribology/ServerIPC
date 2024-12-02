@@ -4,8 +4,12 @@ import tempfile
 import yaml
 from typing import Dict, Any
 
-from simulation.core.utils.config.config import ConfigManager
+from simulation.core.config.config import ConfigManager
 
+@pytest.fixture(autouse=True)
+def initialize_config():
+    ConfigManager.reset()
+    ConfigManager.quick_init()
 
 class TestConfigManager:
     def test_singleton_behavior(self):

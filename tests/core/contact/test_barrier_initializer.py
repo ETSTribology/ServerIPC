@@ -1,6 +1,8 @@
 import pytest
 import numpy as np
 import logging
+import ipctk
+from simulation.core.registry.container import RegistryContainer
 
 from simulation.core.contact.barrier_initializer import (
     BarrierInitializerBase, 
@@ -12,14 +14,14 @@ from simulation.core.parameters import ParametersBase
 
 class MockParameters(ParametersBase):
     def __init__(self):
-        self.mesh = np.array([[0, 0, 0], [1, 1, 1]])
-        self.cmesh = np.array([[0, 0, 0], [1, 1, 1]])
-        self.dhat = 0.01
-        self.dmin = 0.001
+        self.mesh = None
+        self.cmesh = None
+        self.dhat = 0.1
+        self.dmin = 0.01
         self.avgmass = 1.0
-        self.bboxdiag = 1.0
-        self.cconstraints = MockContactConstraints()
-        self.barrier_potential = MockBarrierPotential()
+        self.broad_phase_method = 'default'
+        self.cconstraints = ipctk.NormalCollisions()
+        self.fconstraints = ipctk.TangentialCollisions()
         
         # Attributes to be set during initialization
         self.kB = None

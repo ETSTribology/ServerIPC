@@ -3,6 +3,11 @@ import signal
 import sys
 
 from loop import SimulationManager
+from nets.factory import (
+    NetworkConnectionFactory, 
+    StorageConnectionFactory, 
+    DatabaseConnectionFactory
+)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -46,6 +51,21 @@ def main():
     except Exception as e:
         logger.error(f"Failed to initialize the simulation: {e}")
         sys.exit(1)
+
+    # Retrieve connection factories from simulation state
+    network_factory = simulation_manager.simulation_state.get_attribute('network_factory')
+    storage_factory = simulation_manager.simulation_state.get_attribute('storage_factory')
+    database_factory = simulation_manager.simulation_state.get_attribute('database_factory')
+
+    # Create connection instances
+    network_connection = network_factory.create_connection()
+    storage_connection = storage_factory.create_connection()
+    database_connection = database_factory.create_connection()
+
+    # Add connections to simulation state
+    simulation_manager.simulation_state.set_attribute('network_connection', network_connection)
+    simulation_manager.simulation_state.set_attribute('storage_connection', storage_connection)
+    simulation_manager.simulation_state.set_attribute('database_connection', database_connection)
 
     # Retrieve the communication client from the simulation state
     communication_client = simulation_manager.simulation_state.get_attribute(

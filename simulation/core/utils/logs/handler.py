@@ -9,12 +9,12 @@ from functools import lru_cache
 from threading import Lock, Thread
 from typing import Any, Dict
 
-from core.registry.container import RegistryContainer
-from core.registry.decorators import register
-from core.utils.logs.message import *
+from simulation.core.registry.container import RegistryContainer
+from simulation.core.registry.decorators import register
+from simulation.core.utils.logs.message import *
 from minio import Minio
 from minio.error import S3Error
-from nets.db.surreal import Surreal
+from simulation.nets.db.db import DatabaseBase
 
 logger = logging.getLogger(__name__)
 
@@ -47,33 +47,33 @@ registry_container = RegistryContainer()
 registry_container.add_registry("log_handler", "simulation.core.utils.logs.handler.LogHandlerBase")
 
 
-@register(type="log_handler", name="surrealdb")
-class SurrealDBHandler(LogHandlerBase):
-    """Custom logging handler that sends log records to SurrealDB."""
+@register(type="log_handler", name="database")
+class DatabaseLogHandler(LogHandlerBase):
+    """Custom logging handler that sends log records to a database."""
 
-    HANDLER_NAME = "SurrealDBHandler"
+    HANDLER_NAME = "DatabaseLogHandler"
 
-    def __init__(self, surrealdb_client: Surreal, table: str = "logs"):
-        """Initializes the SurrealDBHandler.
+    def __init__(self, database_client: DatabaseBase, table: str = "logs"):
+        """Initializes the DatabaseLogHandler.
 
         Parameters
         ----------
-        - surrealdb_client: An instance of SurrealDBClient.
-        - table: The SurrealDB table where logs will be stored.
+        - database_client: An instance of DatabaseBase implementation.
+        - table: The database table where logs will be stored.
 
         """
         super().__init__()
-        self.surrealdb_client = surrealdb_client
+        self.database_client = database_client
         self.table = table
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.debug(
-            SURREALDB_HANDLER_INITIALIZED,
+            "Database log handler initialized for table: %s",
             self.table,
             extra={"handler_name": self.HANDLER_NAME},
         )
 
     def emit(self, record: logging.LogRecord):
-        """Overrides the emit method to send log records to SurrealDB.
+        """Overrides the emit method to send log records to the database.
 
         Parameters
         ----------
@@ -92,16 +92,18 @@ class SurrealDBHandler(LogHandlerBase):
                 "process": record.process,
                 "run_number": getattr(record, "run_number", None),
             }
-            self.surrealdb_client.create_record(self.table, log_entry)
+            self.database_client.create_record(self.table, log_entry)
             self.logger.debug(
-                SURREALDB_EMIT_SUCCESS,
+                "Successfully emitted log record to database: %s",
                 log_entry,
                 extra={"handler_name": self.HANDLER_NAME},
             )
         except Exception as e:
             self.handleError(record)
             self.logger.error(
-                SURREALDB_EMIT_FAILURE, e, extra={"handler_name": self.HANDLER_NAME}
+                "Failed to emit log record to database: %s", 
+                e, 
+                extra={"handler_name": self.HANDLER_NAME}
             )
 
 

@@ -1,0 +1,9 @@
+{
+    "name": "aluminum",
+    "type": "elastic",
+    "density": 2700.0,
+    "young_modulus": 69000000000.0,
+    "poisson_ratio": 0.33,
+    "thermal_expansion": 2.31e-5,
+    "color": [192, 192, 192, 255]
+}

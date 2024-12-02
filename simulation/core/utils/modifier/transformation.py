@@ -1,10 +1,10 @@
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import scipy.spatial.transform as spt
 
 
-def apply_scaling(vertices: np.ndarray, scale: List[float]) -> np.ndarray:
+def apply_scaling(vertices: np.ndarray, scale: Union[float, List[float]]) -> np.ndarray:
     """Applies scaling to the mesh vertices.
 
     This function scales the input vertices along the X, Y, and Z axes using the provided scaling factors.
@@ -13,8 +13,8 @@ def apply_scaling(vertices: np.ndarray, scale: List[float]) -> np.ndarray:
     ----------
     vertices : np.ndarray
         A 2D NumPy array of shape (N, 3) representing the coordinates of N vertices.
-    scale : List[float]
-        A list or array of three scaling factors [Sx, Sy, Sz] for the X, Y, and Z axes respectively.
+    scale : Union[float, List[float]]
+        A scalar or list of three scaling factors [Sx, Sy, Sz] for the X, Y, and Z axes respectively.
 
     Returns
     -------
@@ -35,6 +35,10 @@ def apply_scaling(vertices: np.ndarray, scale: List[float]) -> np.ndarray:
            [ 8., 10., 12.]])
 
     """
+    # Convert scalar scale to list
+    if isinstance(scale, (int, float)):
+        scale = [scale, scale, scale]
+
     if len(scale) != 3:
         raise ValueError(
             f"Scale must be a list of three elements, got {len(scale)} elements."
@@ -88,10 +92,17 @@ def apply_rotation(vertices: np.ndarray, rotation: List[float]) -> np.ndarray:
     except ValueError as e:
         raise ValueError(f"Invalid quaternion {rotation}: {e}")
 
-    centroid = vertices.mean(axis=0)
+    # Compute centroid with high precision
+    centroid = vertices.mean(axis=0, dtype=np.float64)
+    
+    # Center vertices and rotate with high precision
     centered_vertices = vertices - centroid
-    rotated_vertices = centered_vertices @ R.T
+    rotated_vertices = np.dot(centered_vertices, R.T)
     rotated_vertices += centroid
+
+    # Round to avoid floating point precision issues
+    rotated_vertices = np.round(rotated_vertices, decimals=10)
+
     return rotated_vertices
 
 
@@ -138,7 +149,7 @@ def apply_translation(vertices: np.ndarray, translation: List[float]) -> np.ndar
 
 def apply_transformations(
     vertices: np.ndarray,
-    scale: List[float],
+    scale: Union[float, List[float]],
     rotation: List[float],
     translation: List[float],
 ) -> np.ndarray:
@@ -153,8 +164,8 @@ def apply_transformations(
     ----------
     vertices : np.ndarray
         A 2D NumPy array of shape (N, 3) representing the original coordinates of N vertices.
-    scale : List[float]
-        A list or array of three scaling factors [Sx, Sy, Sz] for the X, Y, and Z axes respectively.
+    scale : Union[float, List[float]]
+        A scalar or list of three scaling factors [Sx, Sy, Sz] for the X, Y, and Z axes respectively.
     rotation : List[float]
         A list or array of four floats representing the rotation quaternion [x, y, z, w].
     translation : List[float]
@@ -182,6 +193,10 @@ def apply_transformations(
            [ 5.,  6.,  3.]])
 
     """
+    # Convert scalar scale to list
+    if isinstance(scale, (int, float)):
+        scale = [scale, scale, scale]
+
     # Validate input lengths
     if len(scale) != 3:
         raise ValueError(

@@ -16,13 +16,15 @@ class MockParameters(ParametersBase):
     def __init__(self):
         self.mesh = np.array([[0, 0, 0], [1, 1, 1]])
         self.cmesh = np.array([[0, 0, 0], [1, 1, 1]])
+        self.dmin = 0.01
+        self.dhat = 0.1
+        self.broad_phase_method = 'default'
+        self.cconstraints = ipctk.NormalCollisions()
+        self.fconstraints = ipctk.TangentialCollisions()
         self.kB = 1.0
         self.maxkB = 10.0
         self.dprev = 0.1
         self.bboxdiag = 1.732  # sqrt(3)
-        self.dhat = 0.1
-        self.dmin = 0.01
-        self.cconstraints = ipctk.CollisionConstraints()
 
 
 class TestBarrierUpdaterBase:

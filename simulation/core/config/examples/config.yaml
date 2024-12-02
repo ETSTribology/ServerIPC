@@ -1,0 +1,14 @@
+board:
+  tensorboard:
+    log_dir: './logs'
+    tensor_data_subdir: 'tensorboard_data'
+    flush_secs: 120
+    max_queue: 10
+
+logging:
+  level: INFO
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+simulation:
+  timestep: 0.01
+  duration: 100.0

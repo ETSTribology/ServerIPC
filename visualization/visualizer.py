@@ -4,9 +4,9 @@ import numpy as np
 import logging
 import queue
 import os
-from mesh_manager import MeshManager
-from screenshot_manager import ScreenshotManager
-from redis_client import RedisClient
+from .screenshot_manager import ScreenshotManager
+from visualization.backends.base import BaseCommunicationBackend
+from visualization.backends.redis_backend import RedisCommunicationBackend
 
 logger = logging.getLogger(__name__)
 
@@ -14,8 +14,7 @@ class PolyscopeVisualizer:
     def __init__(
         self,
         mesh_queue: queue.Queue,
-        redis_client: RedisClient,
-        mesh_manager: MeshManager,
+        communication_backend: BaseCommunicationBackend,
         screenshot_manager: ScreenshotManager,
     ):
         ps.set_up_dir("z_up")
@@ -27,8 +26,7 @@ class PolyscopeVisualizer:
         self.visual_mesh = None
         self.initialized = False
         self.mesh_queue = mesh_queue
-        self.redis_client = redis_client
-        self.mesh_manager = mesh_manager
+        self.communication_backend = communication_backend
         self.screenshot_manager = screenshot_manager
         self.material_colors = {}
         self.faces = None
@@ -162,17 +160,17 @@ class PolyscopeVisualizer:
         # Handle Pause and Play buttons
         if imgui.Button("Pause"):
             self.is_paused = True
-            self.redis_client.send_command("pause")
+            self.communication_backend.send_command("pause")
             logger.info("Visualization Paused.")
         imgui.SameLine()
         if imgui.Button("Play"):
             self.is_paused = False
-            self.redis_client.send_command("play")
+            self.communication_backend.send_command("play")
             logger.info("Visualization Resumed.")
 
         # Handle Stop and Start buttons
         if imgui.Button("Stop"):
-            self.redis_client.send_command("stop")
+            self.communication_backend.send_command("stop")
             logger.info("Sent stop command to simulation server.")
             self.reset_to_initial_state()
             self.mesh_states = []
@@ -181,19 +179,19 @@ class PolyscopeVisualizer:
             logger.info("Stopped simulation and reset mesh to initial state.")
         imgui.SameLine()
         if imgui.Button("Start"):
-            self.redis_client.send_command("start")
+            self.communication_backend.send_command("start")
             logger.info("Sent start command to simulation server.")
 
         imgui.Separator()
 
         # Handle Reset button
         if imgui.Button("Reset"):
-            self.redis_client.send_command("reset")
+            self.communication_backend.send_command("reset")
             logger.info("Sent reset command to simulation server.")
 
         # Handle Kill Simulation button
         if imgui.Button("Kill Simulation"):
-            self.redis_client.send_command("kill")
+            self.communication_backend.send_command("kill")
             logger.info("Sent kill command to simulation server.")
 
         imgui.Separator()

@@ -1,0 +1,9 @@
+{
+    "type": "static",
+    "time_step": 0.0,
+    "total_time": 0.0,
+    "collision_detection": {
+        "method": "narrow_phase",
+        "dhat": 0.0005
+    }
+}

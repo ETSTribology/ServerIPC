@@ -1,6 +1,6 @@
 import logging
 
-from .registry import Registry
+from simulation.core.registry.registry import Registry
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,49 @@ class RegistryContainer:
         if cls._instance is None:
             cls._instance = super(RegistryContainer, cls).__new__(cls)
             cls._instance._registries = {}
+            
+            # Add default registries
+            default_registries = [
+                # Board-related
+                ("board", "simulation.board.board.BoardBase"),
+
+                # Parameters
+                ("parameters", "simulation.core.parameters.ParametersBase"),
+
+                # Contact-related
+                ("barrier_initializer", "simulation.core.contact.barrier_initializer.BarrierInitializerBase"),
+                ("barrier_updater", "simulation.core.contact.barrier_updater.BarrierUpdaterBase"),
+                ("ccd", "simulation.core.contact.ccd.CCDBase"),
+
+                # Mathematical
+                ("gradient", "simulation.core.math.gradient.GradientBase"),
+                ("hessian", "simulation.core.math.hessian.HessianBase"),
+                ("potential", "simulation.core.math.potential.PotentialBase"),
+
+                # Solvers
+                ("linear_solver", "simulation.core.solvers.linear.LinearSolverBase"),
+                ("line_search", "simulation.core.solvers.line_search.LineSearchBase"),
+                ("optimizer", "simulation.core.solvers.optimizer.OptimizerBase"),
+
+                # Logging
+                ("log_handler", "simulation.core.utils.logs.handler.LogHandlerBase"),
+
+                # Network-related
+                ("database", "simulation.nets.db.db.DatabaseBase"),
+                ("storage", "simulation.nets.storage.storage.StorageBase")
+            ]
+            
+            for registry_name, base_class_path in default_registries:
+                try:
+                    module_name, class_name = base_class_path.rsplit(".", 1)
+                    base_class = getattr(
+                        __import__(module_name, fromlist=[class_name]), class_name
+                    )
+                    cls._instance._registries[registry_name] = Registry(base_class)
+                    setattr(cls._instance, registry_name, cls._instance._registries[registry_name])
+                except (ImportError, AttributeError) as e:
+                    logger.warning(f"Could not initialize registry '{registry_name}': {e}")
+            
             logger.debug(
                 "RegistryContainer instance created with all registries initialized."
             )

@@ -1,0 +1,26 @@
+{
+    "$id": "http://example.com/schemas/optimization_config.json",
+    "type": "object",
+    "description": "Optimization configuration for the simulation",
+    "properties": {
+        "solver": {
+            "type": "string",
+            "enum": ["newton", "gradient_descent", "adam", "lbfgs"],
+            "description": "Optimization solver algorithm"
+        },
+        "max_iterations": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "Maximum number of optimization iterations"
+        },
+        "convergence_tolerance": {
+            "type": "number",
+            "minimum": 1e-12,
+            "maximum": 1,
+            "description": "Convergence tolerance for the optimization process"
+        }
+    },
+    "required": ["solver", "max_iterations", "convergence_tolerance"],
+    "additionalProperties": false
+}
