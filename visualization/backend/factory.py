@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Dict
 
+from visualization.config.config import VisualizationConfigManager
 from visualization.backend.redis import RedisBackend
 from visualization.backend.websocket import WebSocketBackend
 from visualization.core.utils.singleton import SingletonMeta

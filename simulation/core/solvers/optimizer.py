@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Type
+from typing import Optional, Type, Dict, Any
 
 import numpy as np
 import scipy as sp
@@ -306,7 +306,7 @@ class LBFGSOptimizer(OptimizerBase):
                 r += si * (alpha_list[-(i + 1)] - beta)
 
             pk = -r
-            alpha = self.alpha0_func(xk, pk) if hasattr(self, "alpha0_func") else 1.0
+            alpha = 1.0
             xk_new = xk + alpha * pk
             gk_new = grad(xk_new)
 
@@ -334,141 +334,89 @@ class LBFGSOptimizer(OptimizerBase):
 
 
 class OptimizerFactory(metaclass=SingletonMeta):
-    """Factory class to create optimizer instances.
+    """Factory class for creating optimizer instances.
     Implemented as a Singleton to ensure only one instance exists.
     """
 
+    instances = {}
+
+
     def __init__(self):
+        """Initialize the optimizer factory with line search and linear solver factories."""
         self.line_search_factory = LineSearchFactory()
         self.linear_solver_factory = LinearSolverFactory()
 
-    @lru_cache(maxsize=None)
-    def get_class(self, type_lower: str) -> Type[OptimizerBase]:
-        registry_container = RegistryContainer()
-        return registry_container.optimizer.get(type_lower)
-
-    def create(self, type: str, **kwargs) -> OptimizerBase:
-        type_lower = type.lower()
-        try:
-            optimizer_cls = self.get_class(type_lower)
-        except ValueError as e:
-            logger.error(str(e))
-            raise
-
-        logger.info(f"Creating optimizer '{type_lower}'.")
-
-        # Extract line search parameters
-        line_search_method = kwargs.pop("line_search_method", "backtracking").lower()
-        line_search_kwargs = kwargs.pop("line_search_kwargs", {})
-
-        # Create line_searcher using LineSearchFactory
-        try:
-            line_searcher = self.line_search_factory.create(
-                type=line_search_method,
-                f=kwargs.get("f"),
-                grad_f=kwargs.get("grad_f"),
-                **line_search_kwargs,
-            )
-            logger.info(f"Line searcher '{line_search_method}' created successfully.")
-        except Exception as e:
-            logger.error(f"Failed to create line searcher: {e}")
-            raise
-
-        # Create linear solver if optimizer requires it
-        lsolver = None
-        if type_lower == "default":  # Assuming 'default' maps to NewtonOptimizer
-            linear_solver_method = kwargs.pop("linear_solver_method", "default").lower()
-            linear_solver_kwargs = kwargs.pop("linear_solver_kwargs", {})
-            try:
-                lsolver = self.linear_solver_factory.create(
-                    type=linear_solver_method,
-                    dofs=kwargs.get("dofs"),
-                    **linear_solver_kwargs,
-                )
-                logger.info(f"Linear solver '{linear_solver_method}' created successfully.")
-            except Exception as e:
-                logger.error(f"Failed to create linear solver: {e}")
-                raise
-
-        # Extract alpha0_func
-        alpha0_func = kwargs.pop("alpha0_func", None)
-        if alpha0_func is None:
-            raise ValueError("alpha0_func is required.")
-        if not callable(alpha0_func):
-            raise ValueError("alpha0_func must be a callable function.")
-
-        # Prepare optimizer arguments
-        optimizer_args = {
-            "maxiters": kwargs.pop("maxiters", 100),
-            "rtol": kwargs.pop("rtol", 1e-5),
-            "line_searcher": line_searcher,
-            "alpha0_func": alpha0_func,
-        }
-
-        if type_lower == "default":  # NewtonOptimizer
-            if lsolver is None:
-                raise ValueError("Linear solver 'lsolver' is required for Newton's method.")
-            optimizer_args.update(
-                {
-                    "lsolver": lsolver,
-                    "reg_param": kwargs.pop("reg_param", 1e-4),
-                    "n_threads": kwargs.pop("n_threads", 1),
-                }
-            )
-        elif type_lower == "lbfgs":
-            optimizer_args["m"] = kwargs.pop("m", 10)
-
-        # Create and return optimizer instance
-        try:
-            optimizer = optimizer_cls(**optimizer_args)
-            logger.info(f"Optimizer '{type_lower}' created successfully.")
-            return optimizer
-        except TypeError as e:
-            logger.error(f"Failed to initialize optimizer '{type_lower}': {e}")
-            raise
-        except Exception as e:
-            logger.error(
-                f"An unexpected error occurred while creating optimizer '{type_lower}': {e}"
-            )
-            raise
-
-
-class OptimizerFactory(metaclass=SingletonMeta):
-    """
-    Factory class for creating optimizer instances.
-    """
-    _instances = {}
-
-    @staticmethod
-    def create(config: Dict[str, Any]) -> Any:
-        """
-        Create and return an optimizer instance based on the configuration.
+    def create(self, config: dict) -> OptimizerBase:
+        """Create and return an optimizer instance based on the configuration.
 
         Args:
-            config: A dictionary containing the optimizer configuration.
+            config: A dictionary containing the optimizer configuration with the following structure:
+                {
+                    'type': str,  # Type of optimizer ('newton', 'bfgs', 'lbfgs')
+                    'maxiters': int,  # Maximum iterations
+                    'rtol': float,  # Relative tolerance
+                    'line_search': dict,  # Line search configuration
+                    'linear_solver': dict,  # Linear solver configuration (for Newton only)
+                    'reg_param': float,  # Regularization parameter (for Newton only)
+                    'n_threads': int,  # Number of threads (for Newton only)
+                    'm': int,  # Memory parameter (for L-BFGS only)
+                }
 
         Returns:
             An instance of the optimizer class.
 
         Raises:
-            ValueError: 
+            ValueError: If the optimizer type is not supported or if required configuration is missing.
         """
-        logger.info("Creating optimizer...")
-        optimizer_config = config.get("optimizer", {})
-        optimizer_type = optimizer_config.get("type", "default").lower()
+        optimizer_type = config.get('type', '').lower()
+        if not optimizer_type:
+            raise ValueError("Optimizer type must be specified in config")
 
-        if optimizer_type not in OptimizerFactory._instances:
-            if optimizer_type == "default":
-                optimizer_instance = Optimizer()
-            elif optimizer_type == "lbfgs":
-                optimizer_instance = LBFGSOptimizer()
-            elif optimizer_type == "bfgs":
-                optimizer_instance = BFGSOptimizer()
-            else:
-                raise ValueError(f"Unknown optimizer type: {optimizer_type}")
+        # Common parameters
+        maxiters = config.get('maxiters', 100)
+        rtol = config.get('rtol', 1e-5)
 
-            OptimizerFactory._instances[optimizer_type] = optimizer_instance
+        # Create line search instance if config is provided
+        line_search_config = config.get('line_search', {})
+        line_searcher = self.line_search_factory.create(line_search_config) if line_search_config else None
 
-        return OptimizerFactory._instances[optimizer_type]
-        
+        if optimizer_type == 'newton':
+            # Create linear solver instance
+            linear_solver_config = config.get('linear_solver', {})
+            if not linear_solver_config:
+                raise ValueError("Linear solver configuration is required for Newton optimizer")
+            
+            linear_solver = self.linear_solver_factory.create(linear_solver_config)
+            
+            # Additional Newton-specific parameters
+            reg_param = config.get('reg_param', 1e-4)
+            n_threads = config.get('n_threads', 1)
+            
+            return NewtonOptimizer(
+                lsolver=linear_solver,
+                line_searcher=line_searcher,
+                alpha0_func=lambda x, dx: 1.0,
+                maxiters=maxiters,
+                rtol=rtol,
+                reg_param=reg_param,
+                n_threads=n_threads
+            )
 
+        elif optimizer_type == 'bfgs':
+            return BFGSOptimizer(
+                line_searcher=line_searcher,
+                alpha0_func=lambda x, dx: 1.0,
+                maxiters=maxiters,
+                rtol=rtol
+            )
+
+        elif optimizer_type == 'lbfgs':
+            m = config.get('m', 10)
+            return LBFGSOptimizer(
+                maxiters=maxiters,
+                rtol=rtol,
+                m=m
+            )
+
+        else:
+            raise ValueError(f"Unsupported optimizer type: {optimizer_type}")

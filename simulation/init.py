@@ -29,16 +29,9 @@ def parse_arguments():
         description="Simulate 3D elastic deformations with contact handling.",
     )
     parser.add_argument(
-        "--json",
+        "--config",
         type=str,
-        default=None,
-        help="Path to JSON file with simulation parameters",
-    )
-    parser.add_argument(
-        "--yaml",
-        type=str,
-        default=None,
-        help="Path to YAML file with simulation parameters",
+        help="Path to the configuration file (JSON or YAML).",
     )
     return parser.parse_args()
 
@@ -61,21 +54,15 @@ class SimulationInitializer:
 
             # Determine configuration file path
             config_file_path = None
-            if self.args.json:
-                config_file_path = self.args.json
-                self.logger.debug(
-                    f"Loading configuration from JSON file: {config_file_path}"
-                )
-            elif self.args.yaml:
-                config_file_path = self.args.yaml
-                self.logger.debug(
-                    f"Loading configuration from YAML file: {config_file_path}"
-                )
+            if self.args.config:
+                config_file_path = self.args.config
+            else:
+                config_file_path = self.config_manager.get_config_path()
 
             # Initialize ConfigManager with the configuration file
             self.config_manager.initialize(
-                config_name=Path(config_file_path).name if config_file_path else "config.yaml",
-                config_path=str(Path(config_file_path).parent) if config_file_path else "./configs"
+                config_name=Path(config_file_path).name if config_file_path else "rectangle.json",
+                config_path=str(Path(config_file_path).parent) if config_file_path else "./scenarios",
             )
 
             # Apply logging configuration from ConfigManager
