@@ -70,23 +70,6 @@ services:
       timeout: 5s
       retries: 3
 
-  surrealdb:
-    image: surrealdb/surrealdb:latest
-    container_name: surrealdb
-    ports:
-      - "8000:8000"
-    environment:
-      SURREALDB_USER: root
-      SURREALDB_PASSWORD: rootpassword
-    volumes:
-      - surrealdb_data:/data
-    command: start --bind all --log trace
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
   postgres:
     image: postgres:14
     container_name: postgres

@@ -1,6 +1,0 @@
-{
-    "backend": "cpu",
-    "precision": "double",
-    "device_id": null,
-    "num_threads": 4
-}

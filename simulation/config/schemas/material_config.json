@@ -1,0 +1,54 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": "string",
+            "description": "Unique identifier for the material",
+            "minLength": 1
+        },
+        "type": {
+            "type": "string",
+            "enum": ["elastic", "plastic", "viscoelastic", "composite"],
+            "description": "Material behavior classification"
+        },
+        "density": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Density of the material in kg/m³"
+        },
+        "young_modulus": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Young's Modulus of the material in Pascals (Pa)"
+        },
+        "poisson_ratio": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 0.5,
+            "description": "Poisson's Ratio of the material"
+        },
+        "yield_stress": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Yield stress for plastic materials"
+        },
+        "thermal_expansion": {
+            "type": "number",
+            "description": "Coefficient of thermal expansion"
+        },
+        "color": {
+            "type": "array",
+            "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 255
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "RGBA color representation for visualization"
+        }
+    },
+    "required": ["name", "type", "density", "young_modulus", "poisson_ratio", "color"],
+    "additionalProperties": false
+}

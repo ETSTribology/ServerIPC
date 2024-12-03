@@ -1,7 +1,6 @@
 import logging
 from typing import Any, Dict
 
-from visualization.backend.grpc import GrpcBackend
 from visualization.backend.redis import RedisBackend
 from visualization.backend.websocket import WebSocketBackend
 from visualization.core.utils.singleton import SingletonMeta
@@ -39,8 +38,6 @@ class BackendFactory(metaclass=SingletonMeta):
                 backend_instance = RedisBackend(config)
             elif backend_type == "websocket":
                 backend_instance = WebSocketBackend(config)
-            elif backend_type == "grpc":
-                backend_instance = GrpcBackend(config)
             else:
                 raise ValueError(f"Unknown backend type: {backend_type}")
 

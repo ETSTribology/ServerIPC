@@ -1,0 +1,29 @@
+{
+    "$id": "http://example.com/schemas/compute_config.json",
+    "type": "object",
+    "description": "Computational resource configuration",
+    "properties": {
+        "backend": {
+            "type": "string",
+            "enum": ["cpu", "cuda", "opencl", "metal"],
+            "description": "Computational backend for simulation"
+        },
+        "precision": {
+            "type": "string",
+            "enum": ["single", "double", "half"],
+            "description": "Floating-point precision"
+        },
+        "device_id": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "Specific device ID for computation"
+        },
+        "num_threads": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of computational threads"
+        }
+    },
+    "required": ["backend", "precision", "num_threads"],
+    "additionalProperties": false
+}

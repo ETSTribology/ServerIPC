@@ -214,39 +214,44 @@ class ParallelLineSearch(BacktrackingLineSearch):
         return alphaj
 
 
-class LineSearchFactory:
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def get_class(type_lower: str):
-        """Retrieve and cache the LineSearch class from the registry."""
-        registry_container = RegistryContainer()
-        return registry_container.line_search.get(type_lower)
+class LineSearchFactory(metaclass=SingletonMeta):
+    """
+    Factory class for creating line search instances.
+    """
+    _instances = {}
 
     @staticmethod
-    def create(type: str, **kwargs) -> LineSearchBase:
-        """Factory method to create a LineSearch instance based on the specified method."""
-        type_lower = type.lower()
-        try:
-            # Retrieve the line search class from the cache or registry
-            line_search_cls = LineSearchFactory.get_class(type_lower)
+    def create(config: Dict[str, Any]) -> Any:
+        """
+        Create and return a line search instance based on the configuration.
 
-            # Filter constructor parameters
-            required_params = line_search_cls.__init__.__code__.co_varnames
-            filtered_kwargs = {
-                key: value for key, value in kwargs.items() if key in required_params
-            }
+        Args:
+            config: A dictionary containing the line search configuration.
 
-            # Instantiate the class
-            line_search_instance = line_search_cls(**filtered_kwargs)
-            logger.info(
-                f"Line search method '{type_lower}' created successfully using class '{line_search_cls.__name__}'."
-            )
-            return line_search_instance
-        except ValueError as ve:
-            logger.error(str(ve))
-            raise
-        except Exception as e:
-            logger.error(f"Failed to create line search method '{type}': {e}")
-            raise RuntimeError(
-                f"Error during line search initialization for method '{type}': {e}"
-            ) from e
+        Returns:
+            An instance of the line search class.
+
+        Raises:
+            ValueError: 
+        """
+        logger.info("Creating line search...")
+        line_search_config = config.get("line_search", {})
+        line_search_type = line_search_config.get("type", "default").lower()
+
+        if line_search_type not in LineSearchFactory._instances:
+            if line_search_type == "default":
+                line_search_instance = LineSearch()
+            elif line_search_type == "backtracking":
+                line_search_instance = BacktrackingLineSearch()
+            elif line_search_type == "wolfe":
+                line_search_instance = WolfeLineSearch()
+            elif line_search_type == "strong_wolfe":
+                line_search_instance = StrongWolfeLineSearch()
+            elif line_search_type == "parallel":
+                line_search_instance = ParallelLineSearch()
+            else:
+                raise ValueError(f"Unknown line search type: {line_search_type}")
+
+            LineSearchFactory._instances[line_search_type] = line_search_instance
+
+        return LineSearchFactory._instances[line_search_type]

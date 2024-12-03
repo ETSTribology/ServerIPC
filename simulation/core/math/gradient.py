@@ -72,26 +72,37 @@ class Gradient(GradientBase):
         return g
 
 
-class GradientFactory:
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def get_class(type_lower: str):
-        """Retrieve and cache the Gradient class from the registry."""
-        registry_container = RegistryContainer()
-        return registry_container.gradient.get(type_lower)
+class GradientFactory(metaclass=SingletonMeta):
+    """
+    Factory class for creating gradient instances.
+    """
+
+    _instances = {}
 
     @staticmethod
-    def create(type: str, params: Parameters) -> GradientBase:
-        """Creates a gradient computation object of the specified type."""
-        type_lower = type.lower()
-        try:
-            gradient_cls = GradientFactory.get_class(type_lower)
-            return gradient_cls(params)
-        except ValueError as ve:
-            logger.error(str(ve))
-            raise
-        except Exception as e:
-            logger.error(f"Failed to create gradient computation method '{type}': {e}")
-            raise RuntimeError(
-                f"Error during gradient initialization for method '{type}': {e}"
-            ) from e
+    def create(config: Dict[str, Any]) -> Any:
+        """
+        Create and return a gradient instance based on the configuration.
+
+        Args:
+            config: A dictionary containing the gradient configuration.
+
+        Returns:
+            An instance of the gradient class.
+
+        Raises:
+            ValueError: 
+        """
+        logger.info("Creating gradient...")
+        gradient_config = config.get("gradient", {})
+        gradient_type = gradient_config.get("type", "default").lower()
+
+        if gradient_type not in GradientFactory._instances:
+            if gradient_type == "default":
+                gradient_instance = Gradient(config)
+            else:
+                raise ValueError(f"Unknown gradient type: {gradient_type}")
+
+            GradientFactory._instances[gradient_type] = gradient_instance
+
+        return GradientFactory._instances[gradient_type]

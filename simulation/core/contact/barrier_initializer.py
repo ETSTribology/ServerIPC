@@ -63,34 +63,36 @@ class BarrierInitializer(BarrierInitializerBase):
 
 
 class BarrierInitializerFactory(metaclass=SingletonMeta):
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def get_class(type_lower: str):
-        """Retrieve and cache the Barrier Initializer class from the registry."""
-        registry_container = RegistryContainer()
-        return registry_container.barrier_initializer.get(type_lower)
+    """
+    Factory class for creating barrier initializer instances.
+    """
+
+    _instances = {}
 
     @staticmethod
-    def create(type: str, params: ParametersBase) -> BarrierInitializerBase:
-        """Create a Barrier Initializer instance based on the input type.
+    def create(config: Dict[str, Any]) -> Any:
+        """
+        Create and return a barrier initializer instance based on the configuration.
 
         Args:
-            type (str): Name of the Barrier Initializer.
-            params (ParametersBase): Simulation parameters.
+            config: A dictionary containing the barrier initializer configuration.
 
         Returns:
-            BarrierInitializerBase: Instance of the Barrier Initializer.
+            An instance of the barrier initializer class.
 
+        Raises:
+            ValueError: 
         """
-        type_lower = type.lower()
-        try:
-            barrier_initializer_cls = BarrierInitializerFactory.get_class(type_lower)
-            return barrier_initializer_cls(params)
-        except ValueError as ve:
-            logger.error(str(ve))
-            raise
-        except Exception as e:
-            logger.error(f"Failed to create Barrier Initializer '{type}': {e}")
-            raise RuntimeError(
-                f"Error during Barrier Initializer initialization for type '{type}': {e}"
-            ) from e
+        logger.info("Creating barrier initializer...")
+        barrier_initializer_config = config.get("barrier_initializer", {})
+        barrier_initializer_type = barrier_initializer_config.get("type", "default").lower()
+
+        if barrier_initializer_type not in BarrierInitializerFactory._instances:
+            if barrier_initializer_type == "default":
+                barrier_initializer_instance = DefaultBarrierInitializer()
+            else:
+                raise ValueError(f"Unknown barrier initializer type: {barrier_initializer_type}")
+
+            BarrierInitializerFactory._instances[barrier_initializer_type] = barrier_initializer_instance
+
+        return BarrierInitializerFactory._instances[barrier_initializer_type]

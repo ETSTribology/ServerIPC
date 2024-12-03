@@ -192,46 +192,40 @@ class DirectSolver(LinearSolverBase):
 
 
 class LinearSolverFactory(metaclass=SingletonMeta):
-    @lru_cache(maxsize=None)
-    def get_class(self, type_lower: str) -> Type[LinearSolverBase]:
-        """Retrieve and cache the LinearSolver class from the registry."""
-        registry_container = RegistryContainer()
-        return registry_container.linear_solver.get(type_lower)
+    _instances = {}
 
-    def create(self, type: str, dofs: np.ndarray, **kwargs) -> LinearSolverBase:
-        """Factory method to create a LinearSolver instance.
-
-        Parameters
-        ----------
-        - type (str): Type of the linear solver (e.g., 'ldlt', 'cg', 'lu', 'direct').
-        - dofs (np.ndarray): Degrees of freedom for the solver.
-        - kwargs: Additional keyword arguments for the solver.
-
-        Returns
-        -------
-        - An instance of LinearSolverBase.
-
+    @staticmethod
+    def create(config: Dict[str, Any]) -> Any:
         """
-        type_lower = type.lower()
-        try:
-            # Retrieve the solver class from the registry
-            solver_cls = self.get_class(type_lower)
+        Create and return a linear solver instance based on the configuration.
 
-            # Retrieve the constructor parameters for the solver class
-            required_params = solver_cls.__init__.__code__.co_varnames
-            filtered_kwargs = {
-                key: value for key, value in kwargs.items() if key in required_params
-            }
+        Args:
+            config: A dictionary containing the linear solver configuration.
 
-            # Create an instance of the solver class
-            solver_instance = solver_cls(dofs=dofs, **filtered_kwargs)
-            logger.info(
-                f"Solver '{type_lower}' created successfully using class '{solver_cls.__name__}'."
-            )
-            return solver_instance
-        except ValueError as ve:
-            logger.error(str(ve))
-            raise
-        except Exception as e:
-            logger.error(f"Failed to create solver '{type_lower}': {e}")
-            raise RuntimeError(f"Error during solver initialization for method '{type_lower}': {e}")
+        Returns:
+            An instance of the linear solver class.
+
+        Raises:
+            ValueError: 
+        """
+        logger.info("Creating linear solver...")
+        linear_solver_config = config.get("linear_solver", {})
+        linear_solver_type = linear_solver_config.get("type", "default").lower()
+
+        if linear_solver_type not in LinearSolverFactory._instances:
+            if linear_solver_type == "default":
+                linear_solver_instance = LinearSolver()
+            elif linear_solver_type == "ldlt":
+                linear_solver_instance = LDLTSolver()
+            elif linear_solver_type == "cg":
+                linear_solver_instance = CGSolver()
+            elif linear_solver_type == "lu":
+                linear_solver_instance = LUSolver()
+            elif linear_solver_type == "direct":
+                linear_solver_instance = DirectSolver()
+            else:
+                raise ValueError(f"Unknown linear solver type: {linear_solver_type}")
+
+            LinearSolverFactory._instances[linear_solver_type] = linear_solver_instance
+
+        return LinearSolverFactory._instances[linear_solver_type]

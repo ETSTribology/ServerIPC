@@ -67,40 +67,38 @@ class Hessian(HessianBase):
         return H
 
 
-class HessianFactory:
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def get_class(type_lower: str):
-        """Retrieve and cache the Hessian class from the registry."""
-        registry_container = RegistryContainer()
-        return registry_container.hessian.get(type_lower)
+class HessianFactory(meta=SingletonMeta):
+    """
+    Factory class for creating hessian instances.
+    """
+
+    _instances = {}
 
     @staticmethod
-    def create(type: str, params: ParametersBase) -> HessianBase:
-        """Factory method to create a Hessian computation method based on the provided type.
-
-        :param type: The type of Hessian computation method to create.
-        :param params: The simulation parameters.
-        :return: An instance of the specified Hessian computation method.
+    def create(config: Dict[str, Any]) -> Any:
         """
-        type_lower = type.lower()
-        logger.debug(f"Creating Hessian computation method of type '{type_lower}'.")
-        try:
-            # Retrieve the Hessian class from the generalized registry
-            registry_container = RegistryContainer()
-            hessian_cls = registry_container.hessian.get(type_lower)
+        Create and return a hessian instance based on the configuration.
 
-            # Instantiate the Hessian class
-            hessian_instance = hessian_cls(params)
-            logger.info(
-                f"Hessian computation method '{type_lower}' created successfully using class '{hessian_cls.__name__}'."
-            )
-            return hessian_instance
-        except ValueError as ve:
-            logger.error(str(ve))
-            raise
-        except Exception as e:
-            logger.error(f"Failed to create Hessian computation method '{type_lower}': {e}")
-            raise RuntimeError(
-                f"Error during Hessian computation initialization for method '{type_lower}': {e}"
-            ) from e
+        Args:
+            config: A dictionary containing the hessian configuration.
+
+        Returns:
+            An instance of the hessian class.
+
+        Raises:
+            ValueError: 
+        """
+        logger.info("Creating hessian...")
+        hessian_config = config.get("hessian", {})
+        hessian_type = hessian_config.get("type", "default").lower()
+
+        if hessian_type not in HessianFactory._instances:
+            if hessian_type == "default":
+                hessian_instance = Hessian(config)
+            else:
+                raise ValueError(f"Unknown hessian type: {hessian_type}")
+
+            HessianFactory._instances[hessian_type] = hessian_instance
+
+        return HessianFactory._instances[hessian_type]
+

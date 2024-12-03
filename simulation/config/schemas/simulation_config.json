@@ -1,0 +1,28 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "description": "Simulation configuration parameters",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": ["static", "dynamic", "quasi_static"],
+            "description": "Type of simulation to perform"
+        },
+        "time_step": {
+            "type": "number",
+            "minimum": 1e-6,
+            "maximum": 1,
+            "description": "Time step size for the simulation"
+        },
+        "total_time": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Total simulation time"
+        },
+        "collision_detection": {
+            "$ref": "collision_detection_config.json"
+        }
+    },
+    "required": ["type", "time_step", "total_time", "collision_detection"],
+    "additionalProperties": false
+}

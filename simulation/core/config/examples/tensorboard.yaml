@@ -1,7 +1,0 @@
-log_dir: ./runs
-tensor_data_subdir: tensor_data
-comment: ""
-purge_step: null
-max_queue: 10
-flush_secs: 120
-filename_suffix: ""

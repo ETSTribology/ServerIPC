@@ -1,38 +1,44 @@
 import logging
-from functools import lru_cache
-from typing import Type
+from typing import Type, Dict, Any
 
 from simulation.core.db.db import DatabaseBase
+from simulation.core.db.postgresql import PostgreSQL
+from simulation.core.db.sqlite import SQLite
 from simulation.core.utils.singleton import SingletonMeta
 
 class DatabaseFactory(metaclass=SingletonMeta):
-    """Factory for creating database instances."""
+    """
+    Factory for creating and managing database instances.
+    """
 
-    def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+    _instances = {}
 
-    @lru_cache(maxsize=None)
-    def get_class(self, type_lower: str) -> Type[DatabaseBase]:
-        """Retrieve and cache the database class from the registry."""
-        db_cls = self.registry_container.get_database_class(type_lower)
-        if not db_cls:
-            self.logger.error(f"No database class registered under name '{type_lower}'.")
-            raise ValueError(f"No database class registered under name '{type_lower}'.")
-        return db_cls
-
-    def create(self, type: str, **kwargs) -> DatabaseBase:
-        """Factory method to create a database instance.
-
-        :param type: The type of database (e.g., 'sqlite').
-        :param kwargs: Additional parameters for the database backend.
-        :return: An instance of DatabaseBase.
+    @staticmethod
+    def create(config: Dict[str, Any]) -> Any:
         """
-        type_lower = type.lower()
-        try:
-            db_cls = self.get_class(type_lower)
-            db_instance = db_cls(**kwargs)
-            self.logger.info(f"Database '{type_lower}' created successfully.")
-            return db_instance
-        except Exception as e:
-            self.logger.error(f"Failed to create database '{type_lower}': {e}")
-            raise RuntimeError(f"Error during database initialization for type '{type_lower}': {e}")
+        Create and return a backend instance based on the configuration.
+
+        Args:
+            config: A dictionary containing the database configuration.
+
+        Returns:
+            An instance of the database class.
+
+        Raises:
+            ValueError: 
+        """
+        logger.info("Creating database...")
+        database_config = config.get("database", {})
+        database_type = database_config.get("type", "sqlite").lower()
+
+        if database_type not in DatabaseFactory._instances:
+            if database_type == "sqlite":
+                database_instance = SQLite(config)
+            elif database_type == "postgresql":
+                database_instance = PostgreSQL(config)
+            else:
+                raise ValueError(f"Unknown database type: {database_type}")
+
+            DatabaseFactory._instances[database_type] = database_instance
+
+        return DatabaseFactory._instances[database_type]

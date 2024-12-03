@@ -53,33 +53,32 @@ class CCD(CCDBase):
         return max_alpha
 
 
-class CCDFactory:
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def get_class(type_lower: str):
-        """Retrieve and cache the CCD class from the registry."""
-        registry_container = RegistryContainer()
-        return registry_container.ccd.get(type_lower)
+class CCDFactory(metaclass=SingletonMeta):
+    _instances = {}
 
     @staticmethod
-    def create(type: str, params: ParametersBase) -> CCDBase:
-        """Create a CCD implementation.
+    def create(config: Dict[str, Any]) -> Any:
+        """
+        Create and return a CCD instance based on the configuration.
 
         Args:
-            type (str): Name of the CCD implementation.
-            params (ParametersBase): Simulation parameters.
+            config: A dictionary containing the CCD configuration.
 
         Returns:
-            CCDBase: CCD implementation.
+            An instance of the CCD class.
+
+        Raises:
+            ValueError:
 
         """
-        type_lower = type.lower()
-        try:
-            ccd_cls = CCDFactory.get_class(type_lower)
-            return ccd_cls(params)
-        except ValueError as ve:
-            logger.error(str(ve))
-            raise
-        except Exception as e:
-            logger.error(f"Failed to create CCD implementation '{type}': {e}")
-            raise RuntimeError(f"Error during CCD initialization for method '{type}': {e}") from e
+        logger.info("Creating CCD...")
+        ccd_config = config.get("ccd", {})
+        ccd_type = ccd_config.get("type", "default").lower()
+
+        if ccd_type not in CCDFactory._instances:
+            if ccd_type == "default":
+                ccd_instance = CCD(config)
+            else:
+                raise ValueError(f"Unknown CCD type: {ccd_type}")
+            CCDFactory._instances[ccd_type] = ccd_instance
+        return CCDFactory._instances[ccd_type]

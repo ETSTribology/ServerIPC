@@ -51,34 +51,36 @@ class BarrierUpdater(BarrierUpdaterBase):
 
 
 class BarrierUpdaterFactory(metaclass=SingletonMeta):
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def get_class(type_lower: str):
-        """Retrieve and cache the Barrier Updater class from the registry."""
-        registry_container = RegistryContainer()
-        return registry_container.barrier_updater.get(type_lower)
+    """
+    Factory class for creating barrier updater instances.
+    """
+
+    _instances = {}
 
     @staticmethod
-    def create(type: str, params: ParametersBase) -> BarrierUpdaterBase:
-        """Create a Barrier Updater instance based on the given type.
+    def create(config: Dict[str, Any]) -> Any:
+        """
+        Create and return a barrier updater instance based on the configuration.
 
         Args:
-            type (str): Name of the Barrier Updater.
-            params (ParametersBase): Simulation parameters.
+            config: A dictionary containing the barrier updater configuration.
 
         Returns:
-            BarrierUpdaterBase: Instance of the Barrier Updater.
+            An instance of the barrier updater class.
 
+        Raises:
+            ValueError: 
         """
-        type_lower = type.lower()
-        try:
-            barrier_updater_cls = BarrierUpdaterFactory.get_class(type_lower)
-            return barrier_updater_cls(params)
-        except ValueError as ve:
-            logger.error(str(ve))
-            raise
-        except Exception as e:
-            logger.error(f"Failed to create Barrier Updater '{type}': {e}")
-            raise RuntimeError(
-                f"Error during Barrier Updater initialization for type '{type}': {e}"
-            ) from e
+        logger.info("Creating barrier updater...")
+        barrier_updater_config = config.get("barrier_updater", {})
+        barrier_updater_type = barrier_updater_config.get("type", "default").lower()
+
+        if barrier_updater_type not in BarrierUpdaterFactory._instances:
+            if barrier_updater_type == "default":
+                barrier_updater_instance = BarrierUpdater()
+            else:
+                raise ValueError(f"Unknown barrier updater type: {barrier_updater_type}")
+
+            BarrierUpdaterFactory._instances[barrier_updater_type] = barrier_updater_instance
+
+        return BarrierUpdaterFactory._instances[barrier_updater_type]

@@ -6,7 +6,7 @@
     "properties": {
         "backend": {
             "type": "string",
-            "enum": ["redis", "websocket", "grpc"],
+            "enum": ["redis", "websocket"],
             "description": "The type of backend to configure."
         },
         "config": {
@@ -43,25 +43,6 @@
                 "secure": {
                     "type": "boolean",
                     "description": "Enable secure WebSocket connections (wss)."
-                },
-                "service": {
-                    "type": "string",
-                    "description": "The gRPC service name."
-                },
-                "credentials": {
-                    "type": "object",
-                    "required": ["certificate", "privateKey"],
-                    "properties": {
-                        "certificate": {
-                            "type": "string",
-                            "description": "Path to the SSL certificate file."
-                        },
-                        "privateKey": {
-                            "type": "string",
-                            "description": "Path to the private key file."
-                        }
-                    },
-                    "description": "The credentials for gRPC connection."
                 }
             },
             "required": ["host", "port"]
@@ -102,26 +83,6 @@
                             "port": { "type": "integer" },
                             "path": { "type": "string" },
                             "secure": { "type": "boolean" }
-                        }
-                    }
-                }
-            }
-        },
-        {
-            "if": {
-                "properties": { "backend": { "const": "grpc" } }
-            },
-            "then": {
-                "required": ["config"],
-                "properties": {
-                    "config": {
-                        "required": ["host", "port", "service", "credentials"],
-                        "properties": {
-                            "host": { "type": "string" },
-                            "port": { "type": "integer" },
-                            "service": { "type": "string" },
-                            "credentials": { "type": "object" },
-                            "ssl": { "type": "boolean" }
                         }
                     }
                 }

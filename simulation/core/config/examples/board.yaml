@@ -1,3 +1,0 @@
-type: tensorboard
-enabled: true
-log_level: INFO

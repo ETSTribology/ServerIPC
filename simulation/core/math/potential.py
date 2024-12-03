@@ -62,43 +62,37 @@ class Potential(PotentialBase):
         )
         return potential_energy
 
+class PotentialFactory(meta=SingletonMeta):
+    """
+    Factory class for creating potential instances.
+    """
 
-class PotentialFactory:
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def get_class(type_lower: str):
-        """Retrieve and cache the Potential class from the registry."""
-        registry_container = RegistryContainer()
-        return registry_container.potential.get(type_lower)
+    _instances = {}
 
     @staticmethod
-    def create(type: str, params: ParametersBase) -> PotentialBase:
-        """Factory method to create a potential energy computation object.
-
-        :param type: The type of potential energy computation object to create.
-        :param params: The simulation parameters.
-        :return: A potential energy computation object.
+    def create(config: Dict[str, Any]) -> Any:
         """
-        type_lower = type.lower()
-        logger.debug(f"Creating potential energy computation object of type '{type_lower}'.")
-        try:
-            # Retrieve the Potential class from the generalized registry
-            registry_container = RegistryContainer()
-            potential_cls = registry_container.potential.get(type_lower)
+        Create and return a potential instance based on the configuration.
 
-            # Create an instance of the Potential class
-            potential_instance = potential_cls(params)
-            logger.info(
-                f"Potential energy computation method '{type_lower}' created successfully using class '{potential_cls.__name__}'."
-            )
-            return potential_instance
-        except ValueError as ve:
-            logger.error(str(ve))
-            raise
-        except Exception as e:
-            logger.error(
-                f"Failed to create potential energy computation method '{type_lower}': {e}"
-            )
-            raise RuntimeError(
-                f"Error during potential initialization for method '{type_lower}': {e}"
-            ) from e
+        Args:
+            config: A dictionary containing the potential configuration.
+
+        Returns:
+            An instance of the potential class.
+
+        Raises:
+            ValueError: 
+        """
+        logger.info("Creating potential...")
+        potential_config = config.get("potential", {})
+        potential_type = potential_config.get("type", "default").lower()
+
+        if potential_type not in PotentialFactory._instances:
+            if potential_type == "default":
+                potential_instance = Potential(config)
+            else:
+                raise ValueError(f"Unknown potential type: {potential_type}")
+
+            PotentialFactory._instances[potential_type] = potential_instance
+
+        return PotentialFactory._instances[potential_type]

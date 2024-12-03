@@ -431,3 +431,44 @@ class OptimizerFactory(metaclass=SingletonMeta):
                 f"An unexpected error occurred while creating optimizer '{type_lower}': {e}"
             )
             raise
+
+
+class OptimizerFactory(metaclass=SingletonMeta):
+    """
+    Factory class for creating optimizer instances.
+    """
+    _instances = {}
+
+    @staticmethod
+    def create(config: Dict[str, Any]) -> Any:
+        """
+        Create and return an optimizer instance based on the configuration.
+
+        Args:
+            config: A dictionary containing the optimizer configuration.
+
+        Returns:
+            An instance of the optimizer class.
+
+        Raises:
+            ValueError: 
+        """
+        logger.info("Creating optimizer...")
+        optimizer_config = config.get("optimizer", {})
+        optimizer_type = optimizer_config.get("type", "default").lower()
+
+        if optimizer_type not in OptimizerFactory._instances:
+            if optimizer_type == "default":
+                optimizer_instance = Optimizer()
+            elif optimizer_type == "lbfgs":
+                optimizer_instance = LBFGSOptimizer()
+            elif optimizer_type == "bfgs":
+                optimizer_instance = BFGSOptimizer()
+            else:
+                raise ValueError(f"Unknown optimizer type: {optimizer_type}")
+
+            OptimizerFactory._instances[optimizer_type] = optimizer_instance
+
+        return OptimizerFactory._instances[optimizer_type]
+        
+
