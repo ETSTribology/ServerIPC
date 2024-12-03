@@ -1,13 +1,10 @@
 import logging
 from abc import ABC, abstractmethod
-from functools import lru_cache
 
 import ipctk
 import numpy as np
 
 from simulation.core.parameters import ParametersBase
-from simulation.core.registry.container import RegistryContainer
-from simulation.core.registry.decorators import register
 from simulation.core.utils.modifier.mesh import to_surface
 from simulation.core.utils.singleton import SingletonMeta
 
@@ -31,13 +28,6 @@ class BarrierUpdaterBase(ABC):
         raise NotImplementedError("Method not implemented.")
 
 
-registry_container = RegistryContainer()
-registry_container.add_registry(
-    "barrier_updater", "simulation.core.contact.barrier_updater.BarrierUpdaterBase"
-)
-
-
-@register(type="barrier_updater", name="default")
 class BarrierUpdater(BarrierUpdaterBase):
     def __call__(self, xk: np.ndarray):
         self.logger.debug("Updating barrier stiffness")

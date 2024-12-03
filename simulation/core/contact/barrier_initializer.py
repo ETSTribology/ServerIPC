@@ -1,13 +1,10 @@
 import logging
 from abc import ABC, abstractmethod
-from functools import lru_cache
 
 import ipctk
 import numpy as np
 
 from simulation.core.parameters import ParametersBase
-from simulation.core.registry.container import RegistryContainer
-from simulation.core.registry.decorators import register
 from simulation.core.utils.modifier.mesh import to_surface
 from simulation.core.utils.singleton import SingletonMeta
 
@@ -31,13 +28,6 @@ class BarrierInitializerBase(ABC):
         pass
 
 
-registry_container = RegistryContainer()
-registry_container.add_registry(
-    "barrier_initializer", "simulation.core.contact.barrier_initializer.BarrierInitializerBase"
-)
-
-
-@register(type="barrier_initializer", name="default")
 class DefaultBarrierInitializer(BarrierInitializerBase):
     def __call__(self, x: np.ndarray, gU: np.ndarray, gB: np.ndarray) -> None:
         # Implement a basic default initialization

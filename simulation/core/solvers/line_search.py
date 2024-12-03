@@ -1,12 +1,8 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from functools import lru_cache
 from typing import Callable, Optional
 
 import numpy as np
-
-from simulation.core.registry.container import RegistryContainer
-from simulation.core.registry.decorators import register
 
 logger = logging.getLogger(__name__)
 
@@ -27,20 +23,6 @@ class LineSearchBase:
         raise NotImplementedError("This method should be overridden by subclasses")
 
 
-# Ensure the line_search registry is initialized
-def _ensure_line_search_registry():
-    registry_container = RegistryContainer()
-    if not hasattr(registry_container, "line_search"):
-        logger.warning("Initializing line_search registry manually")
-        registry_container.add_registry(
-            "line_search", "simulation.core.solvers.line_search.LineSearchBase"
-        )
-
-
-_ensure_line_search_registry()
-
-
-@register(type="line_search", name="backtracking")
 class BacktrackingLineSearch(LineSearchBase):
     def __init__(
         self,
@@ -88,7 +70,6 @@ class BacktrackingLineSearch(LineSearchBase):
         return alphaj
 
 
-@register(type="line_search", name="wolfe")
 class WolfeLineSearch(LineSearchBase):
     def __init__(
         self,
@@ -129,7 +110,6 @@ class WolfeLineSearch(LineSearchBase):
         return alphaj
 
 
-@register(type="line_search", name="strong_wolfe")
 class StrongWolfeLineSearch(LineSearchBase):
     def __init__(
         self,
@@ -170,8 +150,6 @@ class StrongWolfeLineSearch(LineSearchBase):
         self.logger.warning("Strong Wolfe line search did not converge.")
         return alphaj
 
-
-@register(type="line_search", name="parallel")
 class ParallelLineSearch(BacktrackingLineSearch):
     def __init__(
         self,

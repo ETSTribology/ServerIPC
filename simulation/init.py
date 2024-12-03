@@ -10,17 +10,15 @@ import numpy as np
 import pbatoolkit as pbat
 import scipy as sp
 
-from simulation.core.config.config import generate_default_config, get_config_value, load_config
+from simulation.core.config.config import ConfigManager
 from simulation.core.states.state import SimulationState
 from simulation.core.utils.io.io import combine_meshes, load_individual_meshes
 from simulation.core.utils.logs.log import LoggingManager
 from simulation.core.utils.modifier.mesh import compute_face_to_element_mapping, find_codim_vertices
 from simulation.nets.factory import (
-    DatabaseConnectionFactory,
     NetsFactory,
-    NetworkConnectionFactory,
-    StorageConnectionFactory,
 )
+from simulation.db.factory import DatabaseFactory
 
 logger = logging.getLogger(__name__)
 
@@ -58,36 +56,35 @@ class SimulationInitializer:
             self.logging_manager = LoggingManager()
             self.logger = logger
 
-            # Set up logging based on configuration file if provided
+            # Initialize ConfigManager singleton
+            self.config_manager = ConfigManager.get_instance()
+
+            # Determine configuration file path
             config_file_path = None
             if self.args.json:
                 config_file_path = self.args.json
                 self.logger.debug(
-                    f"Loading logging configuration from JSON file: {config_file_path}"
+                    f"Loading configuration from JSON file: {config_file_path}"
                 )
             elif self.args.yaml:
                 config_file_path = self.args.yaml
                 self.logger.debug(
-                    f"Loading logging configuration from YAML file: {config_file_path}"
+                    f"Loading configuration from YAML file: {config_file_path}"
                 )
 
-            if config_file_path and Path(config_file_path).is_file():
-                config = LoggingManager.load_config_file(config_file_path)
-                self.logging_manager.apply_config(config.get("logging", {}))
-            else:
-                if config_file_path:
-                    self.logger.warning(
-                        f"Configuration file {config_file_path} not found. Using default logging settings."
-                    )
-                else:
-                    self.logger.debug(
-                        "No logging configuration file provided. Using default logging settings."
-                    )
+            # Initialize ConfigManager with the configuration file
+            self.config_manager.initialize(
+                config_name=Path(config_file_path).name if config_file_path else "config.yaml",
+                config_path=str(Path(config_file_path).parent) if config_file_path else "./configs"
+            )
 
+            # Apply logging configuration from ConfigManager
+            logging_config = self.config_manager.get_param("logging", {})
+            self.logging_manager.apply_config(logging_config)
             self.logger.info("Logging has been initialized.")
 
-            # Load simulation configuration
-            self.config = load_config(config_file_path, generate_default_config(self.args))
+            # Load simulation configuration using ConfigManager
+            self.config = self.config_manager.config  # Access the OmegaConf DictConfig directly
             self.logger.info("Simulation configuration loaded successfully.")
             self.logger.debug(f"Configuration details: {self.config}")
 
@@ -129,7 +126,9 @@ class SimulationInitializer:
     def setup_mass_matrix(self, mesh, materials, element_materials):
         self.logger.info("Setting up mass matrix.")
         try:
-            M, detJe = pbat.fem.mass_matrix(mesh, rho=1000, lump=True)
+            # Example: Retrieve mass density from materials if needed
+            rho = self.config_manager.get_param("materials", [{}])[0].get("density", 1000.0)
+            M, detJe = pbat.fem.mass_matrix(mesh, rho=rho, lump=True)
             Minv = sp.sparse.diags(1.0 / M.diagonal())
             return M, Minv
         except Exception as e:
@@ -141,7 +140,7 @@ class SimulationInitializer:
         try:
             g = np.zeros(mesh.dims)
             g[-1] = -gravity
-            rho = 1000
+            rho = self.config_manager.get_param("materials", [{}])[0].get("density", 1000.0)
             f, detJeF = pbat.fem.load_vector(mesh, rho * g)
             a = Minv @ f
             return f, a, detJeF
@@ -344,27 +343,19 @@ class SimulationInitializer:
         try:
             logger = self.logging_manager.logger
 
-            # Extract configuration values
-            inputs = get_config_value(self.config, "inputs", [])
-            friction_coefficient = get_config_value(
-                self.config, "friction.friction_coefficient", 0.3
-            )
-            damping_coefficient = get_config_value(
-                self.config, "friction.damping_coefficient", 1e-4
-            )
-            dhat = get_config_value(self.config, "simulation.dhat", 1e-3)
-            dmin = get_config_value(self.config, "simulation.dmin", 1e-4)
-            dt = get_config_value(self.config, "simulation.dt", 0.016)
-            gravity = get_config_value(self.config, "initial_conditions.gravity", 9.81)
-            side_force = get_config_value(self.config, "force.top_force", 10)
-            epsv = get_config_value(self.config, "simulation.epsv", 1e-6)
+            # Extract configuration values using ConfigManager
+            inputs = self.config_manager.get_param("inputs", [])
+            friction_coefficient = self.config_manager.get_param("friction.friction_coefficient", 0.3)
+            damping_coefficient = self.config_manager.get_param("friction.damping_coefficient", 1e-4)
+            dhat = self.config_manager.get_param("simulation.dhat", 1e-3)
+            dmin = self.config_manager.get_param("simulation.dmin", 1e-4)
+            dt = self.config_manager.get_param("simulation.dt", 0.016)
+            gravity = self.config_manager.get_param("initial_conditions.gravity", 9.81)
+            side_force = self.config_manager.get_param("force.top_force", 10)
+            epsv = self.config_manager.get_param("simulation.epsv", 1e-6)
 
-            communication_method = get_config_value(
-                self.config, "communication.method", "redis"
-            ).lower()
-            communication_settings = get_config_value(
-                self.config, "communication.settings.redis", {}
-            )
+            communication_method = self.config_manager.get_param("communication.method", "redis").lower()
+            communication_settings = self.config_manager.get_param("communication.settings.redis", {})
 
             # Load input meshes and materials
             all_meshes, materials = load_individual_meshes(inputs)
@@ -378,9 +369,7 @@ class SimulationInitializer:
             x, v, acceleration, n = self.setup_initial_conditions(mesh)
 
             # Setup mass matrix
-            mass_matrix, inverse_mass_matrix = self.setup_mass_matrix(
-                mesh, materials, element_materials
-            )
+            mass_matrix, inverse_mass_matrix = self.setup_mass_matrix(mesh, materials, element_materials)
 
             # Setup external forces
             f_ext, acceleration, qgf = self.setup_external_forces(

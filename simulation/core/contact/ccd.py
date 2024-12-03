@@ -1,13 +1,10 @@
 import logging
 from abc import ABC, abstractmethod
-from functools import lru_cache
 
 import ipctk
 import numpy as np
 
 from simulation.core.parameters import ParametersBase
-from simulation.core.registry.container import RegistryContainer
-from simulation.core.registry.decorators import register
 from simulation.core.utils.modifier.mesh import to_surface
 
 logger = logging.getLogger(__name__)
@@ -36,11 +33,6 @@ class CCDBase(ABC):
         raise NotImplementedError("Method not implemented.")
 
 
-registry_container = RegistryContainer()
-registry_container.add_registry("ccd", "simulation.core.contact.ccd.CCDBase")
-
-
-@register(type="ccd", name="default")
 class CCD(CCDBase):
     def __call__(self, x: np.ndarray, dx: np.ndarray) -> float:
         self.logger.debug("Computing CCD stepsize")

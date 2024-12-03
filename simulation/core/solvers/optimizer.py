@@ -2,14 +2,11 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
 from typing import Optional, Type
 
 import numpy as np
 import scipy as sp
 
-from simulation.core.registry.container import RegistryContainer
-from simulation.core.registry.decorators import register
 from simulation.core.solvers.line_search import LineSearchFactory
 from simulation.core.solvers.linear import LinearSolverFactory
 from simulation.core.utils.singleton import SingletonMeta
@@ -47,11 +44,6 @@ class OptimizerBase(ABC):
         pass
 
 
-registry_container = RegistryContainer()
-registry_container.add_registry("optimizer", "simulation.core.solvers.optimizer.OptimizerBase")
-
-
-@register(type="optimizer", name="default")
 class NewtonOptimizer(OptimizerBase):
     def __init__(
         self,
@@ -167,8 +159,6 @@ class NewtonOptimizer(OptimizerBase):
 
         return xk
 
-
-@register(type="optimizer", name="bfgs")
 class BFGSOptimizer(OptimizerBase):
     def __init__(
         self,
@@ -254,8 +244,6 @@ class BFGSOptimizer(OptimizerBase):
 
         return xk
 
-
-@register(type="optimizer", name="lbfgs")
 class LBFGSOptimizer(OptimizerBase):
     def __init__(self, maxiters: int = 100, rtol: float = 1e-5, m: int = 10):
         self.maxiters = maxiters

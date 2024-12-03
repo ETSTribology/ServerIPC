@@ -1,14 +1,12 @@
 import logging
 from abc import ABC, abstractmethod
-from functools import lru_cache
 
 import ipctk
 import numpy as np
 import scipy as sp
-from core.parameters import Parameters, ParametersBase
-from core.registry.container import RegistryContainer
-from core.registry.decorators import register
-from core.utils.modifier.mesh import to_surface
+
+from simulation.core.parameters import Parameters, ParametersBase
+from simulation.core.utils.modifier.mesh import to_surface
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +19,6 @@ class HessianBase(ABC):
     def __call__(self, x: np.ndarray) -> sp.sparse.csc_matrix:
         pass
 
-
-registry_container = RegistryContainer()
-registry_container.add_registry("hessian", "simulation.core.math.hessian.HessianBase")
-
-
-@register(type="hessian", name="default")
 class Hessian(HessianBase):
     def __init__(self, params: ParametersBase):
         self.params = params

@@ -1,6 +1,5 @@
 import logging
 from abc import ABC, abstractmethod
-from functools import lru_cache
 from typing import Type
 
 import numpy as np
@@ -8,8 +7,6 @@ import pbatoolkit as pbat
 import scipy as sp
 from scipy.sparse.linalg import cg, splu, spsolve
 
-from simulation.core.registry.container import RegistryContainer
-from simulation.core.registry.decorators import register
 from simulation.core.utils.singleton import SingletonMeta
 
 # Initialize logging
@@ -41,11 +38,6 @@ class LinearSolverBase(ABC):
         raise NotImplementedError("This method should be overridden by subclasses")
 
 
-registry_container = RegistryContainer()
-registry_container.add_registry("linear_solver", "simulation.core.solvers.linear.LinearSolverBase")
-
-
-@register(type="linear_solver", name="default")
 class LDLTSolver(LinearSolverBase):
     def solve(
         self,
@@ -78,7 +70,6 @@ class LDLTSolver(LinearSolverBase):
             raise
 
 
-@register(type="linear_solver", name="chol")
 class CholeskySolver(LinearSolverBase):
     def solve(
         self,
@@ -110,7 +101,6 @@ class CholeskySolver(LinearSolverBase):
             raise
 
 
-@register(type="linear_solver", name="cg")
 class CGSolver(LinearSolverBase):
     def solve(
         self,
@@ -143,8 +133,6 @@ class CGSolver(LinearSolverBase):
             self.logger.error(f"CG solver failed: {e}")
             raise
 
-
-@register(type="linear_solver", name="lu")
 class LUSolver(LinearSolverBase):
     def solve(
         self,
@@ -172,7 +160,6 @@ class LUSolver(LinearSolverBase):
             raise
 
 
-@register(type="linear_solver", name="direct")
 class DirectSolver(LinearSolverBase):
     def solve(
         self,

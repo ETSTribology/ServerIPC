@@ -1,13 +1,10 @@
 import logging
 from abc import ABC, abstractmethod
-from functools import lru_cache
 
 import numpy as np
-from core.contact.barrier_initializer import BarrierInitializer
-from core.parameters import Parameters, ParametersBase
-from core.registry.container import RegistryContainer
-from core.registry.decorators import register
-from core.utils.modifier.mesh import to_surface
+from simulation.core.contact.barrier_initializer import BarrierInitializer
+from simulation.core.parameters import Parameters, ParametersBase
+from simulation.core.utils.modifier.mesh import to_surface
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +18,6 @@ class GradientBase(ABC):
         pass
 
 
-registry_container = RegistryContainer()
-registry_container.add_registry("gradient", "simulation.core.math.gradient.GradientBase")
-
-
-@register(type="gradient", name="default")
 class Gradient(GradientBase):
     def __init__(self, params: ParametersBase):
         self.params = params

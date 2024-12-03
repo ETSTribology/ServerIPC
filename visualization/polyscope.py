@@ -147,7 +147,7 @@ class Polyscope:
 
             # Mesh Saving Configuration
             if psim.TreeNode("Mesh Saving"):
-                changed, self.mesh_save_enabled = psim.Checkbox(
+                changed, self.mesh_save_enabled = psim.Checkbox(----
                     "Enable Mesh Saving", self.mesh_save_enabled
                 )
                 if changed:

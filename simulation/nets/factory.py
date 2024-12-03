@@ -1,30 +1,46 @@
-from simulation.core.utils.singleton import SingletonMeta
-from simulation.nets.live.grpc import GRPC
-from simulation.nets.live.redis import Redis
-from simulation.nets.live.websocket import WebSocket
 from simulation.nets.nets import Nets
+from simulation.core.utils.singleton import SingletonMeta
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class NetsFactory(metaclass=SingletonMeta):
-    @staticmethod
-    def create_client(method: str, **kwargs) -> Nets:
-        method = method.lower()
-        if method == "redis":
-            return Redis(
-                host=kwargs.get("host", "localhost"),
-                port=kwargs.get("port", 6379),
-                db=kwargs.get("db", 0),
-                password=kwargs.get("password"),
-            )
-        if method == "websocket":
-            return WebSocket(
-                uri=kwargs.get("uri"),
-                serializer_method=kwargs.get("serializer_method", "pickle"),
-            )
-        if method == "grpc":
-            return GRPC(
-                host=kwargs.get("host", "localhost"),
-                port=kwargs.get("port", 50051),
-                serializer_method=kwargs.get("serializer_method", "pickle"),
-            )
-        raise ValueError(f"Unsupported communication method: {method}")
+    """Factory for creating communication client instances based on registered types."""
+
+    def __init__(self):
+        self.registry_container = RegistryContainer()
+        self.logger = logger
+
+    def create(self, method: str, **kwargs) -> Nets:
+        """
+        Factory method to create a communication client instance.
+
+        Parameters
+        ----------
+        method : str
+            The type of communication method (e.g., 'redis', 'grpc', 'websocket').
+        kwargs : dict
+            Additional keyword arguments required for the specific communication client.
+
+        Returns
+        -------
+        Nets
+            An instance of a communication client implementing the Nets interface.
+
+        Raises
+        ------
+        ValueError
+            If the specified communication method is not registered.
+        """
+        method_lower = method.lower()
+        try:
+            cls = self.registry_container.get_nets_class(method_lower)
+            if not cls:
+                self.logger.error(f"No communication client registered under name '{method_lower}'.")
+                raise ValueError(f"No communication client registered under name '{method_lower}'.")
+            self.logger.info(f"Creating communication client for method '{method_lower}'.")
+            return cls(**kwargs)
+        except Exception as e:
+            self.logger.error(f"Error creating communication client '{method_lower}': {e}")
+            raise ValueError(f"Failed to create communication client '{method_lower}': {e}")

@@ -1,14 +1,10 @@
 import logging
 from abc import ABC
-from functools import lru_cache
 
 import ipctk
 import numpy as np
 import pbatoolkit as pbat
 import scipy as sp
-
-from simulation.core.registry.container import RegistryContainer
-from simulation.core.registry.decorators import register
 from simulation.core.utils.modifier.mesh import to_surface
 
 logger = logging.getLogger(__name__)
@@ -19,11 +15,6 @@ class ParametersBase(ABC):
         pass
 
 
-registry_container = RegistryContainer()
-registry_container.add_registry("parameters", "simulation.core.parameters.ParametersBase")
-
-
-@register(type="parameters", name="default")
 class Parameters(ParametersBase):
     def __init__(
         self,

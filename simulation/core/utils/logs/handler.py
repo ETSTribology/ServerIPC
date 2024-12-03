@@ -5,16 +5,13 @@ import sys
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
-from functools import lru_cache
 from threading import Lock, Thread
 from typing import Any, Dict
 
 from minio import Minio
 from minio.error import S3Error
 
-from simulation.core.registry.container import RegistryContainer
-from simulation.core.registry.decorators import register
-from simulation.nets.db.db import DatabaseBase
+from simulation.db.db import DatabaseBase
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +39,6 @@ class LogHandlerBase(logging.Handler, ABC):
         """
         pass
 
-
-registry_container = RegistryContainer()
-registry_container.add_registry("log_handler", "simulation.core.utils.logs.handler.LogHandlerBase")
-
-
-@register(type="log_handler", name="database")
 class DatabaseLogHandler(LogHandlerBase):
     """Custom logging handler that sends log records to a database."""
 
@@ -106,8 +97,6 @@ class DatabaseLogHandler(LogHandlerBase):
                 extra={"handler_name": self.HANDLER_NAME},
             )
 
-
-@register(type="log_handler", name="minio")
 class MinIOHandler(LogHandlerBase):
     """Custom logging handler that uploads log records to a MinIO bucket."""
 
