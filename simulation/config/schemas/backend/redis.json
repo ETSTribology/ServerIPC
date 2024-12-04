@@ -1,0 +1,38 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Redis Backend Configuration",
+    "type": "object",
+    "version": "1.0.0",
+    "required": ["host", "port", "db"],
+    "properties": {
+        "host": {
+            "type": "string",
+            "description": "The host address of the Redis server.",
+            "default": "localhost"
+        },
+        "port": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535,
+            "description": "The port number of the Redis server.",
+            "default": 6379
+        },
+        "db": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The database index for Redis.",
+            "default": 0
+        },
+        "password": {
+            "type": "string",
+            "description": "Optional password for Redis authentication.",
+            "default": ""
+        },
+        "ssl": {
+            "type": "boolean",
+            "description": "Enable SSL for Redis connection.",
+            "default": false
+        }
+    },
+    "additionalProperties": false
+}

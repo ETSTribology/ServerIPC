@@ -1,0 +1,27 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "version": "1.0.0",
+    "description": "Line Search configuration for the simulation",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": ["armijo", "wolfe", "strong_wolfe", "parallel"],
+            "description": "Line search algorithm type"
+        },
+        "max_iterations": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "Maximum number of line search iterations"
+        },
+        "convergence_tolerance": {
+            "type": "number",
+            "minimum": 1e-12,
+            "maximum": 1,
+            "description": "Convergence tolerance for the line search process"
+        }
+    },
+    "required": ["type"],
+    "additionalProperties": false
+}

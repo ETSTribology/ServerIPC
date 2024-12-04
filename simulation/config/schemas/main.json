@@ -1,0 +1,172 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Main Configuration",
+    "type": "object",
+    "version": "1.0.0",
+    "required": [
+        "backend",
+        "boundary",
+        "compute",
+        "contact",
+        "db",
+        "extensions",
+        "geometry",
+        "solver",
+        "storage",
+        "time"
+    ],
+    "properties": {
+        "backend": {
+            "$ref": "backend.json",
+            "description": "Configuration for the backend.",
+            "default": {
+                "backend": "redis",
+                "config": {
+                    "host": "localhost",
+                    "port": 6379,
+                    "db": 0
+                }
+            }
+        },
+        "boundary": {
+            "$ref": "boundary.json",
+            "description": "Boundary conditions configuration",
+            "default": {
+                "dirichlet": [],
+                "neumann": []
+            }
+        },
+        "compute": {
+            "$ref": "compute.json",
+            "description": "Computation configuration",
+            "default": {
+                "threads": 4,
+                "gpu": false,
+                "precision": "double"
+            }
+        },
+        "contact": {
+            "$ref": "contact.json",
+            "description": "Contact handling configuration",
+            "default": {
+                "enabled": false,
+                "method": "penalty",
+                "stiffness": 1e5
+            }
+        },
+        "db": {
+            "$ref": "db.json",
+            "description": "Database configuration",
+            "default": {
+                "backend": "sqlite",
+                "config": {
+                    "path": "simulation.db"
+                }
+            }
+        },
+        "extensions": {
+            "$ref": "extensions.json",
+            "description": "Configuration for various extensions.",
+            "default": {
+                "mesh": {
+                    "enabled": false,
+                    "folder": "meshes"
+                },
+                "screenshot": {
+                    "enabled": false,
+                    "directory": "screenshots"
+                },
+                "board": {
+                    "enabled": false,
+                    "name": "tensorboard",
+                    "host": "localhost",
+                    "port": 6006
+                }
+            }
+        },
+        "initial": {
+            "$ref": "initial.json",
+            "description": "Initial conditions configuration",
+            "default": {
+                "displacement": [],
+                "velocity": [],
+                "force": []
+            }
+        },
+        "logging": {
+            "$ref": "logging.json",
+            "description": "Logging configuration",
+            "default": {
+                "level": "info",
+                "file": "simulation.log",
+                "console": true
+            }
+        },
+        "materials": {
+            "$ref": "materials.json",
+            "description": "Material properties configuration",
+            "default": {
+                "materials": []
+            }
+        },
+        "geometry": {
+            "$ref": "geometry.json",
+            "description": "Geometry configuration"
+        },
+        "solver": {
+            "$ref": "solver.json",
+            "description": "Solver configuration",
+            "default": {
+                "type": "newton",
+                "linear": {
+                    "solver": "cg",
+                    "max_iterations": 1000,
+                    "tolerance": 1e-6
+                },
+                "nonlinear": {
+                    "max_iterations": 10,
+                    "tolerance": 1e-8
+                }
+            }
+        },
+        "run": {
+            "$ref": "run.json",
+            "description": "Run configuration",
+            "default": {
+                "name": "simulation",
+                "output_dir": "output",
+                "save_frequency": 100
+            }
+        },
+        "storage": {
+            "$ref": "storage.json",
+            "description": "Configuration for the storage backend.",
+            "default": {
+                "backend": "local",
+                "config": {
+                    "directory": "storage"
+                }
+            }
+        },
+        "time": {
+            "$ref": "time.json",
+            "description": "Time stepping configuration",
+            "default": {
+                "start": 0.0,
+                "end": 1.0,
+                "dt": 0.001,
+                "integrator": "rk4"
+            }
+        },
+        "units": {
+            "$ref": "units.json",
+            "description": "Units configuration",
+            "default": {
+                "length": {"value": 1.0, "unit": "m"},
+                "time": {"value": 1.0, "unit": "s"},
+                "mass": {"value": 1.0, "unit": "kg"}
+            }
+        }
+    },
+    "additionalProperties": false
+}

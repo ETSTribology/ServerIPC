@@ -1,0 +1,26 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "version": "1.0.0",
+    "description": "Multiple run configurations for the simulation with different parameters",
+    "properties": {
+        "id": {
+            "type": "string",
+            "description": "Unique identifier for the run"
+        },
+        "queue": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "parameters_path": {
+                    "type": "string",
+                    "default": "queue"
+                }
+            }
+        }
+    },
+    "additionalProperties": false
+}

@@ -1,0 +1,27 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "version": "1.0.0",
+    "type": "object",
+    "title": "Time Configuration",
+    "description": "Time configuration parameters",
+    "required": ["step", "total"],
+    "properties": {
+        "step": {
+            "type": "number",
+            "minimum": 1e-6,
+            "maximum": 1,
+            "description": "Time step size for the simulation"
+        },
+        "total": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Total simulation time"
+        },
+        "integrator": {
+            "type": "string",
+            "enum": ["Implicit", "Explicit", "SemiImplicit", "RK4"],
+            "default": "Implicit"
+        }
+    },
+    "additionalProperties": false
+}

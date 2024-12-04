@@ -1,0 +1,20 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Mesh Configuration",
+    "type": "object",
+    "version": "1.0.0",
+    "required": ["enabled", "directory"],
+    "properties": {
+        "enabled": {
+            "type": "boolean",
+            "description": "Enable or disable mesh processing.",
+            "default": false
+        },
+        "directory": {
+            "type": "string",
+            "description": "The directory where meshes will be saved.",
+            "default": "meshes"
+        }
+    },
+    "additionalProperties": false
+}

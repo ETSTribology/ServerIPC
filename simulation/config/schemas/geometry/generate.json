@@ -1,0 +1,87 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "version": "1.0.0",
+    "title": "Mesh Generation Configuration",
+    "description": "Configuration for mesh generation using various methods",
+    "properties": {
+        "enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable mesh generation"
+        },
+        "method": {
+            "type": "string",
+            "enum": ["scan", "noise"],
+            "default": "scan",
+            "description": "Mesh generation method to use (scan: multiple scan paths, noise: random noise, rma: root mean average)"
+        },
+        "scan": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "List of scan paths to use",
+                    "default": "scan_paths.json"
+                }
+            },
+            "required": ["path"],
+            "additionalProperties": false
+        },
+        "noise": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["gaussian", "perlin", "brownian", "sine", "square"],
+                    "default": "gaussian",
+                    "description": "Type of noise to generate"
+                },
+                "amplitude": {
+                    "type": "number",
+                    "minimum": 0,
+                    "default": 1.0,
+                    "description": "Amplitude of the noise"
+                },
+                "frequency": {
+                    "type": "number",
+                    "minimum": 0,
+                    "default": 1.0,
+                    "description": "Frequency of the noise"
+                },
+                "octaves": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1,
+                    "description": "Number of noise octaves (for fractal noise)"
+                },
+                "persistence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.5,
+                    "description": "Persistence between octaves"
+                },
+                "seed": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Random seed for noise generation"
+                }
+            },
+            "additionalProperties": false
+        },
+        "output": {
+            "type": "object",
+            "properties": {
+                "format": {
+                    "type": "string",
+                    "enum": ["obj", "stl", "mesh"],
+                    "default": "obj",
+                    "description": "Output mesh format"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

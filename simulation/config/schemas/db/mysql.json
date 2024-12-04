@@ -1,0 +1,89 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "MySQL Database Configuration",
+    "type": "object",
+    "version": "1.0.0",
+    "description": "Configuration for MySQL database connection",
+    "required": ["host", "port", "database", "user", "password"],
+    "properties": {
+        "host": {
+            "type": "string",
+            "description": "Database server hostname",
+            "default": "localhost"
+        },
+        "port": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535,
+            "description": "Database server port",
+            "default": 3306
+        },
+        "database": {
+            "type": "string",
+            "description": "Database name",
+            "minLength": 1
+        },
+        "user": {
+            "type": "string",
+            "description": "Database user",
+            "minLength": 1
+        },
+        "password": {
+            "type": "string",
+            "description": "Database password"
+        },
+        "charset": {
+            "type": "string",
+            "description": "Database character set",
+            "default": "utf8mb4"
+        },
+        "pool": {
+            "type": "object",
+            "properties": {
+                "min": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1,
+                    "description": "Minimum number of connections in pool"
+                },
+                "max": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 10,
+                    "description": "Maximum number of connections in pool"
+                },
+                "idle_timeout": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 10000,
+                    "description": "Connection idle timeout in milliseconds"
+                }
+            },
+            "additionalProperties": false
+        },
+        "ssl": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable SSL/TLS connection"
+                },
+                "ca": {
+                    "type": "string",
+                    "description": "Path to CA certificate file"
+                },
+                "cert": {
+                    "type": "string",
+                    "description": "Path to client certificate file"
+                },
+                "key": {
+                    "type": "string",
+                    "description": "Path to client key file"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

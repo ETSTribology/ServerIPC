@@ -1,0 +1,25 @@
+{
+    "$id": "http://example.com/schemas/compute_config.json",
+    "type": "object",
+    "description": "Computational resource configuration",
+    "properties": {
+        "backend": {
+            "type": "string",
+            "enum": ["cpu", "cuda"],
+            "description": "Computational backend for simulation"
+        },
+        "distributed": {
+            "type": "boolean",
+            "description": "Enable distributed computing",
+            "default": false
+        },
+        "num_threads": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of computational threads",
+            "default": -1
+        }
+    },
+    "required": ["backend"],
+    "additionalProperties": false
+}

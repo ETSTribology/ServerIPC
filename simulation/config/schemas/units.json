@@ -1,0 +1,132 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "version": "1.0.0",
+    "type": "object",
+    "title": "Units Configuration",
+    "description": "Unit configuration parameters",
+    "required": ["length", "time", "mass", "force", "area", "density", "young"],
+    "properties": {
+        "length": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["nm", "μm", "mm", "m"],
+                    "default": "m"
+                }
+            },
+            "required": ["value", "unit"],
+            "description": "Length unit for the simulation"
+        },
+        "time": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["ns", "μs", "ms", "s"],
+                    "default": "s"
+                }
+            },
+            "required": ["value", "unit"],
+            "description": "Time unit for the simulation"
+        },
+        "mass": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["g", "kg"],
+                    "default": "kg"
+                }
+            },
+            "required": ["value", "unit"],
+            "description": "Mass unit for the simulation"
+        },
+        "force": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["N", "kN", "MN"],
+                    "default": "N"
+                }
+            },
+            "required": ["value", "unit"],
+            "description": "Force unit for the simulation"
+        },
+        "area": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["mm²", "cm²", "m²"],
+                    "default": "m²"
+                }
+            },
+            "required": ["value", "unit"],
+            "description": "Area unit for the simulation"
+        },
+        "density": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["g/cm³", "kg/m³"],
+                    "default": "kg/m³"
+                }
+            },
+            "required": ["value", "unit"],
+            "description": "Density unit for the simulation"
+        },
+        "young_modulus": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["Pa", "kPa", "MPa", "GPa"],
+                    "default": "Pa"
+                }
+            },
+            "required": ["value", "unit"],
+            "description": "Young's modulus unit for the simulation"
+        }
+    },
+    "default": {
+        "length": {"value": 1, "unit": "m"},
+        "time": {"value": 1, "unit": "s"},
+        "mass": {"value": 1, "unit": "kg"},
+        "force": {"value": 1, "unit": "N"},
+        "area": {"value": 1, "unit": "m²"},
+        "density": {"value": 1000, "unit": "kg/m³"},
+        "young_modulus": {"value": 1e6, "unit": "Pa"}
+    },
+    "additionalProperties": false
+}

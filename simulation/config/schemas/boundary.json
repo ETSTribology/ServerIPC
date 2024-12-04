@@ -1,0 +1,23 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "version": "1.0.0",
+    "description": "Boundary conditions configuration",
+    "properties": {
+        "dirichlet": {
+            "type": "array",
+            "items": {
+                "$ref": "boundary/dirichlet.json"
+            },
+            "description": "List of Dirichlet boundary conditions"
+        },
+        "neumann": {
+            "type": "array",
+            "items": {
+                "$ref": "boundary/neumann.json"
+            },
+            "description": "List of Neumann boundary conditions"
+        }
+    },
+    "additionalProperties": false
+}
