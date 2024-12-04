@@ -1,11 +1,14 @@
 import logging
 from abc import ABC
+from typing import Any, Dict
 
 import ipctk
 import numpy as np
 import pbatoolkit as pbat
 import scipy as sp
-from simulation.core.utils.modifier.mesh import to_surface
+
+from simulation.core.utils.singleton import SingletonMeta
+from simulation.core.modifier.mesh import to_surface
 
 logger = logging.getLogger(__name__)
 
@@ -101,42 +104,33 @@ class Parameters(ParametersBase):
         self.vt = vt.copy()
         self.a = a.copy()
 
-
-class ParametersFactory:
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def get_class(type_lower: str):
-        """Retrieve and cache the Parameters class from the registry."""
-        registry_container = RegistryContainer()
-        return registry_container.parameters.get(type_lower)
+class ParametersFactory(metaclass=SingletonMeta):
+    _instance = {}
 
     @staticmethod
-    def create(type: str, *args, **kwargs) -> ParametersBase:
-        """Factory method to create a Parameters configuration based on the provided type.
-
-        :param type: The type of Parameters configuration to create.
-        :param args: Positional arguments for the Parameters class.
-        :param kwargs: Keyword arguments for the Parameters class.
-        :return: An instance of the specified Parameters configuration.
+    def create(config: Dict[str, Any]) -> Any:
         """
-        type_lower = type.lower()
-        logger.debug(f"Creating Parameters configuration '{type_lower}'.")
-        try:
-            # Retrieve the Parameters class from the generalized registry
-            registry_container = RegistryContainer()
-            parameters_cls = registry_container.parameters.get(type_lower)
+        Create and return a potential instance based on the configuration.
 
-            # Create an instance of the Parameters class
-            parameters_instance = parameters_cls(*args, **kwargs)
-            logger.info(
-                f"Parameters configuration '{type_lower}' created successfully using class '{parameters_cls.__name__}'."
-            )
-            return parameters_instance
-        except ValueError as ve:
-            logger.error(str(ve))
-            raise
-        except Exception as e:
-            logger.error(f"Failed to create Parameters configuration '{type_lower}': {e}")
-            raise RuntimeError(
-                f"Error during Parameters initialization for method '{type_lower}': {e}"
-            ) from e
+        Args:
+            config: A dictionary containing the potential configuration.
+
+        Returns:
+            An instance of the potential class.
+
+        Raises:
+            ValueError: 
+        """
+        logger.info("Creating parameters...")
+        parameters_config = config.get("parameters", {})
+        parameters_type = parameters_config.get("type", "default").lower()
+
+        if parameters_type not in ParametersFactory._instances:
+            if parameters_type == "default":
+                parameters_instance = Parameters(config)
+            else:
+                raise ValueError(f"Unknown parameters type: {parameters_type}")
+
+            ParametersFactory._instances[parameters_type] = parameters_instance
+
+        return ParametersFactory._instances[parameters_type]

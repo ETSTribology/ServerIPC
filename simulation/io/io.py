@@ -5,8 +5,8 @@ import meshio
 import numpy as np
 import pbatoolkit as pbat
 
-from simulation.core.config.config import ConfigManager
-from simulation.core.utils.modifier.transformation import apply_transformations
+from simulation.config.config import ConfigManager
+from simulation.core.modifier.transformation import apply_transformations
 
 logger = logging.getLogger(__name__)
 

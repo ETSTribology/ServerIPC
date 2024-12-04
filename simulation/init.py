@@ -10,11 +10,10 @@ import numpy as np
 import pbatoolkit as pbat
 import scipy as sp
 
-from simulation.core.config.config import ConfigManager
-from simulation.core.states.state import SimulationState
-from simulation.core.utils.io.io import combine_meshes, load_individual_meshes
-from simulation.core.utils.logs.log import LoggingManager
-from simulation.core.utils.modifier.mesh import compute_face_to_element_mapping, find_codim_vertices
+from simulation.config.config import ConfigManager
+from simulation.states.state import SimulationState
+from simulation.io.io import combine_meshes, load_individual_meshes
+from simulation.core.modifier.mesh import compute_face_to_element_mapping, find_codim_vertices
 from simulation.nets.factory import (
     NetsFactory,
 )
@@ -44,10 +43,6 @@ class SimulationInitializer:
         try:
             # Parse command-line arguments
             self.args = parse_arguments()
-
-            # Initialize LoggingManager with default settings
-            self.logging_manager = LoggingManager()
-            self.logger = logger
 
             # Initialize ConfigManager singleton
             self.config_manager = ConfigManager.get_instance()

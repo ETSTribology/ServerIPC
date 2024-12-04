@@ -12,8 +12,7 @@ from simulation.core.parameters import Parameters, ParametersBase
 from simulation.core.solvers.line_search import LineSearchBase, LineSearchFactory
 from simulation.core.solvers.linear import LinearSolverBase, LinearSolverFactory
 from simulation.core.solvers.optimizer import OptimizerBase, OptimizerFactory
-from simulation.core.states.state import SimulationState
-from simulation.core.utils.modifier.mesh import to_surface
+from simulation.core.modifier.mesh import to_surface
 from simulation.init import SimulationInitializer
 from simulation.nets.controller.factory import CommandDispatcher
 from simulation.nets.messages import RequestMessage, ResponseMessage

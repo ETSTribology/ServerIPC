@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Type
+from typing import Type, Dict, Any
 
 import numpy as np
 import pbatoolkit as pbat
