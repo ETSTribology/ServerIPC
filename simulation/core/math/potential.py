@@ -1,9 +1,12 @@
 import logging
 from abc import ABC, abstractmethod
+from typing import Any, Dict
 
 import numpy as np
+from simulation.core.contact.ccd import CCD
+from simulation.core.utils.singleton import SingletonMeta
 from simulation.core.parameters import Parameters, ParametersBase
-from simulation.core.utils.modifier.mesh import to_surface
+from simulation.core.modifier.mesh import to_surface
 logger = logging.getLogger(__name__)
 
 
@@ -62,7 +65,7 @@ class Potential(PotentialBase):
         )
         return potential_energy
 
-class PotentialFactory(meta=SingletonMeta):
+class PotentialFactory(metaclass=SingletonMeta):
     """
     Factory class for creating potential instances.
     """

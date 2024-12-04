@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Type
+from typing import Optional, Type, Dict, Any
 
 import numpy as np
 import scipy as sp
@@ -331,106 +331,6 @@ class LBFGSOptimizer(OptimizerBase):
                 callback(xk)
 
         return xk
-
-
-class OptimizerFactory(metaclass=SingletonMeta):
-    """Factory class to create optimizer instances.
-    Implemented as a Singleton to ensure only one instance exists.
-    """
-
-    def __init__(self):
-        self.line_search_factory = LineSearchFactory()
-        self.linear_solver_factory = LinearSolverFactory()
-
-    @lru_cache(maxsize=None)
-    def get_class(self, type_lower: str) -> Type[OptimizerBase]:
-        registry_container = RegistryContainer()
-        return registry_container.optimizer.get(type_lower)
-
-    def create(self, type: str, **kwargs) -> OptimizerBase:
-        type_lower = type.lower()
-        try:
-            optimizer_cls = self.get_class(type_lower)
-        except ValueError as e:
-            logger.error(str(e))
-            raise
-
-        logger.info(f"Creating optimizer '{type_lower}'.")
-
-        # Extract line search parameters
-        line_search_method = kwargs.pop("line_search_method", "backtracking").lower()
-        line_search_kwargs = kwargs.pop("line_search_kwargs", {})
-
-        # Create line_searcher using LineSearchFactory
-        try:
-            line_searcher = self.line_search_factory.create(
-                type=line_search_method,
-                f=kwargs.get("f"),
-                grad_f=kwargs.get("grad_f"),
-                **line_search_kwargs,
-            )
-            logger.info(f"Line searcher '{line_search_method}' created successfully.")
-        except Exception as e:
-            logger.error(f"Failed to create line searcher: {e}")
-            raise
-
-        # Create linear solver if optimizer requires it
-        lsolver = None
-        if type_lower == "default":  # Assuming 'default' maps to NewtonOptimizer
-            linear_solver_method = kwargs.pop("linear_solver_method", "default").lower()
-            linear_solver_kwargs = kwargs.pop("linear_solver_kwargs", {})
-            try:
-                lsolver = self.linear_solver_factory.create(
-                    type=linear_solver_method,
-                    dofs=kwargs.get("dofs"),
-                    **linear_solver_kwargs,
-                )
-                logger.info(f"Linear solver '{linear_solver_method}' created successfully.")
-            except Exception as e:
-                logger.error(f"Failed to create linear solver: {e}")
-                raise
-
-        # Extract alpha0_func
-        alpha0_func = kwargs.pop("alpha0_func", None)
-        if alpha0_func is None:
-            raise ValueError("alpha0_func is required.")
-        if not callable(alpha0_func):
-            raise ValueError("alpha0_func must be a callable function.")
-
-        # Prepare optimizer arguments
-        optimizer_args = {
-            "maxiters": kwargs.pop("maxiters", 100),
-            "rtol": kwargs.pop("rtol", 1e-5),
-            "line_searcher": line_searcher,
-            "alpha0_func": alpha0_func,
-        }
-
-        if type_lower == "default":  # NewtonOptimizer
-            if lsolver is None:
-                raise ValueError("Linear solver 'lsolver' is required for Newton's method.")
-            optimizer_args.update(
-                {
-                    "lsolver": lsolver,
-                    "reg_param": kwargs.pop("reg_param", 1e-4),
-                    "n_threads": kwargs.pop("n_threads", 1),
-                }
-            )
-        elif type_lower == "lbfgs":
-            optimizer_args["m"] = kwargs.pop("m", 10)
-
-        # Create and return optimizer instance
-        try:
-            optimizer = optimizer_cls(**optimizer_args)
-            logger.info(f"Optimizer '{type_lower}' created successfully.")
-            return optimizer
-        except TypeError as e:
-            logger.error(f"Failed to initialize optimizer '{type_lower}': {e}")
-            raise
-        except Exception as e:
-            logger.error(
-                f"An unexpected error occurred while creating optimizer '{type_lower}': {e}"
-            )
-            raise
 
 
 class OptimizerFactory(metaclass=SingletonMeta):

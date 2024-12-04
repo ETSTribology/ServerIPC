@@ -1,11 +1,14 @@
 import logging
 from abc import ABC, abstractmethod
+from typing import Any, Dict
 
 import ipctk
 import numpy as np
 
 from simulation.core.parameters import ParametersBase
-from simulation.core.utils.modifier.mesh import to_surface
+from simulation.core.utils.singleton import SingletonMeta
+from simulation.core.modifier.mesh import to_surface
+
 
 logger = logging.getLogger(__name__)
 
