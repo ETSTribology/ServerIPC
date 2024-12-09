@@ -10,7 +10,7 @@ import math
 import argparse
 import itertools
 from collections.abc import Callable
-import matplotlib.pyplot as plt
+import torch
 
 
 def combine(V: list, C: list):
@@ -21,25 +21,41 @@ def combine(V: list, C: list):
     V = np.vstack(V)
     return V, C
 
+def de_combine(V: np.ndarray, C: np.ndarray):
+    Vsizes = [Vi.shape[0] for Vi in V]
+    offsets = list(itertools.accumulate(Vsizes))
+    C = [C[i] + offsets[i] - Vsizes[i] for i in range(len(C))]
+    C = np.vstack(C)
+    V = np.vstack(V)
+    return V, C
 
 def line_search(alpha0: float,
-                xk: np.ndarray,
-                dx: np.ndarray,
-                gk: np.ndarray,
-                f: Callable[[np.ndarray], float],
+                xk: torch.Tensor,
+                dx: torch.Tensor,
+                gk: torch.Tensor,
+                f: Callable[[torch.Tensor], torch.Tensor],
                 maxiters: int = 20,
                 c: float = 1e-4,
                 tau: float = 0.5):
-    alphaj = alpha0
-    Dfk = gk.dot(dx)
+    # Ensure all tensors are on the same device
+    device = xk.device
+    alpha = torch.tensor(alpha0, dtype=xk.dtype, device=device)
+    c = torch.tensor(c, dtype=xk.dtype, device=device)
+    tau = torch.tensor(tau, dtype=xk.dtype, device=device)
+
+    # Compute directional derivative Df_k
+    Dfk = torch.dot(gk, dx)
     fk = f(xk)
+
     for j in range(maxiters):
-        fx = f(xk + alphaj*dx)
-        flinear = fk + alphaj * c * Dfk
+        fx = f(xk + alpha * dx)
+        flinear = fk + alpha * c * Dfk
+        # Armijo condition
         if fx <= flinear:
             break
-        alphaj = tau*alphaj
-    return alphaj
+        alpha = tau * alpha
+
+    return alpha.item()
 
 
 def newton(x0: np.ndarray,
@@ -74,29 +90,22 @@ def to_surface(x: np.ndarray, mesh: pbat.fem.Mesh, cmesh: ipctk.CollisionMesh):
     return XB
 
 
-class Parameters:
-    def __init__(
-        self,
-        mesh: pbat.fem.Mesh,
-        xt: np.ndarray,
-        vt: np.ndarray,
-        a: np.ndarray,
-        M: sp.sparse.dia_array,
-        hep: pbat.fem.HyperElasticPotential,
-        dt: float,
-        cmesh: ipctk.CollisionMesh = None,
-        cconstraints: ipctk.NormalCollisions = None,
-        fconstraints: ipctk.TangentialCollisions = None,
-        materials: list = None,
-        element_materials: list = None,
-        dhat: float = 1e-3,
-        dmin: float = 1e-4,
-        mu: float = 0.3,
-        epsv: float = 1e-4,
-        barrier_potential: ipctk.BarrierPotential = None,
-        friction_potential: ipctk.FrictionPotential = None,
-        broad_phase_method: ipctk.BroadPhaseMethod = ipctk.BroadPhaseMethod.SWEEP_AND_PRUNE,
-    ):
+class Parameters():
+    def __init__(self,
+                 mesh: pbat.fem.Mesh,
+                 xt: np.ndarray,
+                 vt: np.ndarray,
+                 a: np.ndarray,
+                 M: sp.sparse.dia_array,
+                 hep: pbat.fem.HyperElasticPotential,
+                 dt: float,
+                 cmesh: ipctk.CollisionMesh,
+                 cconstraints: ipctk.NormalCollisions,
+                 fconstraints: ipctk.TangentialCollision,
+                 dhat: float = 1e-3,
+                 dmin: float = 1e-4,
+                 mu: float = 0.3,
+                 epsv: float = 1e-4):
         self.mesh = mesh
         self.xt = xt
         self.vt = vt
@@ -113,7 +122,7 @@ class Parameters:
         self.epsv = epsv
 
         self.dt2 = dt**2
-        self.xtilde = xt + dt * vt + self.dt2 * a
+        self.xtilde = xt + dt*vt + self.dt2 * a
         self.avgmass = M.diagonal().mean()
         self.kB = None
         self.maxkB = None
@@ -123,40 +132,6 @@ class Parameters:
         self.bboxdiag = ipctk.world_bbox_diagonal_length(BX)
         self.gU = None
         self.gB = None
-        self.gF = None
-        self.materials = materials or []
-        self.element_materials = element_materials or []
-
-        # Create BarrierPotential with dhat parameter
-        self.barrier_potential = (
-            barrier_potential
-            if barrier_potential is not None
-            else ipctk.BarrierPotential(dhat=dhat)
-        )
-
-        # Create FrictionPotential with eps_v parameter
-        self.friction_potential = (
-            friction_potential
-            if friction_potential is not None
-            else ipctk.FrictionPotential(eps_v=epsv)
-        )
-
-        self.broad_phase_method = broad_phase_method
-
-
-    def reset(self):
-        # Reset positions, velocities, accelerations to initial state
-        self.xt = self.initial_xt.copy()
-        self.vt = self.initial_vt.copy()
-        self.a = self.initial_a.copy()
-
-    def get_initial_state(self):
-        return self.xt.copy(), self.vt.copy(), self.a.copy()
-
-    def set_initial_state(self, xt, vt, a):
-        self.xt = xt.copy()
-        self.vt = vt.copy()
-        self.a = a.copy()
 
 
 class Potential():
@@ -179,33 +154,20 @@ class Potential():
         mu = self.params.mu
         epsv = self.params.epsv
         kB = self.params.kB
-        B = self.params.barrier_potential
-        D = self.params.friction_potential
 
         hep.compute_element_elasticity(x, grad=False, hessian=False)
         U = hep.eval()
         v = (x - xt) / dt
         BX = to_surface(x, mesh, cmesh)
         BXdot = to_surface(v, mesh, cmesh)
-
-        # Set collision settings before building
-        cconstraints.use_area_weighting = True
-        cconstraints.use_improved_max_approximator = True
-        
-        # Build collisions after settings are configured
         cconstraints.build(cmesh, BX, dhat, dmin=dmin)
-        fconstraints.build(cmesh, BX, cconstraints, B, kB, mu)
-
-        EB = B(cconstraints, cmesh, BX)
-        EF = D(fconstraints, cmesh, BXdot)
-
-        potential_energy = (
-            0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt**2 * U + kB * EB + dt**2 * EF
-        )
-        return potential_energy
+        fconstraints.build(cmesh, BX, cconstraints, dhat, kB, mu)
+        EB = cconstraints.compute_potential(cmesh, BX, dhat)
+        EF = fconstraints.compute_potential(cmesh, BXdot, epsv)
+        return 0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt2*U + kB * EB + dt2*EF
 
 
-class Gradient:
+class Gradient():
     def __init__(self, params: Parameters):
         self.params = params
         self.gradU = None
@@ -227,34 +189,28 @@ class Gradient:
         mu = self.params.mu
         epsv = self.params.epsv
         kB = self.params.kB
-        B = self.params.barrier_potential
-        D = self.params.friction_potential
 
         hep.compute_element_elasticity(x, grad=True, hessian=False)
         gU = hep.gradient()
         v = (x - xt) / dt
         BX = to_surface(x, mesh, cmesh)
         cconstraints.build(cmesh, BX, dhat, dmin=dmin)
-        gB = B.gradient(cconstraints, cmesh, BX)
+        gB = cconstraints.compute_potential_gradient(cmesh, BX, dhat)
         gB = cmesh.to_full_dof(gB)
 
         # Cannot compute gradient without barrier stiffness
         if self.params.kB is None:
             binit = BarrierInitializer(self.params)
             binit(x, gU, gB)
-            kB = self.params.kB
 
         kB = self.params.kB
         BXdot = to_surface(v, mesh, cmesh)
-
-        # Use the BarrierPotential in the build method
-        fconstraints.build(cmesh, BX, cconstraints, B, kB, mu)
-
-        friction_potential = D(fconstraints, cmesh, BXdot)
-        gF = D.gradient(fconstraints, cmesh, BXdot)
+        fconstraints.build(cmesh, BX, cconstraints, dhat, kB, mu)
+        gF = fconstraints.compute_potential_gradient(cmesh, BXdot, epsv)
         gF = cmesh.to_full_dof(gF)
-        g = M @ (x - xtilde) + dt2 * gU + kB * gB + dt * gF
+        g = M @ (x - xtilde) + dt2*gU + kB * gB + dt*gF
         return g
+
 
 class Hessian():
     def __init__(self, params: Parameters):
@@ -275,32 +231,19 @@ class Hessian():
         mu = self.params.mu
         epsv = self.params.epsv
         kB = self.params.kB
-        B = self.params.barrier_potential
-        D = self.params.friction_potential
 
         hep.compute_element_elasticity(x, grad=False, hessian=True)
         HU = hep.hessian()
         v = (x - xt) / dt
         BX = to_surface(x, mesh, cmesh)
         BXdot = to_surface(v, mesh, cmesh)
-        # Compute the Hessian of the barrier potential using the correct signature
-        HB = B.hessian(
-            cconstraints,
-            cmesh,
-            BX,
-            project_hessian_to_psd=ipctk.PSDProjectionMethod.ABS,
-        )
+        HB = cconstraints.compute_potential_hessian(
+            cmesh, BX, dhat, project_hessian_to_psd=True)
         HB = cmesh.to_full_dof(HB)
-
-        # Compute the Hessian of the friction dissipative potential
-        HF = D.hessian(
-            fconstraints,
-            cmesh,
-            BXdot,
-            project_hessian_to_psd=ipctk.PSDProjectionMethod.ABS,
-        )
+        HF = fconstraints.compute_potential_hessian(
+            cmesh, BXdot, epsv, project_hessian_to_psd=True)
         HF = cmesh.to_full_dof(HF)
-        H = M + dt2 * HU + kB * HB + HF
+        H = M + dt2*HU + kB * HB + HF
         return H
 
 
@@ -356,30 +299,21 @@ class BarrierInitializer():
     def __init__(self, params: Parameters):
         self.params = params
 
-    def __call__(self, x: np.ndarray, gU: np.ndarray, gB: np.ndarray) -> None:
-        params = self.params
-        mesh = params.mesh
-        cmesh = params.cmesh
-        dhat = params.dhat
-        dmin = params.dmin
-        avgmass = params.avgmass
-        bboxdiag = params.bboxdiag
-        cconstraints = params.cconstraints
-        B = params.barrier_potential
-
+    def __call__(self, x: np.ndarray, gU: np.ndarray, gB: np.ndarray):
+        mesh = self.params.mesh
+        cmesh = self.params.cmesh
+        dhat = self.params.dhat
+        dmin = self.params.dmin
+        avgmass = self.params.avgmass
+        bboxdiag = self.params.bboxdiag
+        # Compute adaptive barrier stiffness
         BX = to_surface(x, mesh, cmesh)
-        B(cconstraints, cmesh, BX)
-        gB = B.gradient(cconstraints, cmesh, BX)
         kB, maxkB = ipctk.initial_barrier_stiffness(
-            bboxdiag, B.barrier, dhat, avgmass, gU, gB, dmin=dmin
-        )
+            bboxdiag, dhat, avgmass, gU, gB, dmin=dmin)
         dprev = cconstraints.compute_minimum_distance(cmesh, BX)
-
-        # Update parameters
-        params.kB = kB
-        params.maxkB = maxkB
-        params.dprev = dprev
-
+        self.params.kB = kB
+        self.params.maxkB = maxkB
+        self.params.dprev = dprev
 
 
 class BarrierUpdater():
@@ -394,79 +328,13 @@ class BarrierUpdater():
         maxkB = self.params.maxkB
         dprev = self.params.dprev
         bboxdiag = self.params.bboxdiag
-        dhat = self.params.dhat
-        dmin = self.params.dmin
-        cconstraints = self.params.cconstraints
 
         BX = to_surface(xk, mesh, cmesh)
         dcurrent = cconstraints.compute_minimum_distance(cmesh, BX)
-        kB_new = ipctk.update_barrier_stiffness(dprev, dcurrent, maxkB, kB, bboxdiag, dmin=dmin)
-        self.params.kB = kB_new
+        self.params.kB = ipctk.update_barrier_stiffness(
+            dprev, dcurrent, maxkB, kB, bboxdiag, dmin=dmin)
         self.params.dprev = dcurrent
 
-def compute_stress_tensor(mesh: pbat.fem.Mesh, x: np.ndarray, Y: float, nu: float, hep: pbat.fem.HyperElasticPotential):
-    """
-    Compute the von Mises stress for each element in the mesh.
-    """
-    # Compute elasticity to get access to internal quantities
-    hep.compute_element_elasticity(x, grad=True, hessian=False)
-    
-    # Get the number of elements using mesh.E
-    num_elements = mesh.E.shape[1]
-    stress_tensors = []
-    
-    # Material parameters
-    mu = Y / (2 * (1 + nu))
-    lam = Y * nu / ((1 + nu) * (1 - 2 * nu))
-    
-    # Reshape x to match mesh dimensions
-    x_reshaped = x.reshape(-1, mesh.dims, order='F')
-    
-    # Compute stress for each element
-    for e in range(num_elements):
-        # Get element vertices
-        element_vertices = mesh.E[:, e]
-        
-        # Get reference configuration (3x4 for tetrahedra)
-        X = mesh.X[:, element_vertices]
-        
-        # Get current configuration (3x4 for tetrahedra)
-        x_current = x_reshaped[element_vertices, :].T
-        
-        # Compute edge matrices (3x3)
-        X_edges = X[:, 1:] - X[:, 0:1]  # Reference edges
-        x_edges = x_current[:, 1:] - x_current[:, 0:1]  # Current edges
-        
-        # Compute deformation gradient (3x3)
-        try:
-            F = x_edges @ np.linalg.inv(X_edges)
-        except np.linalg.LinAlgError:
-            print(f"Element {e}: Singular matrix encountered while computing F. Setting stress to zero.")
-            stress_tensors.append(0.0)
-            continue
-        
-        # Neo-Hookean stress computation
-        I = np.eye(3)
-        J = np.linalg.det(F)
-        if J <= 0:
-            print(f"Non-positive determinant encountered in element {e}: J={J}. Setting stress to zero.")
-            stress_tensors.append(0.0)
-            continue
-        
-        Finv = np.linalg.inv(F)
-        
-        # 2nd Piola-Kirchhoff stress tensor
-        S = mu * (F @ F.T - I) + lam * np.log(J) * Finv.T
-        
-        # Convert to Cauchy stress
-        sigma = (1/J) * F @ S @ F.T
-        
-        # Compute von Mises stress
-        s11, s22, s33 = np.diag(sigma)
-        von_mises = np.sqrt(0.5 * ((s11 - s22)**2 + (s22 - s33)**2 + (s33 - s11)**2))
-        stress_tensors.append(von_mises)
-    
-    return np.array(stress_tensors)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -536,9 +404,7 @@ if __name__ == "__main__":
     cmesh = ipctk.CollisionMesh.build_from_full_mesh(V, E, F)
     dhat = 1e-3
     cconstraints = ipctk.NormalCollisions()
-    fconstraints = ipctk.TangentialCollisions()
-    cconstraints.use_area_weighting = True
-    cconstraints.use_improved_max_approximator = True
+    fconstraints = ipctk.TangentialCollision()
     mu = 0.3
     epsv = 1e-4
     dmin = 1e-4
@@ -582,7 +448,6 @@ if __name__ == "__main__":
         global dhat, dmin, mu
         global newton_maxiter, newton_rtol
         global animate, step
-        global vm, stress_mesh  # Add stress_mesh to global variables
 
         changed, dt = imgui.InputFloat("dt", dt)
         changed, dhat = imgui.InputFloat(
@@ -598,10 +463,8 @@ if __name__ == "__main__":
         changed, animate = imgui.Checkbox("animate", animate)
         step = imgui.Button("step")
 
-        stress_mesh = None
-        stress_quantity = None
-
         if animate or step:
+            ps.screenshot()
             profiler.begin_frame("Physics")
             params = Parameters(mesh, x, v, a, M, hep, dt, cmesh,
                                 cconstraints, fconstraints, dhat, dmin, mu, epsv)
@@ -617,67 +480,9 @@ if __name__ == "__main__":
             x = xtp1
             BX = to_surface(x, mesh, cmesh)
             profiler.end_frame("Physics")
-            
+
             # Update visuals
             vm.update_vertex_positions(BX)
-            
-            # Compute and visualize stress
-            stress_values = compute_stress_tensor(mesh, x, args.Y, args.nu, hep)
-            
-            # Map per-element stress to per-vertex stress
-            n_vertices = mesh.X.shape[1]
-            stress_per_vertex = np.zeros(n_vertices)
-            stress_counts = np.zeros(n_vertices)
-            
-            # Assuming mesh.E is (4, n_elements)
-            for e in range(mesh.E.shape[1]):
-                element = mesh.E[:, e]
-                stress = stress_values[e]
-                for vertex in element:
-                    stress_per_vertex[vertex] += stress
-                    stress_counts[vertex] += 1
-            
-            # Avoid division by zero
-            stress_per_vertex /= np.maximum(stress_counts, 1)
-            
-            if stress_mesh is None:
-                # Initialize stress_mesh with scalar field
-                if BX.shape[0] == 3:
-                    vertices = np.ascontiguousarray(BX.T)
-                elif BX.shape[1] == 3:
-                    vertices = np.ascontiguousarray(BX)
-                else:
-                    raise ValueError(f"Unexpected shape for BX: {BX.shape}")
-                
-                # Register the surface mesh for stress visualization
-                stress_mesh = ps.register_surface_mesh(
-                    "Stress Visualization", 
-                    vertices,
-                    cmesh.faces,
-                    enabled=True,
-                    smooth_shade=True
-                )
-                
-                # Add the scalar quantity and store the reference
-                stress_quantity = stress_mesh.add_scalar_quantity(
-                    "Von Mises Stress",
-                    stress_per_vertex,
-                    defined_on='vertices',
-                    cmap='viridis'
-                )
-            else:
-                # Update stress_mesh positions
-                if BX.shape[0] == 3:
-                    vertices = np.ascontiguousarray(BX.T)
-                elif BX.shape[1] == 3:
-                    vertices = np.ascontiguousarray(BX)
-                else:
-                    raise ValueError(f"Unexpected shape for BX: {BX.shape}")
-                stress_mesh.update_vertex_positions(vertices)
-                
-                # Update the scalar quantity data
-                stress_quantity.set_data(stress_per_vertex)
-
 
     ps.set_user_callback(callback)
     ps.show()

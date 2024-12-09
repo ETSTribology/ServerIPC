@@ -1,12 +1,16 @@
 [submodule "PhysicsBasedAnimationToolkit"]
 	path = extern/PhysicsBasedAnimationToolkit
 	url = https://github.com/Q-Minh/PhysicsBasedAnimationToolkit.git
+	branch = master
 [submodule "ipc-toolkit"]
 	path = extern/ipc-toolkit
 	url = https://github.com/ipc-sim/ipc-toolkit.git
+	branch = main
 [submodule "fTetWild"]
 	path = extern/fTetWild
 	url = https://github.com/wildmeshing/fTetWild
+	branch = master
 [submodule "vcpkg"]
 	path = extern/vcpkg
 	url = https://github.com/microsoft/vcpkg.git
+	branch = master
