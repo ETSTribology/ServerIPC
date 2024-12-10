@@ -1,0 +1,153 @@
+{
+    "contact": {
+        "enabled": true,
+        "dhat": 0.001,
+        "friction_coefficient": 0.0,
+        "epsv": 0.001
+    },
+    "time": {
+        "integrator": "ImplicitEuler",
+        "tend": 5.0,
+        "dt": 0.025
+    },
+    "space": {
+        "advanced": {
+            "bc_method": "sample"
+        }
+    },
+    "boundary_conditions": {
+        "dirichlet_boundary": [
+            {
+                "id": 1,
+                "value": [0.0, 0.0, 0.0]
+            },
+            {
+                "id": 2,
+                "value": [
+                    "5 * t",
+                    0, 
+                    0
+                ],
+                "dimension": [true, false, true]
+            }
+        ]
+    },
+    "materials": [
+        {
+            "id": 2,
+            "type": "NeoHookean",
+            "E": 210000.0,
+            "nu": 0.3,
+            "rho": 1000.0
+        },
+        {
+            "id": 1,
+            "type": "NeoHookean",
+            "E": 210000.0,
+            "nu": 0.3,
+            "rho": 1000.0
+        }
+    ],
+    "solver": {
+        "linear": {
+            "solver": "Eigen::PardisoLDLT"
+        },
+        "nonlinear": {
+            "x_delta": 1e-06
+        },
+        "advanced": {
+            "lump_mass_matrix": true
+        },
+        "contact": {
+            "friction_convergence_tol": 0,
+            "friction_iterations": 0
+        }
+    },
+    "output": {
+        "json": "results.json",
+        "paraview": {
+            "file_name": "result.pvd",
+            "options": {
+                "material": true,
+                "body_ids": true,
+                "tensor_values": true,
+                "nodes": true
+            }
+        }
+    },
+    "geometry": [
+        {
+            "volume_selection": 2,
+            "mesh": "Cube.002.msh",
+            "point_selection": [
+                {
+                    "id": 2,
+                    "box": [
+                        [
+                            0,
+                            0,
+                            0
+                        ],
+                        [
+                            1,
+                            0.85,
+                            1
+                        ]
+                    ],
+                    "relative": true
+                }
+            ],
+            "transformation": {
+                "translation": [
+                    -0.2769210934638977,
+                    0.0,
+                    1
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "volume_selection": 1,
+            "mesh": "Cube.001.msh",
+            "point_selection": [
+                {
+                    "id": 1,
+                    "box": [
+                        [
+                            0,
+                            0,
+                            0
+                        ],
+                        [
+                            1,
+                            0.5,
+                            1
+                        ]
+                    ],
+                    "relative": true
+                }
+            ],
+            "transformation": {
+                "translation": [
+                    2.1253488063812256,
+                    0,
+                    1
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ]
+            }
+        }
+    ]
+}
