@@ -21,14 +21,6 @@ def combine(V: list, C: list):
     V = np.vstack(V)
     return V, C
 
-def de_combine(V: np.ndarray, C: np.ndarray):
-    Vsizes = [Vi.shape[0] for Vi in V]
-    offsets = list(itertools.accumulate(Vsizes))
-    C = [C[i] + offsets[i] - Vsizes[i] for i in range(len(C))]
-    C = np.vstack(C)
-    V = np.vstack(V)
-    return V, C
-
 def line_search(alpha0: float,
                 xk: torch.Tensor,
                 dx: torch.Tensor,
