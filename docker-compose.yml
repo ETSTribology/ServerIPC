@@ -12,15 +12,14 @@ services:
   #       condition: service_healthy
   #     surrealdb:
   #       condition: service_healthy
-  #     postgres:
+  #     timescaledb:
   #       condition: service_healthy
   #   environment:
   #     REDIS_HOST: dragonfly
   #     MINIO_HOST: minio
   #     MINIO_ROOT_USER: minioadmin
   #     MINIO_ROOT_PASSWORD: minioadminpassword
-  #     SURREALDB_HOST: surrealdb
-  #     POSTGRES_HOST: postgres
+  #     POSTGRES_HOST: timescaledb
   #   volumes:
   #     - ./meshes:/app/meshes
   #     - ./scenario:/app/scenario
@@ -45,6 +44,8 @@ services:
       - "6379:6379"
     volumes:
       - dragonfly-data:/data
+    networks:
+      - simulation_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -64,39 +65,52 @@ services:
       - minio_data:/data
       - minio_config:/root/.minio
     command: server /data --console-address ":9001"
+    networks:
+      - simulation_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9001/minio/health/live"]
       interval: 10s
       timeout: 5s
       retries: 3
 
-  postgres:
-    image: postgres:14
-    container_name: postgres
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - simulation_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  timescaledb:
+    image: timescale/timescaledb-ha:pg17
+    container_name: timescaledb
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: surreal_config
+      POSTGRES_USER: timescale
+      POSTGRES_PASSWORD: timescalepassword
+      POSTGRES_DB: timescale_db
+      POSTGRES_INITDB_ARGS: "--extension=timescaledb"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - timescaledb_data:/var/lib/postgresql/data
+    networks:
+      - simulation_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  tensorboard:
-    image: tensorflow/tensorflow:latest
-    container_name: tensorboard
-    command: tensorboard --logdir=/logs --host=0.0.0.0
-    ports:
-      - "6006:6006"
-    volumes:
-      - ./logs:/logs
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6006"]
+      test: ["CMD-SHELL", "pg_isready -U timescale"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -108,9 +122,12 @@ volumes:
     driver: local
   minio_config:
     driver: local
-  surrealdb_data:
+  timescaledb_data:
     driver: local
-  postgres_data:
+  grafana_data:
     driver: local
-  tensorboard_data:
-    driver: local
+
+
+networks:
+  simulation_network:
+    driver: bridge

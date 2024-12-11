@@ -14,9 +14,6 @@ from simulation.config.config import ConfigManager
 from simulation.states.state import SimulationState
 from simulation.io.io import combine_meshes, load_individual_meshes
 from simulation.core.modifier.mesh import compute_face_to_element_mapping, find_codim_vertices
-from simulation.nets.factory import (
-    NetsFactory,
-)
 from simulation.db.factory import DatabaseFactory
 
 logger = logging.getLogger(__name__)

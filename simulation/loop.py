@@ -14,8 +14,8 @@ from simulation.core.solvers.linear import LinearSolverBase, LinearSolverFactory
 from simulation.core.solvers.optimizer import OptimizerBase, OptimizerFactory
 from simulation.core.modifier.mesh import to_surface
 from simulation.init import SimulationInitializer
-from simulation.nets.controller.factory import CommandDispatcher
-from simulation.nets.messages import RequestMessage, ResponseMessage
+from simulation.states.state import SimulationState
+from simulation.db.factory import DatabaseFactory
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +24,6 @@ class SimulationManager:
     def __init__(self):
         self.logger = logger
         self.simulation_state = self.initialize_simulation()
-
-        # Add connection factories
-        self.network_factory = NetsFactory()
-        self.storage_factory = StorageFactory()
-        self.database_factory = DatabaseFactory()
 
         # Existing factories
         self.line_search_factory = LineSearchFactory()

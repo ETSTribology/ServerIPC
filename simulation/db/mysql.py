@@ -1,10 +1,11 @@
 import json
 import logging
+from typing import List, Dict, Any
 
 import mysql.connector
 from mysql.connector.errors import Error
 
-from simulation.core.db.db import DatabaseBase
+from simulation.db.db import DatabaseBase
 
 
 class MySQL(DatabaseBase):

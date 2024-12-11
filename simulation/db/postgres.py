@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 import psycopg2
 from psycopg2 import sql
 
-from simulation.core.db.db import DatabaseBase
+from simulation.db.db import DatabaseBase
 
 class Postgres(DatabaseBase):
     """PostgreSQL implementation of DatabaseBase."""

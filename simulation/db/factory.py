@@ -1,10 +1,11 @@
 import logging
 from typing import Type, Dict, Any
 
-from simulation.core.db.db import DatabaseBase
-from simulation.core.db.postgresql import PostgreSQL
-from simulation.core.db.sqlite import SQLite
+from simulation.db.db import DatabaseBase
+from simulation.db.postgres import Postgres
+from simulation.db.mysql import MySQL
 from simulation.core.utils.singleton import SingletonMeta
+
 
 class DatabaseFactory(metaclass=SingletonMeta):
     """
@@ -14,7 +15,7 @@ class DatabaseFactory(metaclass=SingletonMeta):
     _instances = {}
 
     @staticmethod
-    def create(config: Dict[str, Any]) -> Any:
+    def create(config: Dict[str, Any]) -> DatabaseBase:
         """
         Create and return a backend instance based on the configuration.
 
@@ -25,17 +26,21 @@ class DatabaseFactory(metaclass=SingletonMeta):
             An instance of the database class.
 
         Raises:
-            ValueError: 
+            ValueError: If the database type is unknown.
         """
+        logger = logging.getLogger("DatabaseFactory")
         logger.info("Creating database...")
+
         database_config = config.get("database", {})
-        database_type = database_config.get("type", "sqlite").lower()
+        database_type = database_config.get("type", "mysql").lower()
 
         if database_type not in DatabaseFactory._instances:
-            if database_type == "sqlite":
-                database_instance = SQLite(config)
-            elif database_type == "postgresql":
-                database_instance = PostgreSQL(config)
+            if database_type in ["postgres"]:
+                database_instance = Postgres(database_config)
+            elif database_type == "mysql":
+                database_instance = MySQL(database_config)
+            # elif database_type == "influxdb":
+            #     database_instance = InfluxDB(database_config)
             else:
                 raise ValueError(f"Unknown database type: {database_type}")
 

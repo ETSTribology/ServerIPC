@@ -1,41 +1,95 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
-    "version": "1.0.0",
-    "description": "Dirichlet boundary condition for the simulation",
+    "version": "1.1.0",
+    "description": "Boundary conditions for the simulation",
     "properties": {
-        "mesh_id": {
+        "type": {
             "type": "string",
-            "description": "ID of the mesh to apply the boundary condition",
-            "minLength": 1
-        },
-        "points": {
-            "type": "array",
-            "items": {
-                "type": "array",
-                "items": {
-                    "type": "number"
-                },
-                "minItems": 3,
-                "maxItems": 3,
-                "description": "Coordinates of the point on the boundary",
-                "default": [0, 0, 0]
-            },
-            "minItems": 1,
-            "maxItems": 1,
-            "description": "List of points on the boundary"
-        },
-        "value": {
-            "type": "array",
-            "items": {
-                "type": "number"
-            },
-            "minItems": 3,
-            "maxItems": 3,
-            "description": "Fixed displacement value for the boundary condition",
-            "default": [0, 0, 0]
+            "description": "Type of boundary condition",
+            "enum": ["dirichlet", "boundary_box"]
         }
     },
-    "required": ["mesh_id", "points", "value"],
-    "additionalProperties": false
+    "required": ["type"],
+    "oneOf": [
+        {
+            "properties": {
+                "type": { "const": "dirichlet" },
+                "mesh_id": {
+                    "type": "string",
+                    "description": "ID of the mesh to apply the boundary condition",
+                    "minLength": 1
+                },
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        },
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "description": "Coordinates of the point on the boundary",
+                        "default": [0, 0, 0]
+                    },
+                    "minItems": 1,
+                    "description": "List of points on the boundary"
+                },
+                "value": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "description": "Fixed displacement value for the boundary condition",
+                    "default": [0, 0, 0]
+                }
+            },
+            "required": ["mesh_id", "points", "value"],
+            "additionalProperties": false
+        },
+        {
+            "properties": {
+                "type": { "const": "boundary_box" },
+                "mesh_id": {
+                    "type": "string",
+                    "description": "ID of the mesh to apply the boundary condition",
+                    "minLength": 1
+                },
+                "box": {
+                    "type": "object",
+                    "description": "Defines the spatial extent of the boundary box",
+                    "properties": {
+                        "min": {
+                            "type": "array",
+                            "items": { "type": "number" },
+                            "minItems": 3,
+                            "maxItems": 3,
+                            "description": "Minimum coordinates of the box",
+                            "default": [0, 0, 0]
+                        },
+                        "max": {
+                            "type": "array",
+                            "items": { "type": "number" },
+                            "minItems": 3,
+                            "maxItems": 3,
+                            "description": "Maximum coordinates of the box",
+                            "default": [1, 1, 1]
+                        }
+                    },
+                    "required": ["min", "max"],
+                    "additionalProperties": false
+                },
+                "condition": {
+                    "type": "string",
+                    "description": "Type of condition to apply within the boundary box",
+                    "enum": ["fixed", "free", "other"],
+                    "default": "fixed"
+                }
+            },
+            "required": ["mesh_id", "box", "condition"],
+            "additionalProperties": false
+        }
+    ]
 }

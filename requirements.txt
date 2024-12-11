@@ -42,6 +42,7 @@ uv>=0.5.2
 # Logging & Monitoring
 loguru
 wandb>=0.18.7
+influxdb-client
 
 # Testing Dependencies
 pytest>=7.3.1

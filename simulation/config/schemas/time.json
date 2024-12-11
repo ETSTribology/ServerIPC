@@ -6,6 +6,11 @@
     "description": "Time configuration parameters",
     "required": ["step", "total"],
     "properties": {
+        "start": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Starting time for the simulation"
+        },
         "step": {
             "type": "number",
             "minimum": 1e-6,
@@ -19,7 +24,7 @@
         },
         "integrator": {
             "type": "string",
-            "enum": ["Implicit", "Explicit", "SemiImplicit", "RK4"],
+            "enum": ["Implicit", "Explicit", "SemiImplicit", "RK4", "ImplicitNewMark"],
             "default": "Implicit"
         }
     },
