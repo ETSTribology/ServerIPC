@@ -1,75 +1,86 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "type": "object",
-    "properties": {
-        "id": {
-            "type": "string",
-            "description": "Unique identifier for the material",
-            "minLength": 1
-        },
-        "name": {
-            "type": "string",
-            "description": "Unique identifier for the material",
-            "minLength": 1
-        },
-        "type": {
-            "type": "string",
-            "enum": ["Hyperelastic", "LinearElastic"],
-            "description": "Material behavior classification",
-            "default": "Hyperelastic"
-        },
-        "density": {
-            "type": "object",
-            "properties": {
-                "value": {
-                    "type": "number",
-                    "minimum": 0
-                },
-                "unit": {
-                    "type": "string",
-                    "enum": ["g/cm³", "kg/m³"],
-                    "default": "kg/m³"
-                }
+    "title": "Materials Configuration",
+    "version": "1.0.0",
+    "type": "array",
+    "description": "Array of material configurations for simulation",
+    "items": {
+        "type": "object",
+        "properties": {
+            "id": {
+                "type": "string",
+                "description": "Unique identifier for the material",
+                "minLength": 1
             },
-            "required": ["value", "unit"],
-            "description": "Density of the material"
-        },
-        "young_modulus": {
-            "type": "object",
-            "properties": {
-                "value": {
-                    "type": "number",
-                    "minimum": 0
-                },
-                "unit": {
-                    "type": "string",
-                    "enum": ["Pa", "kPa", "MPa", "GPa"],
-                    "default": "Pa"
-                }
+            "name": {
+                "type": "string",
+                "description": "Human-readable name for the material",
+                "minLength": 1
             },
-            "required": ["value", "unit"],
-            "description": "Young's Modulus of the material"
-        },
-        "poisson": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 0.5,
-            "description": "Poisson's Ratio of the material (dimensionless)",
-            "default": 0.45
-        },
-        "color": {
-            "type": "array",
-            "items": {
+            "type": {
+                "type": "string",
+                "enum": ["Hyperelastic", "LinearElastic"],
+                "description": "Material behavior classification",
+                "default": "Hyperelastic"
+            },
+            "density": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Density value"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "enum": ["g/cm³", "kg/m³"],
+                        "default": "kg/m³",
+                        "description": "Unit of density"
+                    }
+                },
+                "required": ["value", "unit"],
+                "description": "Density of the material"
+            },
+            "young_modulus": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Young's modulus value"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "enum": ["Pa", "kPa", "MPa", "GPa"],
+                        "default": "Pa",
+                        "description": "Unit of Young's modulus"
+                    }
+                },
+                "required": ["value", "unit"],
+                "description": "Young's modulus of the material"
+            },
+            "poisson": {
                 "type": "number",
                 "minimum": 0,
-                "maximum": 255
+                "maximum": 0.5,
+                "default": 0.45,
+                "description": "Poisson's Ratio of the material (dimensionless)"
             },
-            "minItems": 4,
-            "maxItems": 4,
-            "description": "RGBA color representation for visualization",
-            "default": [128, 128, 128, 255]
-        }
+            "color": {
+                "type": "array",
+                "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "minItems": 4,
+                "maxItems": 4,
+                "default": [128, 128, 128, 255],
+                "description": "RGBA color representation for visualization"
+            }
+        },
+        "required": ["id", "name", "type", "density", "young_modulus", "poisson"],
+        "additionalProperties": false
     },
-    "required": ["name", "type", "density", "young_modulus", "poisson"],
-    "additionalProperties": false
+    "minItems": 1
 }

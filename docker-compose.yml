@@ -73,6 +73,27 @@ services:
       timeout: 5s
       retries: 3
 
+    
+  timescaledb:
+    image: timescale/timescaledb-ha:pg17
+    container_name: timescaledb
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+    networks:
+      - simulation_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timescale"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -85,7 +106,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     depends_on:
-      postgres:
+      timescaledb:
         condition: service_healthy
     networks:
       - simulation_network
@@ -93,26 +114,6 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-
-  timescaledb:
-    image: timescale/timescaledb-ha:pg17
-    container_name: timescaledb
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: timescale
-      POSTGRES_PASSWORD: timescalepassword
-      POSTGRES_DB: timescale_db
-      POSTGRES_INITDB_ARGS: "--extension=timescaledb"
-    volumes:
-      - timescaledb_data:/var/lib/postgresql/data
-    networks:
-      - simulation_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U timescale"]
-      interval: 10s
-      timeout: 5s
       retries: 3
 
 volumes:

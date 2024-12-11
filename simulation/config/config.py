@@ -11,7 +11,7 @@ CURRENT_DIR = Path(__file__).parent
 SCHEMAS_DIR = Path(CURRENT_DIR, "schemas")
 
 
-class ConfigManager(metaclass=SingletonMeta):
+class SimulationConfigManager(metaclass=SingletonMeta):
     """
     A singleton class for managing visualization configurations.
     """

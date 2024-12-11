@@ -10,13 +10,6 @@
                 "$ref": "boundary/dirichlet.json"
             },
             "description": "List of Dirichlet boundary conditions"
-        },
-        "neumann": {
-            "type": "array",
-            "items": {
-                "$ref": "boundary/neumann.json"
-            },
-            "description": "List of Neumann boundary conditions"
         }
     },
     "additionalProperties": false

@@ -1,0 +1,68 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Database Configuration",
+    "type": "object",
+    "required": ["backend", "config"],
+    "properties": {
+        "backend": {
+            "type": "string",
+            "enum": ["postgres", "mysql"],
+            "description": "The type of backend to configure."
+        },
+        "config": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Configuration specific to the selected backend.",
+            "properties": {
+                "host": {
+                    "type": "string",
+                    "description": "The host address of the database server."
+                },
+                "port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "description": "The port number of the database server."
+                },
+                "db": {
+                    "type": "string",
+                    "description": "The name of the database to connect to."
+                },
+                "user": {
+                    "type": "string",
+                    "description": "The username for authenticating with the database."
+                },
+                "password": {
+                    "type": "string",
+                    "description": "The password for authenticating with the database."
+                }
+            }
+        }
+    },
+    "allOf": [
+        {
+            "if": {
+                "properties": { "backend": { "const": "postgres" } }
+            },
+            "then": {
+                "properties": {
+                    "config": {
+                        "$ref": "db/postgres.json"
+                    }
+                }
+            }
+        },
+        {
+            "if": {
+                "properties": { "backend": { "const": "mysql" } }
+            },
+            "then": {
+                "properties": {
+                    "config": {
+                        "$ref": "db/mysql.json"
+                    }
+                }
+            }
+        }
+    ]
+}

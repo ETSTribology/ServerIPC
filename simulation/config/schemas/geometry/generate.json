@@ -3,7 +3,7 @@
     "type": "object",
     "version": "1.0.0",
     "title": "Mesh Generation Configuration",
-    "description": "Configuration for mesh generation using various methods",
+    "description": "Configuration for mesh generation using various noise-based methods",
     "properties": {
         "enabled": {
             "type": "boolean",
@@ -12,29 +12,28 @@
         },
         "method": {
             "type": "string",
-            "enum": ["scan", "noise"],
-            "default": "scan",
-            "description": "Mesh generation method to use (scan: multiple scan paths, noise: random noise, rma: root mean average)"
-        },
-        "scan": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "List of scan paths to use",
-                    "default": "scan_paths.json"
-                }
-            },
-            "required": ["path"],
-            "additionalProperties": false
+            "enum": ["noise"],
+            "default": "noise",
+            "description": "Mesh generation method to use (currently supports noise-based methods)"
         },
         "noise": {
             "type": "object",
             "properties": {
                 "type": {
                     "type": "string",
-                    "enum": ["gaussian", "perlin", "brownian", "sine", "square"],
-                    "default": "gaussian",
+                    "enum": [
+                        "gaussian",
+                        "perlin",
+                        "brownian",
+                        "sine",
+                        "square",
+                        "beckmann",
+                        "ggx",
+                        "blinn",
+                        "mandelbrot",
+                        "fractal_brownian_motion"
+                    ],
+                    "default": "fractal_brownian_motion",
                     "description": "Type of noise to generate"
                 },
                 "amplitude": {
@@ -52,7 +51,7 @@
                 "octaves": {
                     "type": "integer",
                     "minimum": 1,
-                    "default": 1,
+                    "default": 4,
                     "description": "Number of noise octaves (for fractal noise)"
                 },
                 "persistence": {
@@ -62,13 +61,32 @@
                     "default": 0.5,
                     "description": "Persistence between octaves"
                 },
+                "lacunarity": {
+                    "type": "number",
+                    "minimum": 1,
+                    "default": 2.0,
+                    "description": "Lacunarity (frequency multiplier for fractal noise)"
+                },
+                "alpha": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "default": 0.5,
+                    "description": "Alpha (roughness parameter for Beckmann and GGX noise)"
+                },
+                "n": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 20,
+                    "description": "Shininess parameter for Blinn-Phong noise"
+                },
                 "seed": {
                     "type": "integer",
-                    "default": 0,
+                    "default": 42,
                     "description": "Random seed for noise generation"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Noise configuration for mesh generation"
         },
         "output": {
             "type": "object",
@@ -78,10 +96,23 @@
                     "enum": ["obj", "stl", "mesh"],
                     "default": "obj",
                     "description": "Output mesh format"
+                },
+                "resolution": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "default": [512, 512],
+                    "description": "Resolution of the output mesh [width, height]"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Output settings for the generated mesh"
         }
     },
+    "required": ["enabled", "method", "noise"],
     "additionalProperties": false
 }

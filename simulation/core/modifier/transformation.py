@@ -4,6 +4,22 @@ import numpy as np
 import scipy.spatial.transform as spt
 
 
+def euler_to_quaternion(euler_angles: List[float]) -> List[float]:
+    """Convert Euler angles to a quaternion.
+
+    Args:
+        euler_angles (List[float]): List of three Euler angles (in radians).
+
+    Returns:
+        List[float]: Quaternion [x, y, z, w].
+    """
+    if len(euler_angles) != 3:
+        raise ValueError(f"Euler angles must be a list of three elements, got {len(euler_angles)}.")
+
+    rotation = spt.Rotation.from_euler("xyz", euler_angles)
+    return rotation.as_quat().tolist()
+
+
 def apply_scaling(vertices: np.ndarray, scale: Union[float, List[float]]) -> np.ndarray:
     """Applies scaling to the mesh vertices.
 
@@ -43,8 +59,7 @@ def apply_scaling(vertices: np.ndarray, scale: Union[float, List[float]]) -> np.
         raise ValueError(f"Scale must be a list of three elements, got {len(scale)} elements.")
 
     scaling_matrix = np.diag(scale)
-    scaled_vertices = vertices @ scaling_matrix
-    return scaled_vertices
+    return vertices @ scaling_matrix
 
 
 def apply_rotation(vertices: np.ndarray, rotation: List[float]) -> np.ndarray:
@@ -81,27 +96,20 @@ def apply_rotation(vertices: np.ndarray, rotation: List[float]) -> np.ndarray:
 
     """
     if len(rotation) != 4:
-        raise ValueError(
-            f"Rotation must be a list of four elements representing a quaternion, got {len(rotation)} elements."
-        )
+        raise ValueError(f"Rotation must be a quaternion with four elements, got {len(rotation)}.")
 
     try:
-        R = spt.Rotation.from_quat(rotation).as_matrix()
+        rotation_matrix = spt.Rotation.from_quat(rotation).as_matrix()
     except ValueError as e:
         raise ValueError(f"Invalid quaternion {rotation}: {e}")
 
-    # Compute centroid with high precision
+    # Compute centroid for rotation
     centroid = vertices.mean(axis=0, dtype=np.float64)
 
-    # Center vertices and rotate with high precision
+    # Center vertices, rotate, and uncenter
     centered_vertices = vertices - centroid
-    rotated_vertices = np.dot(centered_vertices, R.T)
-    rotated_vertices += centroid
-
-    # Round to avoid floating point precision issues
-    rotated_vertices = np.round(rotated_vertices, decimals=10)
-
-    return rotated_vertices
+    rotated_vertices = centered_vertices @ rotation_matrix.T
+    return rotated_vertices + centroid
 
 
 def apply_translation(vertices: np.ndarray, translation: List[float]) -> np.ndarray:

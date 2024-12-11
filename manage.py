@@ -245,9 +245,7 @@ def run_server(
             "-m",
             "simulation.server",
             "--scenario",
-            str(scenario),
-            "--log-level",
-            log_level,
+            str(scenario)
         ]
 
         console.print("[bold]Starting simulation server...[/bold]")

@@ -1,8 +1,8 @@
-import argparse
 import logging
 import math
 import sys
 from pathlib import Path
+from typing import Tuple
 
 import igl
 import ipctk
@@ -10,73 +10,36 @@ import numpy as np
 import pbatoolkit as pbat
 import scipy as sp
 
-from simulation.config.config import ConfigManager
+from simulation.config.config import SimulationConfigManager
 from simulation.states.state import SimulationState
 from simulation.io.io import combine_meshes, load_individual_meshes
 from simulation.core.modifier.mesh import compute_face_to_element_mapping, find_codim_vertices
-from simulation.db.factory import DatabaseFactory
 
 logger = logging.getLogger(__name__)
-
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(
-        prog="3D Elastic Simulation of Linear FEM Tetrahedra using IPC",
-        description="Simulate 3D elastic deformations with contact handling.",
-    )
-    parser.add_argument(
-        "--config",
-        type=str,
-        help="Path to the configuration file (JSON or YAML).",
-    )
-    return parser.parse_args()
-
 
 class SimulationInitializer:
     """Encapsulates the initialization process for the simulation."""
 
-    def __init__(self):
-        """Initializes the SimulationInitializer by setting up logging and loading the configuration."""
-        try:
-            # Parse command-line arguments
-            self.args = parse_arguments()
+    def __init__(self, scenario: str = None):
+        """
+        Initializes the SimulationInitializer by setting up logging and loading the configuration.
+        
+        Args:
+            scenario (str): Path to the scenario configuration file.
+        """
+        self.scenario = scenario
+        self.simulation_state = None
+        self.config_manager = None
 
-            # Initialize ConfigManager singleton
-            self.config_manager = ConfigManager.get_instance()
+        self.config_path = Path(scenario)
+        self.config = None
+        self.load_configuration()
 
-            # Determine configuration file path
-            config_file_path = None
-            if self.args.config:
-                config_file_path = self.args.config
-            else:
-                config_file_path = self.config_manager.get_config_path()
-
-            # Initialize ConfigManager with the configuration file
-            self.config_manager.initialize(
-                config_name=Path(config_file_path).name if config_file_path else "rectangle.json",
-                config_path=str(Path(config_file_path).parent) if config_file_path else "./scenarios",
-            )
-
-            # Apply logging configuration from ConfigManager
-            logging_config = self.config_manager.get_param("logging", {})
-            self.logging_manager.apply_config(logging_config)
-            self.logger.info("Logging has been initialized.")
-
-            # Load simulation configuration using ConfigManager
-            self.config = self.config_manager.config  # Access the OmegaConf DictConfig directly
-            self.logger.info("Simulation configuration loaded successfully.")
-            self.logger.debug(f"Configuration details: {self.config}")
-
-            self.simulation_state = None
-
-            # Add connection factories
-            self.network_factory = NetworkConnectionFactory()
-            self.storage_factory = StorageConnectionFactory()
-            self.database_factory = DatabaseConnectionFactory()
-
-        except Exception as e:
-            logging.error(f"Failed to initialize SimulationInitializer: {e}")
-            sys.exit(1)
+    def load_configuration(self):
+        logger.info("Loading configuration...")
+        self.config_manager = SimulationConfigManager(config_path=self.config_path)
+        self.config = self.config_manager.get()
+        logger.debug(f"Loaded configuration: {self.config}")
 
     def setup_initial_conditions(self, mesh: pbat.fem.Mesh):
         """Sets up the initial conditions for the simulation.
@@ -103,19 +66,31 @@ class SimulationInitializer:
         return x, v, acceleration, n
 
     def setup_mass_matrix(self, mesh, materials, element_materials):
-        self.logger.info("Setting up mass matrix.")
+        logger.info("Setting up mass matrix.")
         try:
-            # Example: Retrieve mass density from materials if needed
-            rho = self.config_manager.get_param("materials", [{}])[0].get("density", 1000.0)
-            M, detJe = pbat.fem.mass_matrix(mesh, rho=rho, lump=True)
+            # Retrieve material densities
+            densities = [m.get("density", {}).get("value", 1000.0) for m in materials]
+            element_rho = np.array([densities[i] for i in element_materials])
+
+            logger.info(f"Element densities: {element_rho}")
+
+            # Create a 2D array with densities
+            num_quadrature_points = 4
+            rho = np.column_stack([element_rho] * num_quadrature_points)
+
+            logger.info(f"Reshaped rho dimensions: {rho.shape}")
+            logger.info(f"Reshaped rho: {rho}")
+
+            # Compute mass matrix
+            M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho, lump=True)
             Minv = sp.sparse.diags(1.0 / M.diagonal())
             return M, Minv
         except Exception as e:
-            self.logger.error(f"Failed to set up mass matrix: {e}")
+            logger.error(f"Failed to set up mass matrix: {e}")
             sys.exit(1)
 
     def setup_external_forces(self, mesh, materials, element_materials, Minv, gravity=9.81):
-        self.logger.info("Setting up external forces.")
+        logger.info("Setting up external forces.")
         try:
             g = np.zeros(mesh.dims)
             g[-1] = -gravity
@@ -124,11 +99,11 @@ class SimulationInitializer:
             a = Minv @ f
             return f, a, detJeF
         except Exception as e:
-            self.logger.error(f"Failed to set up external forces: {e}")
+            logger.error(f"Failed to set up external forces: {e}")
             sys.exit(1)
 
     def setup_hyperelastic_potential(self, mesh, materials, element_materials):
-        self.logger.info("Setting up hyperelastic potential.")
+        logger.info("Setting up hyperelastic potential.")
         try:
             detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
             GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
@@ -138,11 +113,11 @@ class SimulationInitializer:
             hep, _, _, GNeU = pbat.fem.hyper_elastic_potential(mesh, Y=Y, nu=nu, energy=psi)
             return hep, Y, nu, psi, detJeU, GNeU
         except Exception as e:
-            self.logger.error(f"Failed to set up hyperelastic potential: {e}")
+            logger.error(f"Failed to set up hyperelastic potential: {e}")
             sys.exit(1)
 
     def setup_collision_mesh(self, mesh, V, C, element_materials):
-        self.logger.info("Setting up collision mesh.")
+        logger.info("Setting up collision mesh.")
         try:
             boundary_faces = igl.boundary_facets(C)
             edges = ipctk.edges(boundary_faces)
@@ -170,11 +145,11 @@ class SimulationInitializer:
                 face_to_element_mapping,
             )
         except Exception as e:
-            self.logger.error(f"Failed to set up collision mesh: {e}")
+            logger.error(f"Failed to set up collision mesh: {e}")
             sys.exit(1)
 
     def setup_boundary_conditions(self, mesh, materials, num_nodes_list):
-        self.logger.info("Setting up boundary conditions.")
+        logger.info("Setting up boundary conditions.")
         dirichlet_bc_list = []
         node_offset = 0
         try:
@@ -205,7 +180,7 @@ class SimulationInitializer:
             total_dofs = np.setdiff1d(np.arange(mesh.X.shape[1] * mesh.dims), all_dirichlet_bc)
             return total_dofs, all_dirichlet_bc
         except Exception as e:
-            self.logger.error(f"Failed to set up boundary conditions: {e}")
+            logger.error(f"Failed to set up boundary conditions: {e}")
             sys.exit(1)
 
     def setup_collision_potentials(self, dhat, damping_coefficient):
@@ -320,24 +295,21 @@ class SimulationInitializer:
 
         """
         try:
-            logger = self.logging_manager.logger
 
             # Extract configuration values using ConfigManager
-            inputs = self.config_manager.get_param("inputs", [])
-            friction_coefficient = self.config_manager.get_param("friction.friction_coefficient", 0.3)
-            damping_coefficient = self.config_manager.get_param("friction.damping_coefficient", 1e-4)
-            dhat = self.config_manager.get_param("simulation.dhat", 1e-3)
-            dmin = self.config_manager.get_param("simulation.dmin", 1e-4)
-            dt = self.config_manager.get_param("simulation.dt", 0.016)
-            gravity = self.config_manager.get_param("initial_conditions.gravity", 9.81)
-            side_force = self.config_manager.get_param("force.top_force", 10)
-            epsv = self.config_manager.get_param("simulation.epsv", 1e-6)
+            inputs = self.config.get("geometry", {}).get("meshes", [])
+            friction_coefficient = self.config.get("contact", {}).get("friction", 0.0)
+            damping_coefficient = self.config.get("contact", {}).get("damping_coefficient", 1e-4)
+            dhat = self.config.get("contact", {}).get("dhat", 0.001)
+            dmin = self.config.get("contact", {}).get("dmin", 0.0001)
+            dt = self.config.get("time", {}).get("step", 0.1)
+            gravity = self.config.get("time", {}).get("gravity", 9.81)
+            epsv = self.config.get("solver", {}).get("optimization", {}).get("convergence_tolerance", 1e-6)
 
-            communication_method = self.config_manager.get_param("communication.method", "redis").lower()
-            communication_settings = self.config_manager.get_param("communication.settings.redis", {})
+            communication_method = self.config.get("backend", {}).get("backend", "redis").lower()
 
             # Load input meshes and materials
-            all_meshes, materials = load_individual_meshes(inputs)
+            all_meshes, materials = load_individual_meshes(inputs, self.config_manager)
             logger.info(f"Loaded {len(all_meshes)} meshes.")
 
             # Combine all meshes into a single mesh
@@ -380,14 +352,8 @@ class SimulationInitializer:
                 dhat, damping_coefficient
             )
 
-            # Initialize communication client using NetsFactory (only Redis)
-            communication_client = NetsFactory.create_client(
-                method=communication_method,
-                host=communication_settings.get("host", "localhost"),
-                port=communication_settings.get("port", 6379),
-                db=communication_settings.get("db", 0),
-                password=communication_settings.get("password"),
-            )
+            # Initialize communication client
+            communication_client = None
             logger.info(f"Communication client '{communication_method}' initialized.")
 
             rho_array = np.array([materials[i]["density"] for i in element_materials])

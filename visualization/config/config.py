@@ -153,18 +153,6 @@ class VisualizationConfigManager(metaclass=SingletonMeta):
             else:
                 raise ValueError("Unsupported file format: only 'json' and 'yaml' are supported")
 
-    def get_backend_config(self) -> Dict[str, Any]:
-        """
-        Retrieve the backend-specific configuration.
-
-        Returns:
-            A dictionary containing the backend configuration.
-        """
-        return {
-            "backend": self._config.get("backend"),
-            "backend_config": self._config.get("backend_config", {}),
-        }
-
     def get(self) -> Dict[str, Any]:
         """
         Get the current configuration.

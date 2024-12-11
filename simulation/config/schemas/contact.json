@@ -2,17 +2,36 @@
     "$id": "http://example.com/schemas/collision_detection_config.json",
     "type": "object",
     "properties": {
+        "enabled": {
+            "type": "boolean",
+            "description": "Enable collision detection",
+            "default": true
+        },
         "method": {
             "type": "string",
-            "enum": ["ipc", "broad_phase", "narrow_phase"],
-            "description": "Collision detection algorithm"
+            "enum": ["ipc"],
+            "description": "Collision detection algorithm",
+            "default": "ipc"
         },
         "dhat": {
             "type": "number",
             "minimum": 0,
-            "description": "Collision detection threshold distance"
+            "description": "Collision detection threshold distance",
+            "default": 0.001
+        },
+        "dmin": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Minimum distance between objects",
+            "default": 0.001
+        },
+        "friction": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Friction coefficient",
+            "default": 0
         }
     },
-    "required": ["method", "dhat"],
+    "required": ["enabled", "method", "dhat", "friction"],
     "additionalProperties": false
 }

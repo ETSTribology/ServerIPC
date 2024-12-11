@@ -1,0 +1,16 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Solver Configuration",
+    "type": "object",
+    "version": "1.0.0",
+    "description": "Configuration for solver settings in the simulation",
+    "properties": {
+        "linear": {
+            "$ref": "solver/linear.json"
+        },
+        "optimization": {
+            "$ref": "solver/optimization.json"
+        }
+    },
+    "additionalProperties": false
+}

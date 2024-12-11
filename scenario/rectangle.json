@@ -1,61 +1,120 @@
 {
-    "name": "Simple Sliding Rectangle Flat",
-    "inputs": [
+    "time": {
+        "start": 0.0,
+        "step": 0.1,
+        "total": 1.0,
+        "integrator": "Implicit"
+    },
+    "backend": {
+        "backend": "redis",
+        "config": {
+            "host": "localhost",
+            "port": 6379,
+            "db": 0
+        }
+    },
+    "boundary": {
+        "dirichlet": []
+    },
+    "contact": {
+        "enabled": false,
+        "method": "ipc",
+        "dhat": 0.001,
+        "friction": 0.0
+    },
+    "db": {
+        "backend": "postgres",
+        "config": {
+            "host": "localhost",
+            "port": 5432,
+            "db": "db",
+            "user": "user",
+            "password": "password"
+        }
+    },
+    "material": [
         {
-            "path": "meshes/rectangle.mesh",
-            "percent_fixed": 0.0,
-            "material": {
-                "name": "steel",
-                "density": 7000.0,
-                "young_modulus": 210e9,
-                "poisson_ratio": 0.30,
-                "color": [128, 128, 128]
+            "id": "steel",
+            "name": "Steel",
+            "type": "LinearElastic",
+            "density": {
+                "value": 7850,
+                "unit": "kg/m³"
             },
-            "transform": {
-                "scale": [5.0, 5.0, 5.0],
-                "rotation": [0.0, 0.3, 0.70, 0.70],
-                "translation": [0.0, 0.0, 80.0]
-            }
+            "young_modulus": {
+                "value": 210000,
+                "unit": "MPa"
+            },
+            "poisson": 0.3,
+            "color": [128, 128, 128, 255]
         },
-
         {
-            "path": "meshes/rectangle.mesh",
-            "percent_fixed": 1.0,
-            "material": {
-                "name": "steel",
-                "density": 7000.0,
-                "young_modulus": 210e9,
-                "poisson_ratio": 0.30,
-                "color": [128, 128, 128]
+            "id": "aluminum",
+            "name": "Aluminum",
+            "type": "LinearElastic",
+            "density": {
+                "value": 2700,
+                "unit": "kg/m³"
             },
-            "transform": {
-                "scale": [100.0, 200.0, 2.0],
-                "rotation": [0.0, 0.0, 0.0, 1.0],
-                "translation": [-200, -200, 0]
-            }
+            "young_modulus": {
+                "value": 70000,
+                "unit": "MPa"
+            },
+            "poisson": 0.33,
+            "color": [192, 192, 192, 255]
         }
     ],
-    "server": {
-        "redis_host": "localhost",
-        "redis_port": 6379,
-        "redis_db": 0,
-        "redis_password": "password",
-        "minio_host": "localhost",
-        "minio_port": 9000,
-        "minio_access_key": "minio",
-        "minio_secret_key": "minio123"
+    "geometry": {
+        "meshes": [
+            {
+                "id": "1",
+                "material": "aluminum",
+                "path": "meshes/rectangle.mesh",
+                "transform": {
+                    "scale": [5.0, 5.0, 5.0],
+                    "rotation": {
+                        "type": "euler",
+                        "values": [0, 0, 0]
+                    },
+                    "translation": [0.0, 0.0, 80.0]
+                }
+            },
+            {
+                "id": "2",
+                "material": "steel",
+                "path": "meshes/rectangle.mesh",
+                "transform": {
+                    "scale": [1, 1, 1],
+                    "rotation": {
+                        "type": "euler",
+                        "values": [0, 0, 0]
+                    },
+                    "translation": [0, 0, 0]
+                }
+            }
+        ]
     },
-    "friction": {
-        "coefficient": 0,
-        "damping": 0
+    "solver": {
+        "linear": {
+            "solver": "ldlt",
+            "max_iterations": 1000,
+            "tolerance": 1e-6
+        },
+        "optimization": {
+            "solver": "newton",
+            "max_iterations": 100,
+            "convergence_tolerance": 1e-6,
+            "line_search": {
+                "type": "armijo",
+                "max_iterations": 10,
+                "convergence_tolerance": 1e-6
+            }
+        }
     },
-    "simulation": {
-        "dt": 0.1,
-        "dhat": 1e-3,
-        "dmin": 1e-4
-    },
-    "initial_conditions": {
-        "gravity": 9.81,
-        "side_force": 0
+    "storage": {
+        "backend": "local",
+        "config": {
+            "directory": "storage"
+        }
     }
 }

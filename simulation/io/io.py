@@ -5,8 +5,8 @@ import meshio
 import numpy as np
 import pbatoolkit as pbat
 
-from simulation.config.config import ConfigManager
-from simulation.core.modifier.transformation import apply_transformations
+from simulation.config.config import SimulationConfigManager
+from simulation.core.modifier.transformation import apply_transformations, euler_to_quaternion
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,6 @@ def load_mesh(path: str) -> Tuple[np.ndarray, np.ndarray]:
 
     Raises:
         ValueError: If no tetrahedral cells are found in the mesh.
-
     """
     try:
         imesh = meshio.read(path)
@@ -52,18 +51,8 @@ def load_mesh(path: str) -> Tuple[np.ndarray, np.ndarray]:
 
 def load_individual_meshes(
     inputs: List[Dict],
+    config_manager: SimulationConfigManager
 ) -> Tuple[List[Tuple[np.ndarray, np.ndarray]], List[Dict]]:
-    """Loads and processes individual meshes based on input configurations.
-
-    Args:
-        inputs (List[Dict]): List of input configurations.
-
-    Returns:
-        Tuple[List[Tuple[np.ndarray, np.ndarray]], List[Dict]]:
-            - List of transformed meshes (vertices and connectivity).
-            - List of corresponding material properties.
-
-    """
     all_meshes = []
     materials_list = []
 
@@ -81,18 +70,40 @@ def load_individual_meshes(
                 logger.error(f"Material name missing for entry {idx + 1}. Skipping.")
                 continue
 
-            # Load material properties from predefined materials
-            material = ConfigManager().load_material_properties(material_name)
+            # Load material properties from configuration
+            materials = config_manager.get()["material"]
+            material = next((m for m in materials if m["id"] == material_name), None)
+            if material is None:
+                logger.error(f"Material {material_name} not found in configuration. Skipping.")
+                continue
+
             material["percent_fixed"] = percent_fixed
 
             # Load transformation properties
-            scale, rotation, translation = ConfigManager().load_transform_properties(input_entry)
+            transform = input_entry.get("transform", {})
+            scale = transform.get("scale", [1.0, 1.0, 1.0])
+            rotation = transform.get("rotation", {})
+            if rotation.get("type") == "euler":
+                rotation_values = rotation.get("values", [])
+                if len(rotation_values) != 3:
+                    raise ValueError(
+                        f"Rotation must be a list of three elements representing Euler angles, got {len(rotation_values)} elements."
+                    )
+                rotation_values = euler_to_quaternion(rotation_values)
+            elif len(rotation.get("values", [])) != 4:
+                raise ValueError(
+                    f"Rotation must be a list of four elements representing a quaternion, got {len(rotation.get('values', []))} elements."
+                )
+            else:
+                rotation_values = rotation.get("values", [0.0, 0.0, 0.0, 1.0])
+
+            translation = transform.get("translation", [0.0, 0.0, 0.0])
 
             # Load mesh data (vertices and connectivity)
             V, C = load_mesh(path)
 
             # Apply transformations to vertices
-            V_transformed = apply_transformations(V, scale, rotation, translation)
+            V_transformed = apply_transformations(V, scale, rotation_values, translation)
 
             # Store transformed mesh and material
             all_meshes.append((V_transformed, C))
@@ -110,23 +121,20 @@ def load_individual_meshes(
 
 def combine_meshes(
     all_meshes: List[Tuple[np.ndarray, np.ndarray]], materials: List[Dict]
-) -> Tuple[pbat.fem.Mesh, np.ndarray, np.ndarray, np.ndarray, List[int], Optional[List[Dict]]]:
+) -> Tuple[pbat.fem.Mesh, np.ndarray, np.ndarray, np.ndarray, List[int]]:
     """Combines multiple meshes into a single mesh, optionally deduplicating vertices.
 
     Args:
         all_meshes (List[Tuple[np.ndarray, np.ndarray]]): List of meshes to combine.
         materials (List[Dict]): List of material properties corresponding to each mesh.
-        instancing (bool, optional): Whether to use instancing. Defaults to False.
 
     Returns:
-        Tuple[pbat.fem.Mesh, np.ndarray, np.ndarray, np.ndarray, List[int], Optional[List[Dict]]]:
+        Tuple[pbat.fem.Mesh, np.ndarray, np.ndarray, np.ndarray, List[int]]:
             - Combined mesh.
             - Combined vertices.
             - Combined connectivity.
             - Element materials.
             - List of node counts per mesh.
-            - List of instances if instancing is enabled.
-
     """
     V_list, C_list, element_materials_list = [], [], []
     num_nodes_list = []
@@ -175,6 +183,6 @@ def combine_meshes(
         logger.error("Remapped connectivity has invalid indices.")
         raise ValueError("Remapped connectivity contains invalid vertex indices.")
 
-    logger.info("Instancing is disabled. Meshes have been combined and deduplicated.")
+    logger.info("Meshes have been combined and deduplicated.")
 
     return mesh, V_combined, C_combined, element_materials, num_nodes_list

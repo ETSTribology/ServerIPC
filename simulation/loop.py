@@ -2,6 +2,8 @@ import logging
 import sys
 import time
 from typing import Optional
+from simulation.controller.request import RequestMessage
+from simulation.controller.response import ResponseMessage
 
 from simulation.core.contact.barrier_updater import BarrierUpdater, BarrierUpdaterFactory
 from simulation.core.contact.ccd import CCDBase, CCDFactory
@@ -15,15 +17,15 @@ from simulation.core.solvers.optimizer import OptimizerBase, OptimizerFactory
 from simulation.core.modifier.mesh import to_surface
 from simulation.init import SimulationInitializer
 from simulation.states.state import SimulationState
-from simulation.db.factory import DatabaseFactory
+from simulation.controller.dispatcher import CommandDispatcher
 
 logger = logging.getLogger(__name__)
 
 
 class SimulationManager:
-    def __init__(self):
+    def __init__(self, scenario: str):
         self.logger = logger
-        self.simulation_state = self.initialize_simulation()
+        self.simulation_state = self.initialize_simulation(scenario)
 
         # Existing factories
         self.line_search_factory = LineSearchFactory()
@@ -33,10 +35,10 @@ class SimulationManager:
         self.line_searcher = self.setup_line_searcher()
         self.linear_solver = self.setup_linear_solver()
 
-    def initialize_simulation(self) -> SimulationState:
+    def initialize_simulation(self, scenario: str) -> SimulationState:
         """Initializes the simulation by creating a new SimulationState object."""
         self.logger.info("Initializing simulation...")
-        self.simulation_state = SimulationInitializer().initialize_simulation()
+        self.simulation_state = SimulationInitializer(scenario=scenario).initialize_simulation()
         self.logger.info("Simulation initialized successfully.")
         return self.simulation_state
 

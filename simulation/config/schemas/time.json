@@ -24,7 +24,7 @@
         },
         "integrator": {
             "type": "string",
-            "enum": ["Implicit", "Explicit", "SemiImplicit", "RK4", "ImplicitNewMark"],
+            "enum": ["Implicit", "Explicit", "SemiImplicit", "RK4"],
             "default": "Implicit"
         }
     },

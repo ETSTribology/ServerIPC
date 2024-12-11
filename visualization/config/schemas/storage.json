@@ -26,9 +26,13 @@
                     "maximum": 65535,
                     "description": "The port number for the storage backend.",
                     "default": 9000
+                },
+                "directory": {
+                    "type": "string",
+                    "description": "The directory path for local storage.",
+                    "default": "storage"
                 }
-            },
-            "required": []
+            }
         }
     },
     "allOf": [
@@ -38,19 +42,44 @@
                     "backend": {
                         "const": "minio"
                     }
-                },
-                "required": ["backend"]
+                }
             },
             "then": {
                 "properties": {
                     "config": {
-                        "required": ["host", "port"],
+                        "required": ["host", "port", "accessKey", "secretKey"],
                         "properties": {
                             "host": { "type": "string" },
                             "port": { "type": "integer" },
                             "accessKey": { "type": "string" },
                             "secretKey": { "type": "string" },
-                            "secure": { "type": "boolean" }
+                            "secure": {
+                                "type": "boolean",
+                                "default": true,
+                                "description": "Use secure connection (HTTPS) for MinIO."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "backend": {
+                        "const": "local"
+                    }
+                }
+            },
+            "then": {
+                "properties": {
+                    "config": {
+                        "required": ["directory"],
+                        "properties": {
+                            "directory": {
+                                "type": "string",
+                                "description": "The directory path for local storage."
+                            }
                         }
                     }
                 }

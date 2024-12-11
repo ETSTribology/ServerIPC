@@ -2,9 +2,9 @@ import logging
 import sys
 from typing import Callable
 
-from controller.command import Command, CommandRegistry
-from nets.messages import ResponseMessage, Status
-from states.state import SimulationState
+from simulation.controller.command import Command, CommandRegistry
+from simulation.controller.response import ResponseMessage, Status
+from simulation.states.state import SimulationState
 
 logger = logging.getLogger(__name__)
 

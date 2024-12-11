@@ -1,12 +1,13 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Optimization Solver Configuration",
     "type": "object",
     "version": "1.0.0",
-    "description": "Optimization configuration for the simulation",
+    "description": "Optimization solver configuration for the simulation",
     "properties": {
         "solver": {
             "type": "string",
-            "enum": ["newton", "bfgs","lbfgs"],
+            "enum": ["newton", "bfgs", "lbfgs"],
             "description": "Optimization solver algorithm"
         },
         "max_iterations": {
@@ -19,9 +20,13 @@
             "type": "number",
             "minimum": 1e-12,
             "maximum": 1,
-            "description": "Convergence tolerance for the optimization process"
+            "description": "Convergence tolerance for the optimization solver"
+        },
+        "line_search": {
+            "$ref": "line_search.json",
+            "description": "Line search configuration for the optimization solver"
         }
     },
-    "required": ["solver"],
+    "required": ["solver", "max_iterations", "convergence_tolerance"],
     "additionalProperties": false
 }

@@ -1,94 +1,72 @@
+import argparse
 import logging
 import signal
 import sys
 
 from simulation.loop import SimulationManager
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+def parse_arguments():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        prog="3D Elastic Simulation",
+        description="Simulate 3D elastic deformations with contact handling.",
+    )
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        help="Path to the simulation scenario file.",
+        required=True
+    )
+    return parser.parse_args()
 
+def setup_logging():
+    """Configure logging for the simulation."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
 
 def signal_handler(sig, frame, simulation_manager: SimulationManager):
-    """Handles system signals (e.g., SIGINT, SIGTERM) to gracefully shut down the simulation.
-
-    Parameters
-    ----------
-    sig : int
-        Signal number received.
-    frame : FrameType
-        Current stack frame.
-    simulation_manager : SimulationManager
-        The simulation manager handling the simulation.
-
-    """
-    logger.info("Interrupt received, shutting down...")
-    try:
-        communication_client = simulation_manager.simulation_state.get_attribute(
-            "communication_client"
-        )
-        if communication_client:
-            communication_client.close()
-            logger.info("Communication client closed successfully.")
-    except Exception as e:
-        logger.error(f"Error while closing communication client: {e}")
+    """Handle termination signals to gracefully shut down the simulation."""
+    logging.info("Interrupt received (signal {}). Shutting down gracefully...".format(sig))
+    simulation_manager.stop_simulation()
     sys.exit(0)
 
-
 def main():
-    """Main entry point for the simulation server.
-    Initializes the simulation manager, sets up signal handlers, and starts the simulation loop.
-    """
-    simulation_manager = SimulationManager()
+    """Main entry point for the simulation."""
+    # Set up logging
+    setup_logging()
+    logger = logging.getLogger(__name__)
 
-    # Initialize the simulation
+    # Parse command-line arguments
+    args = parse_arguments()
+
+    # Initialize SimulationManager
+    simulation_manager = SimulationManager(args.scenario)
+
+    # Initialize the simulation with the provided scenario
     try:
-        simulation_manager.initialize_simulation()
+        logger.info(f"Initializing simulation with scenario: {args.scenario}")
+        simulation_manager.initialize_simulation(config_path=args.scenario)
     except Exception as e:
         logger.error(f"Failed to initialize the simulation: {e}")
         sys.exit(1)
 
-    # Retrieve connection factories from simulation state
-    network_factory = simulation_manager.simulation_state.get_attribute("network_factory")
-    storage_factory = simulation_manager.simulation_state.get_attribute("storage_factory")
-    database_factory = simulation_manager.simulation_state.get_attribute("database_factory")
-
-    # Create connection instances
-    network_connection = network_factory.create_connection()
-    storage_connection = storage_factory.create_connection()
-    database_connection = database_factory.create_connection()
-
-    # Add connections to simulation state
-    simulation_manager.simulation_state.set_attribute("network_connection", network_connection)
-    simulation_manager.simulation_state.set_attribute("storage_connection", storage_connection)
-    simulation_manager.simulation_state.set_attribute("database_connection", database_connection)
-
-    # Retrieve the communication client from the simulation state
-    communication_client = simulation_manager.simulation_state.get_attribute("communication_client")
-    if communication_client is None:
-        logger.error("SimulationState does not contain a communication client.")
-        sys.exit(1)
-
     # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, lambda sig, frame: signal_handler(sig, frame, simulation_manager))
-    signal.signal(
-        signal.SIGTERM,
-        lambda sig, frame: signal_handler(sig, frame, simulation_manager),
-    )
+    signal.signal(signal.SIGTERM, lambda sig, frame: signal_handler(sig, frame, simulation_manager))
 
+    # Run the simulation
     try:
+        logger.info("Starting simulation...")
         simulation_manager.run_simulation()
     except Exception as e:
         logger.error(f"An error occurred during simulation: {e}")
     finally:
-        # Ensure communication client is closed
-        try:
-            if communication_client:
-                communication_client.close()
-                logger.info("Communication client closed successfully.")
-        except Exception as e:
-            logger.error(f"Error while closing communication client: {e}")
         logger.info("Simulation terminated gracefully.")
-
 
 if __name__ == "__main__":
     main()

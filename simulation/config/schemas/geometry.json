@@ -1,12 +1,13 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Geometry Configuration",
-    "version": "1.0.0",
-    "description": "Geometry configuration for the simulation",
     "type": "object",
+    "title": "Geometry Configuration",
+    "description": "Geometry configuration for the simulation",
+    "version": "1.0.0",
     "properties": {
         "meshes": {
             "type": "array",
+            "description": "List of meshes in the simulation",
             "items": {
                 "type": "object",
                 "properties": {
@@ -21,53 +22,18 @@
                         "pattern": "^.*\\.(mesh|obj|stl|ply)$"
                     },
                     "material": {
-                        "$ref": "materials/material.json",
-                        "description": "Material properties for this mesh"
+                        "type": "string",
+                        "description": "ID of the material used for this mesh"
                     },
                     "transform": {
-                        "type": "object",
-                        "properties": {
-                            "translation": {
-                                "type": "array",
-                                "items": {
-                                    "type": "number"
-                                },
-                                "minItems": 3,
-                                "maxItems": 3,
-                                "default": [0, 0, 0],
-                                "description": "Translation vector [x, y, z]"
-                            },
-                            "rotation": {
-                                "type": "array",
-                                "items": {
-                                    "type": "number"
-                                },
-                                "minItems": 3,
-                                "maxItems": 3,
-                                "default": [0, 0, 0],
-                                "description": "Rotation angles [rx, ry, rz] in degrees"
-                            },
-                            "scale": {
-                                "type": "array",
-                                "items": {
-                                    "type": "number",
-                                    "minimum": 0,
-                                    "exclusiveMinimum": true
-                                },
-                                "minItems": 3,
-                                "maxItems": 3,
-                                "default": [1, 1, 1],
-                                "description": "Scale factors [sx, sy, sz]"
-                            }
-                        },
-                        "additionalProperties": false
+                        "$ref": "geometry/transform.json",
+                        "description": "Geometric transformation applied to the mesh"
                     }
                 },
-                "required": ["id", "path", "material"],
+                "required": ["id", "path", "material", "transform"],
                 "additionalProperties": false
             },
-            "minItems": 1,
-            "description": "List of meshes in the simulation"
+            "minItems": 1
         }
     },
     "required": ["meshes"],
