@@ -8,10 +8,6 @@ PyYAML>=6.0.2
 
 # Machine Learning & Visualization
 torch>=2.2.1
-torchvision>=0.17.1
-torchaudio>=2.2.1
-tensorboard>=2.18.0
-tensorboardX
 polyscope>=2.0.0
 imgui>=1.4.1
 
@@ -43,6 +39,8 @@ uv>=0.5.2
 loguru
 wandb>=0.18.7
 influxdb-client
+asyncio
+aiofiles
 
 # Testing Dependencies
 pytest>=7.3.1

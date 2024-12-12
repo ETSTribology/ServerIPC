@@ -1,11 +1,16 @@
 import json
+import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import yaml
-from jsonschema import Draft7Validator, RefResolver, ValidationError
+from jsonschema import Draft7Validator, RefResolver
 
 from simulation.core.utils.singleton import SingletonMeta
+from simulation.logs.error import SimulationError, SimulationErrorCode
+from simulation.logs.message import SimulationLogMessageCode
+
+logger = logging.getLogger(__name__)
 
 CURRENT_DIR = Path(__file__).parent
 SCHEMAS_DIR = Path(CURRENT_DIR, "schemas")
@@ -51,11 +56,30 @@ class SimulationConfigManager(metaclass=SingletonMeta):
         schema_path = SCHEMAS_DIR / f"{schema_name}.json"
         try:
             with open(schema_path, "r") as f:
+                logger.info(
+                    SimulationLogMessageCode.CONFIGURATION_LOADED.details(
+                        f"Schema loaded from {schema_path}"
+                    )
+                )
                 return json.load(f)
         except FileNotFoundError:
-            raise FileNotFoundError(f"Schema file not found at {schema_path}")
+            logger.error(
+                SimulationLogMessageCode.CONFIGURATION_FAILED.details(
+                    f"Schema file not found at {schema_path}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.CONFIGURATION, f"Schema file not found at {schema_path}"
+            )
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in schema file: {e}")
+            logger.error(
+                SimulationLogMessageCode.CONFIGURATION_FAILED.details(
+                    f"Invalid JSON in schema file: {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.CONFIGURATION, f"Invalid JSON in schema file: {e}"
+            )
 
     def load_file(self, filepath: str) -> Dict[str, Any]:
         """
@@ -71,13 +95,31 @@ class SimulationConfigManager(metaclass=SingletonMeta):
             ValueError: If the file format is unsupported.
         """
         filepath_str = str(filepath)
-        with open(filepath, "r") as f:
-            if filepath_str.endswith(".json"):
-                return json.load(f)
-            elif filepath_str.endswith((".yaml", ".yml")):
-                return yaml.safe_load(f)
-            else:
-                raise ValueError("Unsupported file format: only JSON and YAML are supported")
+        try:
+            with open(filepath, "r") as f:
+                if filepath_str.endswith(".json"):
+                    config = json.load(f)
+                elif filepath_str.endswith((".yaml", ".yml")):
+                    config = yaml.safe_load(f)
+                else:
+                    raise ValueError("Unsupported file format: only JSON and YAML are supported")
+                logger.info(
+                    SimulationLogMessageCode.CONFIGURATION_LOADED.details(
+                        f"Configuration loaded from {filepath}"
+                    )
+                )
+                return config
+        except Exception as e:
+            logger.error(
+                SimulationLogMessageCode.CONFIGURATION_FAILED.details(
+                    f"Failed to load configuration from {filepath}: {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.CONFIGURATION,
+                f"Failed to load configuration from {filepath}",
+                details=str(e),
+            )
 
     def load_config(self) -> Dict[str, Any]:
         """
@@ -108,9 +150,21 @@ class SimulationConfigManager(metaclass=SingletonMeta):
             error_messages = "\n".join(
                 f"{'.'.join(map(str, error.path))}: {error.message}" for error in errors
             )
-            raise ValidationError(
-                f"Configuration validation failed against schema '{self.schema['title']}':\n{error_messages}"
+            logger.error(
+                SimulationLogMessageCode.CONFIGURATION_FAILED.details(
+                    f"Configuration validation failed: {error_messages}"
+                )
             )
+            raise SimulationError(
+                SimulationErrorCode.CONFIGURATION,
+                "Configuration validation failed",
+                details=error_messages,
+            )
+        logger.info(
+            SimulationLogMessageCode.CONFIGURATION_LOADED.details(
+                "Configuration validated successfully"
+            )
+        )
 
     def update(self, **kwargs) -> None:
         """
@@ -129,9 +183,21 @@ class SimulationConfigManager(metaclass=SingletonMeta):
             for k in keys[:-1]:
                 target = target.get(k, {})
             if keys[-1] not in target:
-                raise AttributeError(f"Invalid configuration attribute: {key}")
+                logger.error(
+                    SimulationLogMessageCode.CONFIGURATION_FAILED.details(
+                        f"Invalid configuration attribute: {key}"
+                    )
+                )
+                raise SimulationError(
+                    SimulationErrorCode.CONFIGURATION, f"Invalid configuration attribute: {key}"
+                )
             target[keys[-1]] = value
         self.validate(self._config)
+        logger.info(
+            SimulationLogMessageCode.CONFIGURATION_LOADED.details(
+                "Configuration updated successfully"
+            )
+        )
 
     def save(self, filepath: Optional[str] = None, file_format: str = "json") -> None:
         """
@@ -145,13 +211,32 @@ class SimulationConfigManager(metaclass=SingletonMeta):
             ValueError: If an unsupported file format is provided.
         """
         filepath = filepath or self.config_path
-        with open(filepath, "w") as f:
-            if file_format == "json":
-                json.dump(self._config, f, indent=4)
-            elif file_format in ("yaml", "yml"):
-                yaml.safe_dump(self._config, f, default_flow_style=False)
-            else:
-                raise ValueError("Unsupported file format: only 'json' and 'yaml' are supported")
+        try:
+            with open(filepath, "w") as f:
+                if file_format == "json":
+                    json.dump(self._config, f, indent=4)
+                elif file_format in ("yaml", "yml"):
+                    yaml.safe_dump(self._config, f, default_flow_style=False)
+                else:
+                    raise ValueError(
+                        "Unsupported file format: only 'json' and 'yaml' are supported"
+                    )
+            logger.info(
+                SimulationLogMessageCode.CONFIGURATION_LOADED.details(
+                    f"Configuration saved to {filepath}"
+                )
+            )
+        except Exception as e:
+            logger.error(
+                SimulationLogMessageCode.CONFIGURATION_FAILED.details(
+                    f"Failed to save configuration to {filepath}: {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.CONFIGURATION,
+                f"Failed to save configuration to {filepath}",
+                details=str(e),
+            )
 
     def get(self) -> Dict[str, Any]:
         """

@@ -240,13 +240,7 @@ def run_server(
 ):
     """Run the simulation server."""
     try:
-        cmd = [
-            sys.executable,
-            "-m",
-            "simulation.server",
-            "--scenario",
-            str(scenario)
-        ]
+        cmd = [sys.executable, "-m", "simulation.server", "--scenario", str(scenario)]
 
         console.print("[bold]Starting simulation server...[/bold]")
         subprocess.run(cmd, check=True)

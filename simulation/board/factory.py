@@ -5,6 +5,7 @@ from board.base import BoardBase
 from board.factory_base import BoardFactoryBase
 from board.grafana_board import GrafanaBoard
 
+
 class BoardFactory(BoardFactoryBase):
     """
     Factory for creating and managing board instances.

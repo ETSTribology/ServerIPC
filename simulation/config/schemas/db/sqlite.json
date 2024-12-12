@@ -1,0 +1,47 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "SQLite Database Configuration",
+    "type": "object",
+    "version": "1.0.0",
+    "description": "Configuration for SQLite database connection",
+    "required": ["file"],
+    "properties": {
+        "file": {
+            "type": "string",
+            "description": "Path to SQLite database file",
+            "default": "database.db",
+            "minLength": 1
+        },
+        "pool": {
+            "type": "object",
+            "properties": {
+                "min": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1,
+                    "description": "Minimum number of connections in pool"
+                },
+                "max": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 10,
+                    "description": "Maximum number of connections in pool"
+                },
+                "idle_timeout": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 10000,
+                    "description": "Connection idle timeout in milliseconds"
+                }
+            },
+            "additionalProperties": false
+        },
+        "timeout": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 5000,
+            "description": "Connection timeout in milliseconds"
+        }
+    },
+    "additionalProperties": false
+}

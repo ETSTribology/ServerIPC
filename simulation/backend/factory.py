@@ -1,50 +1,68 @@
 import logging
 from typing import Any, Dict
 
-from visualization.config.config import VisualizationConfigManager
-from visualization.backend.redis import RedisBackend
-from visualization.backend.websocket import WebSocketBackend
-from visualization.core.utils.singleton import SingletonMeta
+from simulation.backend.redis import RedisBackend
+from simulation.backend.websocket import WebSocketBackend
+from simulation.core.utils.singleton import SingletonMeta
+from simulation.logs.error import BackendInitializationError
+from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
 
 class BackendFactory(metaclass=SingletonMeta):
-    """
-    Factory for creating and managing backend instances.
-    """
+    """Factory for creating and managing backend instances."""
 
     _instances = {}
 
     @staticmethod
     def create(config: Dict[str, Any]) -> Any:
-        """
-        Create and return a backend instance based on the configuration.
+        """Create or retrieve a backend instance based on configuration.
 
         Args:
-            config: A dictionary containing the backend configuration.
+            config: Backend configuration dictionary.
 
         Returns:
-            An instance of the backend class.
+            Backend instance.
 
         Raises:
-            ValueError: If the backend type is not recognized or required fields are missing.
+            SimulationError: If backend type is invalid or creation fails.
         """
-        logger.info("Creating backend...")
-        backend_config = config.get("backend", {})
-        backend_type = backend_config.get("backend", "redis")
+        backend_type = config.get("backend", {}).get("backend", "redis")
 
-        if backend_type not in BackendFactory._instances:
+        # Return existing instance if available
+        if backend_type in BackendFactory._instances:
+            logger.debug(
+                SimulationLogMessageCode.BACKEND_INITIALIZED.details(
+                    f"Reusing existing {backend_type} backend instance"
+                )
+            )
+            return BackendFactory._instances[backend_type]
+
+        # Create new instance
+        logger.info(
+            SimulationLogMessageCode.BACKEND_INITIALIZED.details(
+                f"Creating new {backend_type} backend instance"
+            )
+        )
+        try:
             if backend_type == "redis":
                 backend_instance = RedisBackend(config)
             elif backend_type == "websocket":
                 backend_instance = WebSocketBackend(config)
             else:
-                raise ValueError(f"Unknown backend type: {backend_type}")
+                raise BackendInitializationError(f"Unknown backend type: {backend_type}")
 
             backend_instance.connect()
             BackendFactory._instances[backend_type] = backend_instance
-        else:
-            logger.info(f"Backend instance already exists: {backend_type}")
+            return backend_instance
 
-        return BackendFactory._instances[backend_type]
+        except Exception as e:
+            logger.error(
+                SimulationLogMessageCode.BACKEND_FAILED.details(
+                    f"Failed to create {backend_type} backend: {str(e)}"
+                )
+            )
+            raise BackendInitializationError(
+                f"Failed to create {backend_type} backend", details=str(e)
+            )

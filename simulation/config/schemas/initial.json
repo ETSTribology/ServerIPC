@@ -1,0 +1,30 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Initial Conditions Configuration",
+    "type": "object",
+    "version": "1.0.0",
+    "description": "Initial conditions configuration",
+    "properties": {
+        "gravity": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "acceleration": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "default": [0.0, 0.0, -9.81]
+                }
+            },
+            "required": ["enabled", "acceleration"]
+        }
+    },
+    "required": ["gravity"],
+    "additionalProperties": false
+}

@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import meshio
 import numpy as np
@@ -50,8 +50,7 @@ def load_mesh(path: str) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def load_individual_meshes(
-    inputs: List[Dict],
-    config_manager: SimulationConfigManager
+    inputs: List[Dict], config_manager: SimulationConfigManager
 ) -> Tuple[List[Tuple[np.ndarray, np.ndarray]], List[Dict]]:
     all_meshes = []
     materials_list = []

@@ -1,15 +1,16 @@
-import pbatoolkit as pbat
+import argparse
+import itertools
+import math
+from collections.abc import Callable
+
 import igl
 import ipctk
 import meshio
 import numpy as np
-import scipy as sp
+import pbatoolkit as pbat
 import polyscope as ps
 import polyscope.imgui as imgui
-import math
-import argparse
-import itertools
-from collections.abc import Callable
+import scipy as sp
 import torch
 
 
@@ -21,14 +22,17 @@ def combine(V: list, C: list):
     V = np.vstack(V)
     return V, C
 
-def line_search(alpha0: float,
-                xk: torch.Tensor,
-                dx: torch.Tensor,
-                gk: torch.Tensor,
-                f: Callable[[torch.Tensor], torch.Tensor],
-                maxiters: int = 20,
-                c: float = 1e-4,
-                tau: float = 0.5):
+
+def line_search(
+    alpha0: float,
+    xk: torch.Tensor,
+    dx: torch.Tensor,
+    gk: torch.Tensor,
+    f: Callable[[torch.Tensor], torch.Tensor],
+    maxiters: int = 20,
+    c: float = 1e-4,
+    tau: float = 0.5,
+):
     # Ensure all tensors are on the same device
     device = xk.device
     alpha = torch.tensor(alpha0, dtype=xk.dtype, device=device)
@@ -50,15 +54,17 @@ def line_search(alpha0: float,
     return alpha.item()
 
 
-def newton(x0: np.ndarray,
-           f: Callable[[np.ndarray], float],
-           grad: Callable[[np.ndarray], np.ndarray],
-           hess: Callable[[np.ndarray], sp.sparse.csc_matrix],
-           lsolver: Callable[[sp.sparse.csc_matrix, np.ndarray], np.ndarray],
-           alpha0: Callable[[np.ndarray, np.ndarray], float],
-           maxiters: int = 10,
-           rtol: float = 1e-5,
-           callback: Callable[[np.ndarray], None] = None):
+def newton(
+    x0: np.ndarray,
+    f: Callable[[np.ndarray], float],
+    grad: Callable[[np.ndarray], np.ndarray],
+    hess: Callable[[np.ndarray], sp.sparse.csc_matrix],
+    lsolver: Callable[[sp.sparse.csc_matrix, np.ndarray], np.ndarray],
+    alpha0: Callable[[np.ndarray, np.ndarray], float],
+    maxiters: int = 10,
+    rtol: float = 1e-5,
+    callback: Callable[[np.ndarray], None] = None,
+):
     xk = x0
     gk = grad(x0)
     for k in range(maxiters):
@@ -68,7 +74,7 @@ def newton(x0: np.ndarray,
         Hk = hess(xk)
         dx = lsolver(Hk, -gk)
         alpha = line_search(alpha0(xk, dx), xk, dx, gk, f)
-        xk = xk + alpha*dx
+        xk = xk + alpha * dx
         gk = grad(xk)
         if callback is not None:
             callback(xk)
@@ -76,28 +82,29 @@ def newton(x0: np.ndarray,
 
 
 def to_surface(x: np.ndarray, mesh: pbat.fem.Mesh, cmesh: ipctk.CollisionMesh):
-    X = x.reshape(mesh.X.shape[0],
-                  mesh.X.shape[1], order='F').T
+    X = x.reshape(mesh.X.shape[0], mesh.X.shape[1], order="F").T
     XB = cmesh.map_displacements(X)
     return XB
 
 
-class Parameters():
-    def __init__(self,
-                 mesh: pbat.fem.Mesh,
-                 xt: np.ndarray,
-                 vt: np.ndarray,
-                 a: np.ndarray,
-                 M: sp.sparse.dia_array,
-                 hep: pbat.fem.HyperElasticPotential,
-                 dt: float,
-                 cmesh: ipctk.CollisionMesh,
-                 cconstraints: ipctk.NormalCollisions,
-                 fconstraints: ipctk.TangentialCollision,
-                 dhat: float = 1e-3,
-                 dmin: float = 1e-4,
-                 mu: float = 0.3,
-                 epsv: float = 1e-4):
+class Parameters:
+    def __init__(
+        self,
+        mesh: pbat.fem.Mesh,
+        xt: np.ndarray,
+        vt: np.ndarray,
+        a: np.ndarray,
+        M: sp.sparse.dia_array,
+        hep: pbat.fem.HyperElasticPotential,
+        dt: float,
+        cmesh: ipctk.CollisionMesh,
+        cconstraints: ipctk.NormalCollisions,
+        fconstraints: ipctk.TangentialCollision,
+        dhat: float = 1e-3,
+        dmin: float = 1e-4,
+        mu: float = 0.3,
+        epsv: float = 1e-4,
+    ):
         self.mesh = mesh
         self.xt = xt
         self.vt = vt
@@ -114,7 +121,7 @@ class Parameters():
         self.epsv = epsv
 
         self.dt2 = dt**2
-        self.xtilde = xt + dt*vt + self.dt2 * a
+        self.xtilde = xt + dt * vt + self.dt2 * a
         self.avgmass = M.diagonal().mean()
         self.kB = None
         self.maxkB = None
@@ -126,7 +133,7 @@ class Parameters():
         self.gB = None
 
 
-class Potential():
+class Potential:
     def __init__(self, params: Parameters):
         self.params = params
 
@@ -156,10 +163,10 @@ class Potential():
         fconstraints.build(cmesh, BX, cconstraints, dhat, kB, mu)
         EB = cconstraints.compute_potential(cmesh, BX, dhat)
         EF = fconstraints.compute_potential(cmesh, BXdot, epsv)
-        return 0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt2*U + kB * EB + dt2*EF
+        return 0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt2 * U + kB * EB + dt2 * EF
 
 
-class Gradient():
+class Gradient:
     def __init__(self, params: Parameters):
         self.params = params
         self.gradU = None
@@ -200,11 +207,11 @@ class Gradient():
         fconstraints.build(cmesh, BX, cconstraints, dhat, kB, mu)
         gF = fconstraints.compute_potential_gradient(cmesh, BXdot, epsv)
         gF = cmesh.to_full_dof(gF)
-        g = M @ (x - xtilde) + dt2*gU + kB * gB + dt*gF
+        g = M @ (x - xtilde) + dt2 * gU + kB * gB + dt * gF
         return g
 
 
-class Hessian():
+class Hessian:
     def __init__(self, params: Parameters):
         self.params = params
 
@@ -229,17 +236,15 @@ class Hessian():
         v = (x - xt) / dt
         BX = to_surface(x, mesh, cmesh)
         BXdot = to_surface(v, mesh, cmesh)
-        HB = cconstraints.compute_potential_hessian(
-            cmesh, BX, dhat, project_hessian_to_psd=True)
+        HB = cconstraints.compute_potential_hessian(cmesh, BX, dhat, project_hessian_to_psd=True)
         HB = cmesh.to_full_dof(HB)
-        HF = fconstraints.compute_potential_hessian(
-            cmesh, BXdot, epsv, project_hessian_to_psd=True)
+        HF = fconstraints.compute_potential_hessian(cmesh, BXdot, epsv, project_hessian_to_psd=True)
         HF = cmesh.to_full_dof(HF)
-        H = M + dt2*HU + kB * HB + HF
+        H = M + dt2 * HU + kB * HB + HF
         return H
 
 
-class LinearSolver():
+class LinearSolver:
 
     def __init__(self, dofs: np.ndarray):
         self.dofs = dofs
@@ -260,11 +265,13 @@ class LinearSolver():
         return x
 
 
-class CCD():
+class CCD:
 
-    def __init__(self,
-                 params: Parameters,
-                 broad_phase_method: ipctk.BroadPhaseMethod = ipctk.BroadPhaseMethod.HASH_GRID):
+    def __init__(
+        self,
+        params: Parameters,
+        broad_phase_method: ipctk.BroadPhaseMethod = ipctk.BroadPhaseMethod.HASH_GRID,
+    ):
         self.params = params
         self.broad_phase_method = broad_phase_method
 
@@ -277,16 +284,12 @@ class CCD():
         BXt0 = to_surface(x, mesh, cmesh)
         BXt1 = to_surface(x + dx, mesh, cmesh)
         max_alpha = ipctk.compute_collision_free_stepsize(
-            cmesh,
-            BXt0,
-            BXt1,
-            broad_phase_method=broad_phase_method,
-            min_distance=dmin
+            cmesh, BXt0, BXt1, broad_phase_method=broad_phase_method, min_distance=dmin
         )
         return max_alpha
 
 
-class BarrierInitializer():
+class BarrierInitializer:
 
     def __init__(self, params: Parameters):
         self.params = params
@@ -300,15 +303,14 @@ class BarrierInitializer():
         bboxdiag = self.params.bboxdiag
         # Compute adaptive barrier stiffness
         BX = to_surface(x, mesh, cmesh)
-        kB, maxkB = ipctk.initial_barrier_stiffness(
-            bboxdiag, dhat, avgmass, gU, gB, dmin=dmin)
+        kB, maxkB = ipctk.initial_barrier_stiffness(bboxdiag, dhat, avgmass, gU, gB, dmin=dmin)
         dprev = cconstraints.compute_minimum_distance(cmesh, BX)
         self.params.kB = kB
         self.params.maxkB = maxkB
         self.params.dprev = dprev
 
 
-class BarrierUpdater():
+class BarrierUpdater:
 
     def __init__(self, params: Parameters):
         self.params = params
@@ -324,7 +326,8 @@ class BarrierUpdater():
         BX = to_surface(xk, mesh, cmesh)
         dcurrent = cconstraints.compute_minimum_distance(cmesh, BX)
         self.params.kB = ipctk.update_barrier_stiffness(
-            dprev, dcurrent, maxkB, kB, bboxdiag, dmin=dmin)
+            dprev, dcurrent, maxkB, kB, bboxdiag, dmin=dmin
+        )
         self.params.dprev = dcurrent
 
 
@@ -332,32 +335,47 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="3D elastic simulation of linear FEM tetrahedra using Incremental Potential Contact",
     )
+    parser.add_argument("-i", "--input", help="Path to input mesh", dest="input", required=True)
     parser.add_argument(
-        "-i", "--input", help="Path to input mesh", dest="input", required=True)
-    parser.add_argument("-t", "--translation", help="Vertical translation", type=float,
-                        dest="translation", default=0.1)
-    parser.add_argument("--percent-fixed", help="Percentage of input mesh's bottom to fix", type=float,
-                        dest="percent_fixed", default=0.1)
-    parser.add_argument("-m", "--mass-density", help="Mass density", type=float,
-                        dest="rho", default=1000.)
-    parser.add_argument("-Y", "--young-modulus", help="Young's modulus", type=float,
-                        dest="Y", default=1e6)
-    parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
-                        dest="nu", default=0.45)
+        "-t",
+        "--translation",
+        help="Vertical translation",
+        type=float,
+        dest="translation",
+        default=0.1,
+    )
     parser.add_argument(
-        "-c", "--copy", help="Number of copies of input model", type=int, dest="ncopy", default=1)
+        "--percent-fixed",
+        help="Percentage of input mesh's bottom to fix",
+        type=float,
+        dest="percent_fixed",
+        default=0.1,
+    )
+    parser.add_argument(
+        "-m", "--mass-density", help="Mass density", type=float, dest="rho", default=1000.0
+    )
+    parser.add_argument(
+        "-Y", "--young-modulus", help="Young's modulus", type=float, dest="Y", default=1e6
+    )
+    parser.add_argument(
+        "-n", "--poisson-ratio", help="Poisson's ratio", type=float, dest="nu", default=0.45
+    )
+    parser.add_argument(
+        "-c", "--copy", help="Number of copies of input model", type=int, dest="ncopy", default=1
+    )
     args = parser.parse_args()
 
     # Load input meshes and combine them into 1 mesh
     V, C = [], []
     imesh = meshio.read(args.input)
-    V1 = imesh.points.astype(np.float64, order='C')
-    C1 = imesh.cells_dict["tetra"].astype(np.int64, order='C')
+    V1 = imesh.points.astype(np.float64, order="C")
+    C1 = imesh.cells_dict["tetra"].astype(np.int64, order="C")
     V.append(V1)
     C.append(C1)
     for c in range(args.ncopy):
         R = sp.spatial.transform.Rotation.from_quat(
-            [0, 0, np.sin(np.pi/4), np.cos(np.pi/4)]).as_matrix()
+            [0, 0, np.sin(np.pi / 4), np.cos(np.pi / 4)]
+        ).as_matrix()
         V2 = (V[-1] - V[-1].mean(axis=0)) @ R.T + V[-1].mean(axis=0)
         V2[:, 2] += (V2[:, 2].max() - V2[:, 2].min()) + args.translation
         C2 = C[-1]
@@ -365,29 +383,27 @@ if __name__ == "__main__":
         C.append(C2)
 
     V, C = combine(V, C)
-    mesh = pbat.fem.Mesh(
-        V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
+    mesh = pbat.fem.Mesh(V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
 
     # Construct FEM quantities for simulation
-    x = mesh.X.reshape(math.prod(mesh.X.shape), order='F')
+    x = mesh.X.reshape(math.prod(mesh.X.shape), order="F")
     n = x.shape[0]
     v = np.zeros(n)
 
     # Lumped mass matrix
     rho = args.rho
     M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho, lump=True)
-    Minv = sp.sparse.diags(1./M.diagonal())
+    Minv = sp.sparse.diags(1.0 / M.diagonal())
 
     # Construct load vector from gravity field
     g = np.zeros(mesh.dims)
     g[-1] = -9.81
-    f, detJeF = pbat.fem.load_vector(mesh, rho*g)
+    f, detJeF = pbat.fem.load_vector(mesh, rho * g)
     a = Minv @ f
 
     # Create hyper elastic potential
     Y, nu, psi = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep, egU, wgU, GNeU = pbat.fem.hyper_elastic_potential(
-        mesh, Y=Y, nu=nu, energy=psi)
+    hep, egU, wgU, GNeU = pbat.fem.hyper_elastic_potential(mesh, Y=Y, nu=nu, energy=psi)
 
     # Setup IPC contact handling
     F = igl.boundary_facets(C)
@@ -405,14 +421,14 @@ if __name__ == "__main__":
     Xmin = mesh.X.min(axis=1)
     Xmax = mesh.X.max(axis=1)
     dX = Xmax - Xmin
-    Xmax[-1] = Xmin[-1] + args.percent_fixed*dX[-1]
+    Xmax[-1] = Xmin[-1] + args.percent_fixed * dX[-1]
     Xmin[-1] = Xmin[-1] - 1e-4
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = aabb.contained(mesh.X)
     dbcs = np.array(vdbc)[:, np.newaxis]
     dbcs = np.repeat(dbcs, mesh.dims, axis=1)
     for d in range(mesh.dims):
-        dbcs[:, d] = mesh.dims*dbcs[:, d]+d
+        dbcs[:, d] = mesh.dims * dbcs[:, d] + d
     dbcs = dbcs.reshape(math.prod(dbcs.shape))
     dofs = np.setdiff1d(list(range(n)), dbcs)
 
@@ -424,8 +440,7 @@ if __name__ == "__main__":
     ps.set_ground_plane_height_factor(0.5)
     ps.set_program_name("Incremental Potential Contact")
     ps.init()
-    vm = ps.register_surface_mesh(
-        "Visual mesh", cmesh.rest_positions, cmesh.faces)
+    vm = ps.register_surface_mesh("Visual mesh", cmesh.rest_positions, cmesh.faces)
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
     animate = False
@@ -442,32 +457,29 @@ if __name__ == "__main__":
         global animate, step
 
         changed, dt = imgui.InputFloat("dt", dt)
-        changed, dhat = imgui.InputFloat(
-            "IPC activation distance", dhat, format="%.6f")
-        changed, dmin = imgui.InputFloat(
-            "IPC minimum distance", dmin, format="%.6f")
-        changed, mu = imgui.InputFloat(
-            "Coulomb friction coeff", mu, format="%.2f")
-        changed, newton_maxiter = imgui.InputInt(
-            "Newton max iterations", newton_maxiter)
+        changed, dhat = imgui.InputFloat("IPC activation distance", dhat, format="%.6f")
+        changed, dmin = imgui.InputFloat("IPC minimum distance", dmin, format="%.6f")
+        changed, mu = imgui.InputFloat("Coulomb friction coeff", mu, format="%.2f")
+        changed, newton_maxiter = imgui.InputInt("Newton max iterations", newton_maxiter)
         changed, newton_rtol = imgui.InputFloat(
-            "Newton convergence residual", newton_rtol, format="%.8f")
+            "Newton convergence residual", newton_rtol, format="%.8f"
+        )
         changed, animate = imgui.Checkbox("animate", animate)
         step = imgui.Button("step")
 
         if animate or step:
             ps.screenshot()
             profiler.begin_frame("Physics")
-            params = Parameters(mesh, x, v, a, M, hep, dt, cmesh,
-                                cconstraints, fconstraints, dhat, dmin, mu, epsv)
+            params = Parameters(
+                mesh, x, v, a, M, hep, dt, cmesh, cconstraints, fconstraints, dhat, dmin, mu, epsv
+            )
             f = Potential(params)
             g = Gradient(params)
             H = Hessian(params)
             solver = LinearSolver(dofs)
             ccd = CCD(params)
             updater = BarrierUpdater(params)
-            xtp1 = newton(x, f, g, H, solver, ccd,
-                          newton_maxiter, newton_rtol, updater)
+            xtp1 = newton(x, f, g, H, solver, ccd, newton_maxiter, newton_rtol, updater)
             v = (xtp1 - x) / dt
             x = xtp1
             BX = to_surface(x, mesh, cmesh)

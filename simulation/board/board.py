@@ -1,6 +1,7 @@
 import abc
 from typing import Any, Dict, List
 
+
 class BoardBase(abc.ABC):
     """
     Abstract base class for monitoring backends.
@@ -34,7 +35,9 @@ class BoardBase(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update_panel(self, dashboard_id: str, panel_id: str, panel_config: Dict[str, Any]) -> Dict[str, Any]:
+    def update_panel(
+        self, dashboard_id: str, panel_id: str, panel_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Update an existing panel in a dashboard.
 

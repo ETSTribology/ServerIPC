@@ -1,6 +1,10 @@
 import logging
+import csv
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
+
+from simulation.logs.message import SimulationLogMessageCode
+from simulation.logs.error import SimulationError, SimulationErrorCode
 
 logger = logging.getLogger(__name__)
 
@@ -27,218 +31,42 @@ class Material:
 
 
 # Predefined materials dictionary
-materials: Dict[str, Material] = {
-    "WOOD": Material(
-        name="WOOD",
-        young_modulus=10e9,
-        poisson_ratio=0.35,
-        density=600,
-        color=(139, 69, 19),
-    ),
-    "STEEL": Material(
-        name="STEEL",
-        young_modulus=210e9,
-        poisson_ratio=0.3,
-        density=7850,
-        color=(192, 192, 192),
-    ),
-    "ALUMINUM": Material(
-        name="ALUMINUM",
-        young_modulus=69e9,
-        poisson_ratio=0.33,
-        density=2700,
-        color=(211, 211, 211),
-    ),
-    "CONCRETE": Material(
-        name="CONCRETE",
-        young_modulus=30e9,
-        poisson_ratio=0.2,
-        density=2400,
-        color=(128, 128, 128),
-    ),
-    "RUBBER": Material(
-        name="RUBBER",
-        young_modulus=0.01e9,
-        poisson_ratio=0.48,
-        density=1100,
-        color=(0, 0, 0),
-    ),
-    "COPPER": Material(
-        name="COPPER",
-        young_modulus=110e9,
-        poisson_ratio=0.34,
-        density=8960,
-        color=(135, 206, 235),
-    ),
-    "GLASS": Material(
-        name="GLASS",
-        young_modulus=50e9,
-        poisson_ratio=0.22,
-        density=2500,
-        color=(135, 206, 235),
-    ),
-    "TITANIUM": Material(
-        name="TITANIUM",
-        young_modulus=116e9,
-        poisson_ratio=0.32,
-        density=4500,
-        color=(169, 169, 169),
-    ),
-    "BRASS": Material(
-        name="BRASS",
-        young_modulus=100e9,
-        poisson_ratio=0.34,
-        density=8500,
-        color=(218, 165, 32),
-    ),
-    "PLA": Material(
-        name="PLA",
-        young_modulus=4.4e9,
-        poisson_ratio=0.3,
-        density=1250,
-        color=(255, 228, 196),
-    ),
-    "ABS": Material(
-        name="ABS",
-        young_modulus=2.3e9,
-        poisson_ratio=0.35,
-        density=1050,
-        color=(0, 0, 0),
-    ),
-    "PETG": Material(
-        name="PETG",
-        young_modulus=2.59e9,
-        poisson_ratio=0.4,
-        density=1300,
-        color=(176, 196, 222),
-    ),
-    "HYDROGEL": Material(
-        name="HYDROGEL",
-        young_modulus=1e6,
-        poisson_ratio=0.35,
-        density=1000,
-        color=(173, 216, 230),
-    ),
-    "POLYACRYLAMIDE": Material(
-        name="POLYACRYLAMIDE",
-        young_modulus=1e6,
-        poisson_ratio=0.45,
-        density=1050,
-        color=(250, 250, 210),
-    ),
-    "CAST_IRON": Material(
-        name="CAST_IRON",
-        young_modulus=170e9,
-        poisson_ratio=0.26,
-        density=7200,
-        color=(128, 128, 128),
-    ),
-    "CADMIUM": Material(
-        name="CADMIUM",
-        young_modulus=64e9,
-        poisson_ratio=0.31,
-        density=8650,
-        color=(184, 184, 208),
-    ),
-    "CHROMIUM": Material(
-        name="CHROMIUM",
-        young_modulus=248e9,
-        poisson_ratio=0.31,
-        density=7190,
-        color=(180, 180, 180),
-    ),
-    "GRAPHITE": Material(
-        name="GRAPHITE",
-        young_modulus=20e9,
-        poisson_ratio=0.2,
-        density=2050,
-        color=(0, 0, 0),
-    ),
-    "NICKEL": Material(
-        name="NICKEL",
-        young_modulus=170e9,
-        poisson_ratio=0.31,
-        density=8900,
-        color=(175, 175, 175),
-    ),
-    "NYLON": Material(
-        name="NYLON",
-        young_modulus=4e9,
-        poisson_ratio=0.39,
-        density=1130,
-        color=(255, 255, 255),
-    ),
-    "PLEXIGLASS": Material(
-        name="PLEXIGLASS",
-        young_modulus=3.3e9,
-        poisson_ratio=0.37,
-        density=1190,
-        color=(255, 255, 255),
-    ),
-    "POLYSTYRENE": Material(
-        name="POLYSTYRENE",
-        young_modulus=2.5e9,
-        poisson_ratio=0.4,
-        density=1040,
-        color=(255, 255, 255),
-    ),
-    "ASPHALT": Material(
-        name="ASPHALT",
-        young_modulus=3e9,
-        poisson_ratio=0.35,
-        density=2500,
-        color=(0, 0, 0),
-    ),
-    "TEFLON": Material(
-        name="TEFLON",
-        young_modulus=0.5e9,
-        poisson_ratio=0.47,
-        density=2200,
-        color=(255, 255, 255),
-    ),
-    "ZINC": Material(
-        name="ZINC",
-        young_modulus=82.7e9,
-        poisson_ratio=0.25,
-        density=7120,
-        color=(192, 192, 192),
-    ),
-    "PINE_WOOD": Material(
-        name="PINE_WOOD",
-        young_modulus=11e9,
-        poisson_ratio=0.35,
-        density=500,
-        color=(139, 69, 19),
-    ),
-    "STAINLESS_STEEL_17_4_PH": Material(
-        name="STAINLESS_STEEL_17_4_PH",
-        young_modulus=280e9,
-        poisson_ratio=0.3,
-        density=7800,
-        color=(192, 192, 192),
-    ),
-    "ABS_FDM": Material(
-        name="ABS_FDM",
-        young_modulus=1.65e9,
-        poisson_ratio=0.35,
-        density=1050,
-        color=(0, 0, 0),
-    ),
-    "FORMLABS_TOUGH_2000_RESIN_SLA": Material(
-        name="FORMLABS_TOUGH_2000_RESIN_SLA",
-        young_modulus=2.2e9,
-        poisson_ratio=0.3,
-        density=1200,
-        color=(100, 100, 100),
-    ),
-    "FORMLABS_NYLON_12_SLS": Material(
-        name="FORMLABS_NYLON_12_SLS",
-        young_modulus=1.85e9,
-        poisson_ratio=0.4,
-        density=970,
-        color=(176, 196, 222),
-    ),
-}
+materials: Dict[str, Material] = {}
+
+
+def load_materials_from_csv(file_path: str):
+    """
+    Load materials from a CSV file into the materials dictionary.
+
+    Args:
+        file_path (str): The path to the CSV file.
+
+    Raises:
+        SimulationError: If there is an error reading the CSV file.
+    """
+    try:
+        with open(file_path, mode='r') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                name = row['name'].upper()
+                young_modulus = float(row['young_modulus'])
+                poisson_ratio = float(row['poisson_ratio'])
+                density = float(row['density'])
+                color = (int(row['color_r']), int(row['color_g']), int(row['color_b']))
+                hardness = float(row['hardness']) if row['hardness'] else None
+
+                materials[name] = Material(
+                    name=name,
+                    young_modulus=young_modulus,
+                    poisson_ratio=poisson_ratio,
+                    density=density,
+                    color=color,
+                    hardness=hardness,
+                )
+        logger.info(SimulationLogMessageCode.CONFIGURATION_LOADED.details(f"Materials loaded from {file_path}"))
+    except Exception as e:
+        logger.error(SimulationLogMessageCode.CONFIGURATION_FAILED.details(f"Failed to load materials from {file_path}: {e}"))
+        raise SimulationError(SimulationErrorCode.FILE_IO, f"Failed to load materials from {file_path}", details=str(e))
 
 
 def add_custom_material(
@@ -250,15 +78,30 @@ def add_custom_material(
     hardness: Optional[float] = None,
     overwrite: bool = False,
 ):
+    """
+    Add a custom material to the materials dictionary.
+
+    Args:
+        name (str): The name of the material.
+        young_modulus (float): Young's modulus in Pascals (Pa).
+        poisson_ratio (float): Poisson's ratio (dimensionless).
+        density (float): Density in kg/m^3.
+        color (Tuple[int, int, int]): RGB color representation.
+        hardness (Optional[float]): Optional hardness property, if relevant.
+        overwrite (bool): Whether to overwrite an existing material with the same name.
+
+    Raises:
+        ValueError: If the color values are invalid or the material already exists and overwrite is False.
+    """
     name_upper = name.upper()
 
     if any(c < 0 or c > 255 for c in color):
-        raise ValueError(f"Invalid color {color}. RGB values must be between 0 and 255.")
+        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Invalid color {color}. RGB values must be between 0 and 255."))
+        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Invalid color {color}. RGB values must be between 0 and 255.")
 
     if name_upper in materials and not overwrite:
-        raise ValueError(
-            f"Material '{name_upper}' already exists. Use overwrite=True to replace it."
-        )
+        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Material '{name_upper}' already exists. Use overwrite=True to replace it."))
+        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Material '{name_upper}' already exists. Use overwrite=True to replace it.")
 
     materials[name_upper] = Material(
         name=name_upper,
@@ -268,7 +111,7 @@ def add_custom_material(
         color=color,
         hardness=hardness,
     )
-    print(f"Material '{name_upper}' has been {'updated' if overwrite else 'added'}.")
+    logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Material '{name_upper}' has been {'updated' if overwrite else 'added'}."))
 
 
 def initial_material(
@@ -276,16 +119,40 @@ def initial_material(
     young_modulus=1e6,
     poisson_ratio=0.45,
     density=1000.0,
-    color=(128, 128, 128, 1),
+    color=(128, 128, 128),
 ):
+    """
+    Initialize a material with the given properties.
+
+    Args:
+        name (str): The name of the material.
+        young_modulus (float): Young's modulus in Pascals (Pa).
+        poisson_ratio (float): Poisson's ratio (dimensionless).
+        density (float): Density in kg/m^3.
+        color (Tuple[int, int, int]): RGB color representation.
+
+    Returns:
+        Material: The initialized material.
+
+    Raises:
+        SimulationError: If the material cannot be initialized.
+    """
     name = name.upper()
-    if name in materials:
-        material = materials[name]
-    else:
-        # Add custom material if it doesn't exist
-        add_custom_material(name, young_modulus, poisson_ratio, density, color)
-        material = materials[name]
-    logger.info(
-        f"Material '{name}' initialized with properties: Young's Modulus = {material.young_modulus}, Poisson's Ratio = {material.poisson_ratio}, Density = {material.density}, Color = {material.color}"
-    )
-    return material
+    try:
+        if name in materials:
+            material = materials[name]
+        else:
+            # Add custom material if it doesn't exist
+            add_custom_material(name, young_modulus, poisson_ratio, density, color)
+            material = materials[name]
+        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(
+            f"Material '{name}' initialized with properties: Young's Modulus = {material.young_modulus}, Poisson's Ratio = {material.poisson_ratio}, Density = {material.density}, Color = {material.color}"
+        ))
+        return material
+    except Exception as e:
+        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to initialize material '{name}': {e}"))
+        raise SimulationError(SimulationErrorCode.COMMAND_PROCESSING, f"Failed to initialize material '{name}'", details=str(e))
+
+
+# Load materials from CSV file
+load_materials_from_csv('materials.csv')

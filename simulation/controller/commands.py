@@ -1,157 +1,224 @@
 import logging
 import sys
-from typing import Callable
+from abc import ABC, abstractmethod
+from datetime import datetime
+from enum import Enum, auto
+from functools import wraps
+from typing import Callable, Optional
 
-from simulation.controller.command import Command, CommandRegistry
-from simulation.controller.response import ResponseMessage, Status
-from simulation.states.state import SimulationState
+from simulation.controller.history import CommandHistory, CommandHistoryEntry
+from simulation.controller.model import (
+    CannotConnectError,
+    CommandError,
+    CommandFailedError,
+    CommandType,
+    Request,
+    Response,
+    Status,
+)
+from simulation.logs.message import SimulationLogMessageCode
+from simulation.logs.error import SimulationError, SimulationErrorCode
 
 logger = logging.getLogger(__name__)
 
 
-@CommandRegistry.register("start", aliases=["run", "begin"])
-class StartCommand(Command):
-    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
-        """Starts the simulation if it's not already running."""
-        if not simulation_state.running:
-            simulation_state.running = True
-            logger.info("Simulation started.")
-            return ResponseMessage(
-                request_id=request_id,
-                status=Status.SUCCESS,
-                message="Simulation started.",
+class SimulationStateMachine(Enum):
+    """Tracks valid simulation states"""
+
+    STOPPED = auto()
+    RUNNING = auto()
+    PAUSED = auto()
+
+
+def validate_state(valid_states: list[SimulationStateMachine]):
+    """Decorator to validate simulation state before executing command"""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            if self.current_state not in valid_states:
+                error_message = (
+                    f"Invalid state {self.current_state.name} for {self.__class__.__name__}"
+                )
+                logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(error_message))
+                raise CommandFailedError(error_message)
+            return func(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+class ICommand(ABC):
+    @abstractmethod
+    def execute(self, request: Request) -> Response:
+        pass
+
+    @abstractmethod
+    def undo(self) -> None:
+        pass
+
+    @abstractmethod
+    def log(self, request: Request, response: Response) -> None:
+        pass
+
+
+class BaseCommand(ICommand):
+    def __init__(self, history: CommandHistory):
+        self.history = history
+        self.current_state = SimulationStateMachine.STOPPED
+        self.previous_state: Optional[SimulationStateMachine] = None
+
+    def execute(self, request: Request) -> Response:
+        """Template method for command execution"""
+        try:
+            response = self._execute_impl(request)
+            self.log_history(request, response)
+            return response
+        except CommandError as e:
+            error_response = Response(
+                request_id=request.request_id, status=e.__class__.__name__, message=e.message
             )
-        logger.warning("Simulation is already running.")
-        return ResponseMessage(
-            request_id=request_id,
-            status=Status.WARNING,
-            message="Simulation is already running.",
-        )
-
-
-@CommandRegistry.register("pause", aliases=["suspend"])
-class PauseCommand(Command):
-    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
-        """Pauses the simulation if it's currently running."""
-        if simulation_state.running:
-            simulation_state.running = False
-            logger.info("Simulation paused.")
-            return ResponseMessage(
-                request_id=request_id,
-                status=Status.SUCCESS,
-                message="Simulation paused.",
+            self.log_history(request, error_response)
+            return error_response
+        except Exception as e:
+            error_response = Response(
+                request_id=request.request_id,
+                status=Status.COMMAND_FAILED.value,
+                message=f"Unexpected error: {str(e)}",
             )
-        logger.error("Simulation is not running; cannot pause.")
-        return ResponseMessage(
-            request_id=request_id,
-            status=Status.ERROR,
-            message="Simulation is not running; cannot pause.",
+            self.log_history(request, error_response)
+            return error_response
+
+    @abstractmethod
+    def _execute_impl(self, request: Request) -> Response:
+        """Implementation specific to each command"""
+        pass
+
+    def undo(self) -> None:
+        """Restore previous state if available"""
+        if self.previous_state:
+            self.current_state = self.previous_state
+            self.previous_state = None
+
+    def log_history(self, request: Request, response: Response):
+        entry = CommandHistoryEntry(
+            timestamp=datetime.now().isoformat(),
+            command_name=self.__class__.__name__,
+            request_id=request.request_id,
+            status=response.status,
+            message=response.message,
         )
+        self.history.add_entry(entry)
+
+    def _update_state(self, new_state: SimulationStateMachine):
+        """Update simulation state with history"""
+        self.previous_state = self.current_state
+        self.current_state = new_state
 
 
-@CommandRegistry.register("stop", aliases=["halt", "terminate"])
-class StopCommand(Command):
-    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
-        """Stops the simulation if it's currently running."""
-        if simulation_state.running:
-            simulation_state.running = False
-            logger.info("Simulation stopped.")
-            return ResponseMessage(
-                request_id=request_id,
-                status=Status.SUCCESS,
-                message="Simulation stopped.",
+class StartCommand(BaseCommand):
+    @validate_state([SimulationStateMachine.STOPPED])
+    def _execute_impl(self, request: Request) -> Response:
+        try:
+            # Simulate connection logic
+            success = self._connect()
+            if not success:
+                error_message = "Failed to connect to simulation engine."
+                logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(error_message))
+                raise CannotConnectError(error_message)
+            self._update_state(SimulationStateMachine.RUNNING)
+            message = CommandType.START.description
+            logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(message))
+            return Response(
+                request_id=request.request_id, status=Status.SUCCESS.value, message=message
             )
-        logger.error("Simulation is not running; cannot stop.")
-        return ResponseMessage(
-            request_id=request_id,
-            status=Status.ERROR,
-            message="Simulation is not running; cannot stop.",
-        )
+        except CannotConnectError as e:
+            raise e
+        except Exception as e:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
+            raise CommandFailedError(str(e))
+
+    def _connect(self) -> bool:
+        # Placeholder for actual connection logic
+        return True
 
 
-@CommandRegistry.register("resume", aliases=["continue"])
-class ResumeCommand(Command):
-    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
-        """Resumes the simulation if it's paused."""
-        if not simulation_state.running:
-            simulation_state.running = True
-            logger.info("Simulation resumed.")
-            return ResponseMessage(
-                request_id=request_id,
-                status=Status.SUCCESS,
-                message="Simulation resumed.",
+class PauseCommand(BaseCommand):
+    @validate_state([SimulationStateMachine.RUNNING])
+    def _execute_impl(self, request: Request) -> Response:
+        try:
+            self._update_state(SimulationStateMachine.PAUSED)
+            message = CommandType.PAUSE.description
+            logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(message))
+            return Response(
+                request_id=request.request_id, status=Status.SUCCESS.value, message=message
             )
-        logger.warning("Simulation is already running.")
-        return ResponseMessage(
-            request_id=request_id,
-            status=Status.WARNING,
-            message="Simulation is already running.",
-        )
+        except Exception as e:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
+            raise CommandFailedError(str(e))
 
 
-@CommandRegistry.register("play", aliases=["continue"])
-class PlayCommand(Command):
-    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
-        """Plays the simulation if it's not already playing."""
-        if not simulation_state.running:
-            simulation_state.running = True
-            logger.info("Simulation playing.")
-            return ResponseMessage(
-                request_id=request_id,
-                status=Status.SUCCESS,
-                message="Simulation playing.",
+class StopCommand(BaseCommand):
+    @validate_state([SimulationStateMachine.RUNNING, SimulationStateMachine.PAUSED])
+    def _execute_impl(self, request: Request) -> Response:
+        try:
+            self._update_state(SimulationStateMachine.STOPPED)
+            message = CommandType.STOP.description
+            logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(message))
+            return Response(
+                request_id=request.request_id, status=Status.SUCCESS.value, message=message
             )
-        logger.warning("Simulation is already playing.")
-        return ResponseMessage(
-            request_id=request_id,
-            status=Status.WARNING,
-            message="Simulation is already playing.",
-        )
+        except Exception as e:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
+            raise CommandFailedError(str(e))
 
 
-@CommandRegistry.register("kill", aliases=["exit", "terminate"])
-class KillCommand(Command):
-    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
-        """Kills the simulation and exits the application."""
-        logger.info("Killing simulation.")
-        simulation_state.communication_client.close()
-        logger.info("Simulation killed.")
-        sys.exit()
-        # The following return statement is unreachable but required for type consistency
-        return ResponseMessage(
-            request_id=request_id, status=Status.SUCCESS, message="Simulation killed."
-        )
+class ResumeCommand(BaseCommand):
+    @validate_state([SimulationStateMachine.PAUSED])
+    def _execute_impl(self, request: Request) -> Response:
+        try:
+            self._update_state(SimulationStateMachine.RUNNING)
+            message = CommandType.RESUME.description
+            logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(message))
+            return Response(
+                request_id=request.request_id, status=Status.SUCCESS.value, message=message
+            )
+        except Exception as e:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
+            raise CommandFailedError(str(e))
 
 
-@CommandRegistry.register("reset", aliases=["reinitialize"])
-class ResetCommand(Command):
-    def __init__(self, reset_function: Callable[[], SimulationState]):
-        """Initializes the ResetCommand with a reset function.
-
-        Args:
-            reset_function (Callable[[], SimulationState]): A callable that returns a new SimulationState.
-
-        """
+class ResetCommand(BaseCommand):
+    def __init__(self, history: CommandHistory, reset_function: Callable[[], None]):
+        super().__init__(history)
         self.reset_function = reset_function
 
-    def execute(self, simulation_state: SimulationState, request_id: str) -> ResponseMessage:
-        """Resets the simulation state.
+    def _execute_impl(self, request: Request) -> Response:
+        try:
+            self.reset_function()
+            self._update_state(SimulationStateMachine.STOPPED)
+            message = "Simulation reset complete."
+            logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(message))
+            return Response(
+                request_id=request.request_id, status=Status.SUCCESS.value, message=message
+            )
+        except Exception as e:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
+            raise CommandFailedError(f"Reset failed: {str(e)}")
 
-        Args:
-            simulation_state (SimulationState): The current simulation state.
-            request_id (str): The unique identifier for the request.
 
-        Returns:
-            ResponseMessage: The response after resetting the simulation.
-
-        """
-        logger.info("Resetting simulation.")
-        new_state = self.reset_function()
-        simulation_state.update_from(new_state)
-        simulation_state.running = False
-        logger.info("Simulation reset complete.")
-        return ResponseMessage(
-            request_id=request_id,
-            status=Status.SUCCESS,
-            message="Simulation reset complete.",
-        )
+class KillCommand(BaseCommand):
+    def _execute_impl(self, request: Request) -> Response:
+        try:
+            message = "Simulation killed."
+            response = Response(
+                request_id=request.request_id, status=Status.SUCCESS.value, message=message
+            )
+            self.log_history(request, response)
+            logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(message))
+            sys.exit(0)
+            return response
+        except Exception as e:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
+            raise CommandFailedError(str(e))

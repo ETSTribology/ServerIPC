@@ -30,6 +30,12 @@
             "minimum": 0,
             "description": "Friction coefficient",
             "default": 0
+        },
+        "espv": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Separation velocity",
+            "default": 0.01
         }
     },
     "required": ["enabled", "method", "dhat", "friction"],

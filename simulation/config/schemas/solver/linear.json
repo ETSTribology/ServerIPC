@@ -21,6 +21,12 @@
             "minimum": 1e-12,
             "maximum": 1,
             "description": "Convergence tolerance for the linear solver"
+        },
+        "regularization": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Regularization parameter for the linear solver",
+            "default": 0
         }
     },
     "required": ["solver", "max_iterations", "tolerance"],

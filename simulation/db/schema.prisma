@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-py"
+  interface = "asyncio"
+  recursive_type_depth = -1
+}
+
+datasource db {
+  provider = "postgresql"
+  url = "postgresql://user:password@localhost:5432/db?schema=public"
+}
+
+model Config {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  backendId   Int
+  backend     Backend  @relation(fields: [backendId], references: [id])
+  boundaryId  Int
+  boundary    Boundary @relation(fields: [boundaryId], references: [id])
+  computeId   Int
+  compute     Compute  @relation(fields: [computeId], references: [id])
+  contactId   Int
+  contact     Contact  @relation(fields: [contactId], references: [id])
+  dbId        Int
+  db          Database @relation(fields: [dbId], references: [id])
+  extensionsId Int
+  extensions  Extensions @relation(fields: [extensionsId], references: [id])
+  initialId   Int
+  initial     Initial   @relation(fields: [initialId], references: [id])
+  materialId  Int
+  material    Material  @relation(fields: [materialId], references: [id])
+  geometryId  Int
+  geometry    Geometry  @relation(fields: [geometryId], references: [id])
+  solverId    Int
+  solver      Solver    @relation(fields: [solverId], references: [id])
+  storageId   Int
+  storage     Storage   @relation(fields: [storageId], references: [id])
+  timeId      Int
+  time        Time      @relation(fields: [timeId], references: [id])
+  runs        Run[]
+}
+
+model Backend {
+  id      Int    @id @default(autoincrement())
+  backend String
+  config  Json
+  configs Config[]
+}
+
+model Boundary {
+  id        Int    @id @default(autoincrement())
+  dirichlet Json
+  configs   Config[]
+}
+
+model Compute {
+  id        Int    @id @default(autoincrement())
+  threads   Int
+  gpu       Boolean
+  precision String
+  configs   Config[]
+}
+
+model Contact {
+  id        Int    @id @default(autoincrement())
+  enabled   Boolean
+  method    String
+  dhat      Float
+  dmin      Float
+  friction  Float
+  espv      Float
+  configs   Config[]
+}
+
+model Database {
+  id       Int    @id @default(autoincrement())
+  backend  String
+  config   Json
+  configs  Config[]
+}
+
+model Extensions {
+  id        Int    @id @default(autoincrement())
+  mesh      Json
+  screenshot Json
+  board     Json
+  config    Config[]
+}
+
+model Initial {
+  id       Int    @id @default(autoincrement())
+  gravity  Json
+  config   Config[]
+}
+
+model Material {
+  id       Int    @id @default(autoincrement())
+  materials Json
+  config    Config[]
+}
+
+model Geometry {
+  id       Int    @id @default(autoincrement())
+  meshes   Json
+  config   Config[]
+}
+
+model Solver {
+  id       Int    @id @default(autoincrement())
+  type     String
+  linear   Json
+  nonlinear Json
+  optimization Json
+  config   Config[]
+}
+
+model Storage {
+  id       Int    @id @default(autoincrement())
+  backend  String
+  config   Config[]
+}
+
+model Time {
+  id       Int    @id @default(autoincrement())
+  start    Float
+  step     Float
+  total    Float
+  integrator String
+  config   Config[]
+}
+
+model Run {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  configId    Int
+  config      Config   @relation(fields: [configId], references: [id])
+  name        String
+  outputDir   String
+  saveFrequency Int
+  queue       Json?
+  states      State[]
+}
+
+model State {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  runId       Int
+  run         Run      @relation(fields: [runId], references: [id])
+  timeStep    Int
+  data        Json
+  dt          Float
+  dhat        Float
+  dmin        Float
+  frictionCoefficient Float
+  epsv        Float
+  dampingCoefficient Float
+  isRunning   Boolean
+  broadPhaseMethod String
+  position    Json
+  velocity    Json
+  acceleration Json
+  massMatrix  Json
+  hep         Json
+  collisionMesh Json
+  collisionConstraints Json
+  frictionConstraints Json
+  degreesOfFreedom Json
+  communicationClient Json
+  materials   Json
+  barrierPotential Json
+  frictionPotential Json
+  normalVector Json
+  externalForce Json
+  qgf         Json
+  densityArray Json
+  youngModulusArray Json
+  poissonRatioArray Json
+  psiEnergy   Json
+  determinantJeU Json
+  gradientNeU Json
+  elementMaterials Json
+  numNodesList Json
+}

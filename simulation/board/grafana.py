@@ -2,8 +2,8 @@ import logging
 from typing import Any, Dict, List
 
 import requests
-
 from board.base import BoardBase
+
 
 class Grafana(BoardBase):
     """
@@ -42,11 +42,7 @@ class Grafana(BoardBase):
             A dictionary containing details of the created dashboard.
         """
         endpoint = f"{self.url}/api/dashboards/db"
-        payload = {
-            "dashboard": dashboard_config,
-            "folderId": 0,
-            "overwrite": False
-        }
+        payload = {"dashboard": dashboard_config, "folderId": 0, "overwrite": False}
         self.logger.debug(f"Creating dashboard with payload: {payload}")
         response = requests.post(endpoint, headers=self.headers, json=payload)
         if response.status_code == 200:
@@ -72,16 +68,16 @@ class Grafana(BoardBase):
         if not dashboard:
             raise ValueError(f"Dashboard with UID '{dashboard_id}' not found.")
 
-        dashboard_body = dashboard['dashboard']
-        panels = dashboard_body.get('panels', [])
+        dashboard_body = dashboard["dashboard"]
+        panels = dashboard_body.get("panels", [])
         panels.append(panel_config)
-        dashboard_body['panels'] = panels
+        dashboard_body["panels"] = panels
 
         # Update dashboard
         payload = {
             "dashboard": dashboard_body,
-            "folderId": dashboard['meta']['folderId'],
-            "overwrite": True
+            "folderId": dashboard["meta"]["folderId"],
+            "overwrite": True,
         }
         self.logger.debug(f"Updating dashboard '{dashboard_id}' with new panel.")
         endpoint = f"{self.url}/api/dashboards/db"
@@ -93,7 +89,9 @@ class Grafana(BoardBase):
             self.logger.error(f"Failed to add panel: {response.text}")
             response.raise_for_status()
 
-    def update_panel(self, dashboard_id: str, panel_id: int, panel_config: Dict[str, Any]) -> Dict[str, Any]:
+    def update_panel(
+        self, dashboard_id: str, panel_id: int, panel_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Update an existing panel in a dashboard.
 
@@ -110,23 +108,23 @@ class Grafana(BoardBase):
         if not dashboard:
             raise ValueError(f"Dashboard with UID '{dashboard_id}' not found.")
 
-        dashboard_body = dashboard['dashboard']
-        panels = dashboard_body.get('panels', [])
+        dashboard_body = dashboard["dashboard"]
+        panels = dashboard_body.get("panels", [])
         for idx, panel in enumerate(panels):
-            if panel.get('id') == panel_id:
+            if panel.get("id") == panel_id:
                 self.logger.debug(f"Updating panel ID {panel_id} in dashboard '{dashboard_id}'.")
                 panels[idx].update(panel_config)
                 break
         else:
             raise ValueError(f"Panel with ID '{panel_id}' not found in dashboard '{dashboard_id}'.")
 
-        dashboard_body['panels'] = panels
+        dashboard_body["panels"] = panels
 
         # Update dashboard
         payload = {
             "dashboard": dashboard_body,
-            "folderId": dashboard['meta']['folderId'],
-            "overwrite": True
+            "folderId": dashboard["meta"]["folderId"],
+            "overwrite": True,
         }
         endpoint = f"{self.url}/api/dashboards/db"
         response = requests.post(endpoint, headers=self.headers, json=payload)
@@ -146,10 +144,12 @@ class Grafana(BoardBase):
         """
         dashboard = self.get_dashboard_by_uid(dashboard_id)
         if not dashboard:
-            self.logger.warning(f"Dashboard with UID '{dashboard_id}' not found. Nothing to delete.")
+            self.logger.warning(
+                f"Dashboard with UID '{dashboard_id}' not found. Nothing to delete."
+            )
             return
 
-        folder_id = dashboard['meta']['folderId']
+        folder_id = dashboard["meta"]["folderId"]
         endpoint = f"{self.url}/api/dashboards/uid/{dashboard_id}"
         self.logger.debug(f"Deleting dashboard '{dashboard_id}' from folder ID {folder_id}.")
         response = requests.delete(endpoint, headers=self.headers)
@@ -188,7 +188,9 @@ class Grafana(BoardBase):
             A dictionary representing the dashboard, or None if not found.
         """
         endpoint = f"{self.url}/api/dashboards/uid/{dashboard_uid}"
-        self.logger.debug(f"Retrieving dashboard with UID '{dashboard_uid}' using endpoint: {endpoint}")
+        self.logger.debug(
+            f"Retrieving dashboard with UID '{dashboard_uid}' using endpoint: {endpoint}"
+        )
         response = requests.get(endpoint, headers=self.headers)
         if response.status_code == 200:
             self.logger.info(f"Dashboard '{dashboard_uid}' retrieved successfully.")

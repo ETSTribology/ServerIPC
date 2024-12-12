@@ -73,7 +73,7 @@ services:
       timeout: 5s
       retries: 3
 
-    
+
   timescaledb:
     image: timescale/timescaledb-ha:pg17
     container_name: timescaledb

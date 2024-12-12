@@ -25,7 +25,7 @@
                 "id": 2,
                 "value": [
                     "5 * t",
-                    0, 
+                    0,
                     0
                 ],
                 "dimension": [true, false, true]

@@ -6,7 +6,7 @@
     "properties": {
         "backend": {
             "type": "string",
-            "enum": ["postgres", "mysql"],
+            "enum": ["postgresql", "mysql", "sqlite"],
             "description": "The type of backend to configure."
         },
         "config": {
@@ -35,6 +35,10 @@
                 "password": {
                     "type": "string",
                     "description": "The password for authenticating with the database."
+                },
+                "file": {
+                    "type": "string",
+                    "description": "The path to the SQLite database file."
                 }
             }
         }
@@ -42,12 +46,12 @@
     "allOf": [
         {
             "if": {
-                "properties": { "backend": { "const": "postgres" } }
+                "properties": { "backend": { "const": "postgresql" } }
             },
             "then": {
                 "properties": {
                     "config": {
-                        "$ref": "db/postgres.json"
+                        "$ref": "db/postgresql.json"
                     }
                 }
             }
@@ -60,6 +64,18 @@
                 "properties": {
                     "config": {
                         "$ref": "db/mysql.json"
+                    }
+                }
+            }
+        },
+        {
+            "if": {
+                "properties": { "backend": { "const": "sqlite" } }
+            },
+            "then": {
+                "properties": {
+                    "config": {
+                        "$ref": "db/sqlite.json"
                     }
                 }
             }

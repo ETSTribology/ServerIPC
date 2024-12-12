@@ -1,72 +1,91 @@
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Type, Dict, Any
+from enum import Enum
+from typing import Any, Dict, Optional, Type
 
 import numpy as np
-import scipy as sp
+import scipy.sparse as sp
 
-from simulation.core.solvers.line_search import LineSearchFactory
-from simulation.core.solvers.linear import LinearSolverFactory
+from simulation.core.solvers.line_search import (
+    ArmijoLineSearch,
+    BacktrackingLineSearch,
+    LineSearchBase,
+    LineSearchFactory,
+    LineSearchMethod,
+    ParallelLineSearch,
+    StrongWolfeLineSearch,
+    WolfeLineSearch,
+)
+from simulation.core.solvers.linear import LinearSolverBase, LinearSolverFactory
 from simulation.core.utils.singleton import SingletonMeta
+from simulation.logs.message import SimulationLogMessageCode
+from simulation.logs.error import SimulationError, SimulationErrorCode
 
 logger = logging.getLogger(__name__)
 
 
+class OptimizerType(Enum):
+    """Enumeration of supported optimizer types."""
+    NEWTON = "newton"
+    BFGS = "bfgs"
+    LBFGS = "lbfgs"
+
+
 class OptimizerBase(ABC):
+    """Abstract base class for optimizers."""
+
     @abstractmethod
     def optimize(
         self,
         x0: np.ndarray,
         f: Callable[[np.ndarray], float],
         grad: Callable[[np.ndarray], np.ndarray],
-        hess: Callable[[np.ndarray], sp.sparse.csc_matrix],
+        hess: Optional[Callable[[np.ndarray], sp.csc_matrix]] = None,
         callback: Optional[Callable[[np.ndarray], None]] = None,
         **kwargs,
     ) -> np.ndarray:
-        """Perform optimization to find the optimal x that minimizes the function f.
+        """
+        Perform optimization to find the optimal x that minimizes the function f.
 
-        Parameters
-        ----------
-        - x0: Initial guess for the solution.
-        - f: Objective function to minimize.
-        - grad: Gradient of the objective function.
-        - hess: Hessian of the objective function.
-        - callback: Optional callback function called after each iteration.
-        - kwargs: Additional keyword arguments.
+        Args:
+            x0 (np.ndarray): Initial guess.
+            f (Callable[[np.ndarray], float]): Objective function.
+            grad (Callable[[np.ndarray], np.ndarray]): Gradient of the objective function.
+            hess (Optional[Callable[[np.ndarray], sp.csc_matrix]]): Hessian of the objective function.
+            callback (Optional[Callable[[np.ndarray], None]]): Callback function called after each iteration.
+            **kwargs: Additional keyword arguments.
 
-        Returns
-        -------
-        - The optimized solution vector.
-
+        Returns:
+            np.ndarray: Optimized variables.
         """
         pass
 
 
 class NewtonOptimizer(OptimizerBase):
+    """Newton's method optimizer."""
+
     def __init__(
         self,
-        lsolver: "LinearSolverBase",
-        line_searcher: "LineSearchBase",
+        lsolver: LinearSolverBase,
+        line_searcher: LineSearchBase,
         alpha0_func: Callable[[np.ndarray, np.ndarray], float],
         maxiters: int = 10,
         rtol: float = 1e-5,
         reg_param: float = 1e-4,
         n_threads: int = 1,
     ):
-        """Initialize the Newton Optimizer.
+        """
+        Initialize the Newton optimizer.
 
-        Parameters
-        ----------
-        - lsolver: Linear solver instance.
-        - line_searcher: Line search method instance.
-        - alpha0_func: Function to compute initial step size.
-        - maxiters: Maximum number of iterations.
-        - rtol: Relative tolerance for convergence.
-        - reg_param: Regularization parameter for Hessian.
-        - n_threads: Number of threads for parallel execution.
-
+        Args:
+            lsolver (LinearSolverBase): Linear solver instance.
+            line_searcher (LineSearchBase): Line searcher instance.
+            alpha0_func (Callable[[np.ndarray, np.ndarray], float]): Function to determine step size.
+            maxiters (int, optional): Maximum number of iterations. Defaults to 10.
+            rtol (float, optional): Relative tolerance for convergence. Defaults to 1e-5.
+            reg_param (float, optional): Regularization parameter. Defaults to 1e-4.
+            n_threads (int, optional): Number of threads for parallel execution. Defaults to 1.
         """
         self.lsolver = lsolver
         self.line_searcher = line_searcher
@@ -82,100 +101,70 @@ class NewtonOptimizer(OptimizerBase):
         x0: np.ndarray,
         f: Callable[[np.ndarray], float],
         grad: Callable[[np.ndarray], np.ndarray],
-        hess: Callable[[np.ndarray], sp.sparse.csc_matrix],
+        hess: Callable[[np.ndarray], sp.csc_matrix],
         callback: Optional[Callable[[np.ndarray], None]] = None,
         **kwargs,
     ) -> np.ndarray:
-        """Perform Newton optimization.
+        """
+        Perform Newton optimization.
 
-        Parameters
-        ----------
-        - x0: Initial guess.
-        - f: Objective function.
-        - grad: Gradient function.
-        - hess: Hessian function.
-        - callback: Optional callback after each iteration.
-        - kwargs: Additional keyword arguments.
+        Args:
+            x0 (np.ndarray): Initial guess.
+            f (Callable[[np.ndarray], float]): Objective function.
+            grad (Callable[[np.ndarray], np.ndarray]): Gradient of the objective function.
+            hess (Callable[[np.ndarray], sp.csc_matrix]): Hessian of the objective function.
+            callback (Optional[Callable[[np.ndarray], None]]): Callback function called after each iteration.
+            **kwargs: Additional keyword arguments.
 
-        Returns
-        -------
-        - Optimized solution vector.
-
+        Returns:
+            np.ndarray: Optimized variables.
         """
         maxiters = kwargs.get("maxiters", self.maxiters)
         rtol = kwargs.get("rtol", self.rtol)
         xk = x0.copy()
 
-        if self.n_threads == 1:
-            # Sequential Newton's method
-            for k in range(maxiters):
-                gk = grad(xk)
-                gnorm = np.linalg.norm(gk, np.inf)
-                if gnorm < rtol:
-                    self.logger.info(f"Converged at iteration {k} with gradient norm {gnorm}")
-                    break
+        for k in range(maxiters):
+            gk = grad(xk)
+            gnorm = np.linalg.norm(gk, np.inf)
+            if gnorm < rtol:
+                self.logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Converged at iteration {k} with gradient norm {gnorm}"))
+                break
 
-                Hk = hess(xk)
-                # Regularize Hessian
-                Hk_reg = Hk + self.reg_param * sp.sparse.eye(Hk.shape[0])
+            Hk = hess(xk)
+            Hk_reg = Hk + self.reg_param * sp.eye(Hk.shape[0], format="csc")
+            try:
                 dx = self.lsolver.solve(Hk_reg, -gk)
-                alpha = self.alpha0_func(xk, dx)
-                xk = xk + alpha * dx
+            except Exception as e:
+                self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Linear solver failed: {e}"))
+                raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "Linear solver failed", details=str(e))
 
-                if callback is not None:
-                    callback(xk)
+            alpha = self.alpha0_func(xk, dx)
+            xk += alpha * dx
 
-        else:
-            # Parallel Newton's method
-            Hk_cache = None
-            with ThreadPoolExecutor(max_workers=self.n_threads) as executor:
-                for k in range(maxiters):
-                    # Compute gradient and Hessian in parallel
-                    future_grad = executor.submit(grad, xk)
-                    gk = future_grad.result()
-                    gnorm = np.linalg.norm(gk, np.inf)
-                    if gnorm < rtol:
-                        self.logger.info(f"Converged at iteration {k} with gradient norm {gnorm}")
-                        break
-
-                    if Hk_cache is None:
-                        future_hess = executor.submit(hess, xk)
-                        Hk = future_hess.result()
-                        Hk_cache = Hk
-                    else:
-                        Hk = Hk_cache
-
-                    # Regularize Hessian
-                    Hk_reg = Hk + self.reg_param * sp.sparse.eye(Hk.shape[0])
-                    dx = self.lsolver.solve(Hk_reg, -gk)
-                    alpha = self.alpha0_func(xk, dx)
-                    xk = xk + alpha * dx
-
-                    if np.linalg.norm(alpha * dx) > 1e-5:
-                        Hk_cache = None  # Invalidate cache
-
-                    if callback is not None:
-                        callback(xk)
+            if callback:
+                callback(xk)
 
         return xk
 
+
 class BFGSOptimizer(OptimizerBase):
+    """BFGS optimization algorithm."""
+
     def __init__(
         self,
-        line_searcher: "LineSearchBase",
+        line_searcher: LineSearchBase,
         alpha0_func: Callable[[np.ndarray, np.ndarray], float],
         maxiters: int = 100,
         rtol: float = 1e-5,
     ):
-        """Initialize the BFGS Optimizer.
+        """
+        Initialize the BFGS optimizer.
 
-        Parameters
-        ----------
-        - line_searcher: Line search method instance.
-        - alpha0_func: Function to compute initial step size.
-        - maxiters: Maximum number of iterations.
-        - rtol: Relative tolerance for convergence.
-
+        Args:
+            line_searcher (LineSearchBase): Line searcher instance.
+            alpha0_func (Callable[[np.ndarray, np.ndarray], float]): Function to determine step size.
+            maxiters (int, optional): Maximum number of iterations. Defaults to 100.
+            rtol (float, optional): Relative tolerance for convergence. Defaults to 1e-5.
         """
         self.line_searcher = line_searcher
         self.alpha0_func = alpha0_func
@@ -188,25 +177,23 @@ class BFGSOptimizer(OptimizerBase):
         x0: np.ndarray,
         f: Callable[[np.ndarray], float],
         grad: Callable[[np.ndarray], np.ndarray],
-        hess: Optional[Callable[[np.ndarray], sp.sparse.csc_matrix]] = None,
+        hess: Optional[Callable[[np.ndarray], sp.csc_matrix]] = None,
         callback: Optional[Callable[[np.ndarray], None]] = None,
         **kwargs,
     ) -> np.ndarray:
-        """Perform BFGS optimization.
+        """
+        Perform BFGS optimization.
 
-        Parameters
-        ----------
-        - x0: Initial guess.
-        - f: Objective function.
-        - grad: Gradient function.
-        - hess: Hessian function (optional).
-        - callback: Optional callback after each iteration.
-        - kwargs: Additional keyword arguments.
+        Args:
+            x0 (np.ndarray): Initial guess.
+            f (Callable[[np.ndarray], float]): Objective function.
+            grad (Callable[[np.ndarray], np.ndarray]): Gradient of the objective function.
+            hess (Optional[Callable[[np.ndarray], sp.csc_matrix]]): Hessian of the objective function.
+            callback (Optional[Callable[[np.ndarray], None]]): Callback function called after each iteration.
+            **kwargs: Additional keyword arguments.
 
-        Returns
-        -------
-        - Optimized solution vector.
-
+        Returns:
+            np.ndarray: Optimized variables.
         """
         maxiters = kwargs.get("maxiters", self.maxiters)
         rtol = kwargs.get("rtol", self.rtol)
@@ -219,7 +206,7 @@ class BFGSOptimizer(OptimizerBase):
         for k in range(maxiters):
             gnorm = np.linalg.norm(gk, np.inf)
             if gnorm < rtol:
-                self.logger.info(f"BFGS converged at iteration {k} with gradient norm {gnorm}")
+                self.logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"BFGS converged at iteration {k} with gradient norm {gnorm}"))
                 break
 
             pk = -Hk @ gk
@@ -232,11 +219,10 @@ class BFGSOptimizer(OptimizerBase):
 
             if sy > 1e-10:
                 rho_k = 1.0 / sy
-                I = np.eye(n)
-                Vk = I - rho_k * np.outer(sk, yk)
+                Vk = np.eye(n) - rho_k * np.outer(sk, yk)
                 Hk = Vk @ Hk @ Vk.T + rho_k * np.outer(sk, sk)
             else:
-                self.logger.warning("Skipping update due to small sy in BFGS.")
+                self.logger.warning(SimulationLogMessageCode.COMMAND_FAILED.details("Skipping update due to small sy in BFGS."))
 
             xk, gk = xk_new, gk_new
             if callback:
@@ -244,11 +230,22 @@ class BFGSOptimizer(OptimizerBase):
 
         return xk
 
+
 class LBFGSOptimizer(OptimizerBase):
+    """L-BFGS optimization algorithm."""
+
     def __init__(self, maxiters: int = 100, rtol: float = 1e-5, m: int = 10):
+        """
+        Initialize the L-BFGS optimizer.
+
+        Args:
+            maxiters (int, optional): Maximum number of iterations. Defaults to 100.
+            rtol (float, optional): Relative tolerance for convergence. Defaults to 1e-5.
+            m (int, optional): Maximum number of stored vector pairs. Defaults to 10.
+        """
         self.maxiters = maxiters
         self.rtol = rtol
-        self.m = m  # Memory parameter
+        self.m = m
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def optimize(
@@ -256,54 +253,49 @@ class LBFGSOptimizer(OptimizerBase):
         x0: np.ndarray,
         f: Callable[[np.ndarray], float],
         grad: Callable[[np.ndarray], np.ndarray],
-        hess: Optional[Callable[[np.ndarray], sp.sparse.csc_matrix]] = None,
+        hess: Optional[Callable[[np.ndarray], sp.csc_matrix]] = None,
         callback: Optional[Callable[[np.ndarray], None]] = None,
         **kwargs,
     ) -> np.ndarray:
-        """Perform L-BFGS optimization.
+        """
+        Perform L-BFGS optimization.
 
-        Parameters
-        ----------
-        - x0: Initial guess.
-        - f: Objective function.
-        - grad: Gradient function.
-        - hess: Hessian function (optional).
-        - callback: Optional callback after each iteration.
-        - kwargs: Additional keyword arguments.
+        Args:
+            x0 (np.ndarray): Initial guess.
+            f (Callable[[np.ndarray], float]): Objective function.
+            grad (Callable[[np.ndarray], np.ndarray]): Gradient of the objective function.
+            hess (Optional[Callable[[np.ndarray], sp.csc_matrix]]): Hessian of the objective function.
+            callback (Optional[Callable[[np.ndarray], None]]): Callback function called after each iteration.
+            **kwargs: Additional keyword arguments.
 
-        Returns
-        -------
-        - Optimized solution vector.
-
+        Returns:
+            np.ndarray: Optimized variables.
         """
         maxiters = kwargs.get("maxiters", self.maxiters)
         rtol = kwargs.get("rtol", self.rtol)
 
         xk = x0.copy()
-        n = len(xk)
         gk = grad(xk)
         s_list, y_list, rho_list = [], [], []
 
         for k in range(maxiters):
             gnorm = np.linalg.norm(gk, np.inf)
             if gnorm < rtol:
-                self.logger.info(f"L-BFGS converged at iteration {k} with gradient norm {gnorm}")
+                self.logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"L-BFGS converged at iteration {k} with gradient norm {gnorm}"))
                 break
 
             # Two-loop recursion
             q = gk.copy()
             alpha_list = []
-            for i in range(len(s_list) - 1, -1, -1):
-                si, yi, rhoi = s_list[i], y_list[i], rho_list[i]
-                alpha_i = rhoi * si @ q
-                q -= alpha_i * yi
+            for si, yi, rhoi in reversed(list(zip(s_list, y_list, rho_list))):
+                alpha_i = rhoi * np.dot(si, q)
                 alpha_list.append(alpha_i)
+                q -= alpha_i * yi
 
             r = q
-            for i in range(len(s_list)):
-                si, yi, rhoi = s_list[i], y_list[i], rho_list[i]
-                beta = rhoi * yi @ r
-                r += si * (alpha_list[-(i + 1)] - beta)
+            for si, yi, rhoi in zip(s_list, y_list, rho_list):
+                beta = rhoi * np.dot(yi, r)
+                r += si * (alpha_list.pop() - beta)
 
             pk = -r
             alpha = 1.0
@@ -312,7 +304,7 @@ class LBFGSOptimizer(OptimizerBase):
 
             sk = xk_new - xk
             yk = gk_new - gk
-            sy = sk @ yk
+            sy = np.dot(sk, yk)
 
             if sy > 1e-10:
                 rho_k = 1.0 / sy
@@ -324,7 +316,7 @@ class LBFGSOptimizer(OptimizerBase):
                 y_list.append(yk)
                 rho_list.append(rho_k)
             else:
-                self.logger.warning("Skipping update due to small sy in L-BFGS.")
+                self.logger.warning(SimulationLogMessageCode.COMMAND_FAILED.details("Skipping update due to small sy in L-BFGS."))
 
             xk, gk = xk_new, gk_new
             if callback:
@@ -334,89 +326,116 @@ class LBFGSOptimizer(OptimizerBase):
 
 
 class OptimizerFactory(metaclass=SingletonMeta):
-    """Factory class for creating optimizer instances.
-    Implemented as a Singleton to ensure only one instance exists.
-    """
+    """Factory class for creating optimizer instances."""
 
-    instances = {}
+    _optimizer_mapping: Dict[OptimizerType, Type[OptimizerBase]] = {
+        OptimizerType.NEWTON: NewtonOptimizer,
+        OptimizerType.BFGS: BFGSOptimizer,
+        OptimizerType.LBFGS: LBFGSOptimizer,
+    }
 
+    _line_search_mapping: Dict[str, Type[LineSearchBase]] = {
+        LineSearchMethod.ARMIJO: ArmijoLineSearch,
+        LineSearchMethod.WOLFE: WolfeLineSearch,
+        LineSearchMethod.STRONG_WOLFE: StrongWolfeLineSearch,
+        LineSearchMethod.PARALLEL: ParallelLineSearch,
+        LineSearchMethod.BACKTRACKING: BacktrackingLineSearch,
+    }
 
     def __init__(self):
-        """Initialize the optimizer factory with line search and linear solver factories."""
+        """Initialize the OptimizerFactory with necessary factories."""
         self.line_search_factory = LineSearchFactory()
         self.linear_solver_factory = LinearSolverFactory()
 
-    def create(self, config: dict) -> OptimizerBase:
-        """Create and return an optimizer instance based on the configuration.
+    def create(
+        self,
+        config: Dict[str, Any],
+        f: Callable[[np.ndarray], float],
+        grad_f: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        linear_solver_config: Optional[Dict[str, Any]] = None,
+        dofs: Optional[np.ndarray] = None,
+        **kwargs,
+    ) -> OptimizerBase:
+        """
+        Create optimizer instance based on the configuration.
 
         Args:
-            config: A dictionary containing the optimizer configuration with the following structure:
-                {
-                    'type': str,  # Type of optimizer ('newton', 'bfgs', 'lbfgs')
-                    'maxiters': int,  # Maximum iterations
-                    'rtol': float,  # Relative tolerance
-                    'line_search': dict,  # Line search configuration
-                    'linear_solver': dict,  # Linear solver configuration (for Newton only)
-                    'reg_param': float,  # Regularization parameter (for Newton only)
-                    'n_threads': int,  # Number of threads (for Newton only)
-                    'm': int,  # Memory parameter (for L-BFGS only)
-                }
+            config (Dict[str, Any]): Configuration dictionary.
+            f (Callable[[np.ndarray], float]): Objective function.
+            grad_f (Optional[Callable[[np.ndarray], np.ndarray]]): Gradient function.
+            linear_solver_config (Optional[Dict[str, Any]]): Linear solver configuration.
+            dofs (Optional[np.ndarray]): Degrees of freedom (indices) to consider in the solver.
+            **kwargs: Additional keyword arguments.
 
         Returns:
-            An instance of the optimizer class.
+            OptimizerBase: An instance of an OptimizerBase subclass.
 
         Raises:
-            ValueError: If the optimizer type is not supported or if required configuration is missing.
+            SimulationError: If the optimizer type is unknown or required configurations are missing.
         """
-        optimizer_type = config.get('type', '').lower()
-        if not optimizer_type:
-            raise ValueError("Optimizer type must be specified in config")
+        optimizer_type_str = config.get("solver", "newton")
+        if not optimizer_type_str:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details("Optimizer type must be specified in config"))
+            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "Optimizer type must be specified in config")
 
-        # Common parameters
-        maxiters = config.get('maxiters', 100)
-        rtol = config.get('rtol', 1e-5)
+        try:
+            optimizer_type = OptimizerType(optimizer_type_str)
+        except ValueError:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unsupported optimizer type: {optimizer_type_str}"))
+            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, f"Unsupported optimizer type: {optimizer_type_str}")
 
-        # Create line search instance if config is provided
-        line_search_config = config.get('line_search', {})
-        line_searcher = self.line_search_factory.create(line_search_config) if line_search_config else None
+        optimizer_class = self._optimizer_mapping.get(optimizer_type)
+        if not optimizer_class:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"No optimizer found for type: {optimizer_type_str}"))
+            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, f"No optimizer found for type: {optimizer_type_str}")
 
-        if optimizer_type == 'newton':
-            # Create linear solver instance
-            linear_solver_config = config.get('linear_solver', {})
+        maxiters = config.get("max_iterations", 100)
+        rtol = config.get("convergence_tolerance", 1e-5)
+
+        line_search_config = config.get("line_search", {})
+        line_searcher = (
+            self.line_search_factory.create(line_search_config, f=f, grad_f=grad_f)
+            if line_search_config
+            else None
+        )
+
+        if optimizer_type == OptimizerType.NEWTON:
             if not linear_solver_config:
-                raise ValueError("Linear solver configuration is required for Newton optimizer")
-            
-            linear_solver = self.linear_solver_factory.create(linear_solver_config)
-            
-            # Additional Newton-specific parameters
-            reg_param = config.get('reg_param', 1e-4)
-            n_threads = config.get('n_threads', 1)
-            
-            return NewtonOptimizer(
+                logger.error(SimulationLogMessageCode.COMMAND_FAILED.details("Linear solver configuration is required for Newton optimizer."))
+                raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "Linear solver configuration is required for Newton optimizer.")
+            if dofs is None:
+                logger.error(SimulationLogMessageCode.COMMAND_FAILED.details("Degrees of freedom (dofs) are required for Newton optimizer."))
+                raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "Degrees of freedom (dofs) are required for Newton optimizer.")
+
+            linear_solver = self.linear_solver_factory.create(
+                linear_solver_config, dofs=dofs
+            )  # Pass dofs here
+
+            reg_param = config.get("reg_param", 1e-4)
+            n_threads = config.get("n_threads", 1)
+
+            return optimizer_class(
                 lsolver=linear_solver,
                 line_searcher=line_searcher,
                 alpha0_func=lambda x, dx: 1.0,
                 maxiters=maxiters,
                 rtol=rtol,
                 reg_param=reg_param,
-                n_threads=n_threads
+                n_threads=n_threads,
             )
 
-        elif optimizer_type == 'bfgs':
-            return BFGSOptimizer(
+        elif optimizer_type == OptimizerType.BFGS:
+            return optimizer_class(
                 line_searcher=line_searcher,
                 alpha0_func=lambda x, dx: 1.0,
                 maxiters=maxiters,
-                rtol=rtol
+                rtol=rtol,
             )
 
-        elif optimizer_type == 'lbfgs':
-            m = config.get('m', 10)
-            return LBFGSOptimizer(
-                maxiters=maxiters,
-                rtol=rtol,
-                m=m
-            )
+        elif optimizer_type == OptimizerType.LBFGS:
+            m = config.get("m", 10)
+            return optimizer_class(maxiters=maxiters, rtol=rtol, m=m)
 
         else:
-            raise ValueError(f"Unsupported optimizer type: {optimizer_type}")
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unsupported optimizer type: {optimizer_type_str}"))
+            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, f"Unsupported optimizer type: {optimizer_type_str}")

@@ -1,9 +1,12 @@
 import logging
-from typing import Any, Callable, Dict
+from typing import Any, Dict, Optional
 
 import redis
 
-from visualization.backend.backend import Backend
+from simulation.backend.backend import Backend
+from simulation.controller.model import Request, Response
+from simulation.logs.error import SimulationError, SimulationErrorCode
+from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +19,10 @@ class RedisBackend(Backend):
         Args:
             config: A dictionary containing the Redis configuration.
         """
-        self.config = config
+        super().__init__(config)
         self.backend_config = config.get("backend", {}).get("config", {})
         self.client = None
         self.pubsub = None
-        self.connected = False
 
     def connect(self):
         """
@@ -33,103 +35,77 @@ class RedisBackend(Backend):
                 db=self.backend_config.get("db", 0),
                 password=self.backend_config.get("password"),
                 ssl=self.backend_config.get("ssl", False),
+                decode_responses=True,
             )
+            # Test connection
+            self.client.ping()
             self.pubsub = self.client.pubsub()
             self.connected = True
-            logger.info("Connected to Redis backend with Pub/Sub enabled.")
+            logger.info(
+                SimulationLogMessageCode.REDIS_CONNECTED.details("Connected to Redis backend.")
+            )
         except Exception as e:
-            logger.error(f"Failed to connect to Redis: {e}")
-            raise
+            logger.error(
+                SimulationLogMessageCode.REDIS_CONNECTION_FAILED.details(
+                    f"Failed to connect to Redis: {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.BACKEND_INITIALIZATION,
+                "Failed to connect to Redis",
+                details=str(e),
+            )
 
     def disconnect(self):
         """
         Disconnect from the Redis server.
         """
-        if self.pubsub:
-            self.pubsub.close()
-        if self.client:
-            self.client.close()
-            self.connected = False
-            logger.info("Disconnected from Redis backend.")
-
-    def publish(self, channel: str, message: str) -> None:
-        """
-        Publish a message to a Redis channel.
-
-        Args:
-            channel: The name of the Redis channel.
-            message: The message to be published.
-        """
         try:
-            self.client.publish(channel, message)
-            logger.info(f"Published message to channel '{channel}'.")
-        except Exception as e:
-            logger.error(f"Failed to publish message to channel '{channel}': {e}")
-            raise
-
-    def subscribe(self, channel: str, callback: Callable[[str, str], None]) -> None:
-        """
-        Subscribe to a Redis channel and process messages using a callback.
-
-        Args:
-            channel: The name of the Redis channel to subscribe to.
-            callback: A callable that processes messages. It receives the message data.
-        """
-        try:
-
-            def message_handler(message):
-                if message["type"] == "message":
-                    callback(message["channel"], message["data"].decode("utf-8"))
-
-            self.pubsub.subscribe(**{channel: message_handler})
-            logger.info(f"Subscribed to channel '{channel}'.")
-        except Exception as e:
-            logger.error(f"Failed to subscribe to channel '{channel}': {e}")
-            raise
-
-    def listen(self) -> None:
-        """
-        Start listening to subscribed channels.
-        """
-        if not self.pubsub:
-            logger.error("Pub/Sub is not initialized. Call `connect` first.")
-            return
-        try:
-            for message in self.pubsub.listen():
-                if message["type"] == "message":
-                    logger.info(
-                        f"Received message on channel '{message['channel']}': {message['data'].decode('utf-8')}"
+            if self.pubsub:
+                self.pubsub.close()
+            if self.client:
+                self.client.close()
+                self.connected = False
+                logger.info(
+                    SimulationLogMessageCode.REDIS_DISCONNECTED.details(
+                        "Disconnected from Redis backend."
                     )
+                )
         except Exception as e:
-            logger.error(f"Error while listening to Pub/Sub channels: {e}")
-            raise
+            logger.error(
+                SimulationLogMessageCode.REDIS_DISCONNECTION_FAILED.details(
+                    f"Error while disconnecting Redis backend: {e}"
+                )
+            )
 
-    def delete(self, channel: str) -> None:
+    def write(self, key: str, value: Any) -> None:
         """
-        Delete a Redis channel.
+        Write data to Redis.
 
         Args:
-            channel: The name of the Redis channel to delete.
+            key: The key under which the data will be stored.
+            value: The data to store.
         """
         try:
-            self.client.delete(channel)
-            logger.info(f"Deleted channel '{channel}'.")
+            self.client.set(key, value)
+            logger.info(
+                SimulationLogMessageCode.REDIS_WRITE_SUCCESS.details(
+                    f"Written data to key '{key}'."
+                )
+            )
         except Exception as e:
-            logger.error(f"Failed to delete channel '{channel}': {e}")
-            raise
-
-        if self.pubsub:
-            self.pubsub.unsubscribe(channel)
-
-        if self.client:
-            self.client.close()
-
-        self.connected = False
-        logger.info("Disconnected from Redis backend.")
+            logger.error(
+                SimulationLogMessageCode.REDIS_WRITE_FAILURE.details(
+                    f"Failed to write data to key '{key}': {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.FILE_IO, f"Failed to write data to key '{key}'", details=str(e)
+            )
 
     def read(self, key: str) -> Any:
         """
-        Read data from the Redis pub/sub channel.
+        Read data from Redis.
 
         Args:
             key: The key of the data to retrieve.
@@ -137,14 +113,77 @@ class RedisBackend(Backend):
         Returns:
             The retrieved data.
         """
-        return self.client.get(key)
+        try:
+            value = self.client.get(key)
+            logger.info(
+                SimulationLogMessageCode.REDIS_READ_SUCCESS.details(f"Read data from key '{key}'.")
+            )
+            return value
+        except Exception as e:
+            logger.error(
+                SimulationLogMessageCode.REDIS_READ_FAILURE.details(
+                    f"Failed to read data from key '{key}': {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.FILE_IO, f"Failed to read data from key '{key}'", details=str(e)
+            )
 
-    def write(self, key: str, value: Any) -> None:
+    def send_response(self, response: Response) -> None:
         """
-        Write data to the Redis pub/sub channel.
+        Publish a response message to the 'responses' channel.
 
         Args:
-            key: The key under which the data will be stored.
-            value: The data to store.
+            response: The Response to send.
         """
-        self.client.set(key, value)
+        try:
+            message = response.to_json()
+            self.client.publish("responses", message)
+            logger.info(
+                SimulationLogMessageCode.REDIS_WRITE_SUCCESS.details(
+                    "Published response to 'responses' channel."
+                )
+            )
+        except Exception as e:
+            logger.error(
+                SimulationLogMessageCode.REDIS_WRITE_FAILURE.details(
+                    f"Failed to publish response: {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.NETWORK_COMMUNICATION,
+                "Failed to publish response",
+                details=str(e),
+            )
+
+    def get_command(self) -> Optional[Request]:
+        """
+        Subscribe to the 'commands' channel and retrieve a command message.
+
+        Returns:
+            A Request if available, else None.
+        """
+        try:
+            self.pubsub.subscribe("commands")
+            message = self.pubsub.get_message(timeout=1)
+            if message and message["type"] == "message":
+                command_data = message["data"]
+                command = Request.from_json(command_data)
+                logger.info(
+                    SimulationLogMessageCode.REDIS_READ_SUCCESS.details(
+                        "Received command from 'commands' channel."
+                    )
+                )
+                return command
+            return None
+        except Exception as e:
+            logger.error(
+                SimulationLogMessageCode.REDIS_READ_FAILURE.details(
+                    f"Failed to retrieve command: {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.NETWORK_COMMUNICATION,
+                "Failed to retrieve command",
+                details=str(e),
+            )
