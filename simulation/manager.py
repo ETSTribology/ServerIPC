@@ -9,7 +9,9 @@ import numpy as np
 
 from simulation.backend.factory import BackendFactory
 from simulation.config.config import SimulationConfigManager
+from simulation.controller.commands import GetBackendStatusCommand, SendDataCommand, UpdateParameterCommand
 from simulation.controller.dispatcher import CommandDispatcher
+from simulation.controller.factory import CommandFactory
 from simulation.controller.model import Request, Response, Status
 from simulation.core.contact.barrier import BarrierFactory
 from simulation.core.contact.ccd import CCDFactory
@@ -37,6 +39,9 @@ class SimulationManager:
         self.config_manager = None
         self.config = None
         self.simulation_state = self.initialize_simulation(scenario)
+        self.backend = None
+        self.storage = None
+        self.command_factory = None
 
         self.load_configuration()
         self.setup_factories()
@@ -49,6 +54,8 @@ class SimulationManager:
         self.total_time = self.config.get("time", {}).get("total", 1.0)
         self.time_step = self.config.get("time", {}).get("step", 0.01)
         self.max_steps = int(self.total_time / self.time_step)
+
+        self.setup_commands()
 
     def load_configuration(self):
         logger.info(SimulationLogMessageCode.CONFIGURATION_LOADED)
@@ -87,6 +94,20 @@ class SimulationManager:
         self.linear_solver_factory = LinearSolverFactory()
         self.optimizer_factory = OptimizerFactory()
         self.storage_factory = StorageFactory()
+
+    def setup_commands(self):
+        """Set up commands within the simulation."""
+        self.command_factory = CommandFactory(history=his
+        try:
+            # Register commands with the CommandFactory
+            CommandFactory.register("send_data", SendDataCommand)
+            CommandFactory.register("update_parameter", UpdateParameterCommand)
+            CommandFactory.register("get_backend_status", GetBackendStatusCommand)
+            logger.info(SimulationLogMessageCode.COMMANDS_REGISTERED.details("Commands initialized successfully"))
+        except Exception as e:
+            logger.error(SimulationLogMessageCode.COMMANDS_FAILED.details(str(e)))
+            raise SimulationError(SimulationErrorCode.COMMAND_REGISTRATION, "Failed to register commands", str(e))
+
 
     def initialize_simulation(self, scenario: str) -> SimulationState:
         logger.info(SimulationLogMessageCode.SIMULATION_STATE_INITIALIZED)
@@ -433,33 +454,77 @@ class SimulationManager:
                 status=Status.ERROR.value,
                 message=f"Command processing failed: {str(e)}",
             )
-
-    def handle_command(self, dispatcher: CommandDispatcher) -> None:
-        request = self.backend.get_command()
-        if not request:
-            return
-        logger.info(SimulationLogMessageCode.SIMULATION_STARTED.details("Command received."))
+        
+    def process_command(self, dispatcher: CommandDispatcher, request: Request) -> Optional[Response]:
+        logger.info(
+            SimulationLogMessageCode.COMMAND_RECEIVED.details(f"Processing command: {request.command_name}")
+        )
         try:
-            response = self.process_command(dispatcher, request)
-            metrics = dispatcher.get_metrics()
-            logger.debug(
-                SimulationLogMessageCode.SIMULATION_STARTED.details(f"Command metrics: {metrics}")
-            )
+            response = dispatcher.dispatch(request)
+            if response:
+                try:
+                    self.backend.send_response(response)
+                    logger.info(
+                        SimulationLogMessageCode.COMMAND_EXECUTED.details(f"Command {request.command_name} executed successfully")
+                    )
+                except Exception as e:
+                    logger.error(
+                        SimulationLogMessageCode.COMMAND_EXECUTION_FAILED.details(f"Failed to send response: {e}")
+                    )
+            return response
         except Exception as e:
             logger.error(
-                SimulationLogMessageCode.SIMULATION_STARTED.details(
-                    f"Failed to process command: {e}"
-                )
+                SimulationLogMessageCode.COMMAND_PROCESSING_FAILED.details(f"Command processing failed: {e}")
+            )
+            return Response(
+                request_id=request.request_id,
+                status=Status.ERROR.value,
+                message=f"Command processing failed: {str(e)}",
+            )
+
+    def handle_command(self, dispatcher: CommandDispatcher) -> None:
+        # Get the command from the backend
+        request = self.backend.get_command()
+
+        if not request:
+            return
+
+        logger.info(SimulationLogMessageCode.COMMAND_RECEIVED.details(f"Command received: {request.command_name}"))
+
+        try:
+            # If the command is 'start', begin the simulation process
+            if request.command_name == "start":
+                logger.info(SimulationLogMessageCode.SIMULATION_STARTED.details("Simulation starting..."))
+                self.simulation_state.update_attribute("running", True)
+                self.process_command(dispatcher, request)  # Process the start command
+            elif self.simulation_state.get_attribute("running"):
+                # If simulation is running, process other commands
+                response = self.process_command(dispatcher, request)
+                if response:
+                    metrics = dispatcher.get_metrics()
+                    logger.debug(
+                        SimulationLogMessageCode.COMMAND_METRICS.details(f"Command metrics: {metrics}")
+                    )
+
+        except Exception as e:
+            logger.error(
+                SimulationLogMessageCode.COMMAND_EXECUTION_FAILED.details(f"Failed to process command: {e}")
             )
 
     def run_simulation(self) -> None:
-        logger.info(SimulationLogMessageCode.SIMULATION_STARTED)
+        logger.info(SimulationLogMessageCode.SIMULATION_STARTED.details("Waiting for 'start' command..."))
+        
+        # Wait for the start command before beginning the simulation
+        while not self.simulation_state.get_attribute("running"):
+            time.sleep(1)  # Check periodically for the start command
+
+        logger.info(SimulationLogMessageCode.SIMULATION_STARTED.details("Simulation started."))
         dispatcher = CommandDispatcher()
         params = self.setup_parameters()
 
         for step in range(self.max_steps):
             self.simulation_state.update_attribute("running", True)
-            self.handle_command(dispatcher)
+            self.handle_command(dispatcher)  # Handle any incoming commands during the simulation
 
             if not self.simulation_state.get_attribute("running"):
                 logger.debug(
@@ -470,6 +535,7 @@ class SimulationManager:
                 time.sleep(1)
                 continue
 
+            # Simulation logic (e.g., optimization steps)
             potentials = self.setup_potentials(params)
             gradient = self.setup_gradient(params)
             hessian = self.setup_hessian(params)
@@ -497,7 +563,7 @@ class SimulationManager:
                 )
             except Exception as e:
                 logger.error(
-                    SimulationLogMessageCode.SIMULATION_STEP_COMPLETED.details(
+                    SimulationLogMessageCode.SIMULATION_STEP_FAILED.details(
                         f"Optimization failed at step {step}: {e}"
                     )
                 )
@@ -505,11 +571,7 @@ class SimulationManager:
 
             self.update_simulation_values(params, xtp1, step)
 
-
-            # save data a csv file
-
-
-        logger.info(SimulationLogMessageCode.SIMULATION_SHUTDOWN)
+        logger.info(SimulationLogMessageCode.SIMULATION_SHUTDOWN.details("Simulation shutting down..."))
         self.simulation_state.update_attribute("running", False)
 
     def update_simulation_state(

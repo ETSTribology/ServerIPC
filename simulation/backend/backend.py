@@ -79,3 +79,23 @@ class Backend(ABC):
             A Request if available, else None.
         """
         pass
+
+    @abstractmethod
+    def is_connected(self) -> bool:
+        """
+        Check if the backend is connected.
+
+        Returns:
+            True if connected, else False.
+        """
+        return self.connected
+    
+    @abstractmethod
+    def get_status(self) -> Dict[str, Any]:
+        """
+        Get the current status of the backend.
+
+        Returns:
+            A dictionary containing the current status.
+        """
+        pass

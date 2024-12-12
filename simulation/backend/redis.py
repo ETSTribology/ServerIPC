@@ -23,6 +23,7 @@ class RedisBackend(Backend):
         self.backend_config = config.get("backend", {}).get("config", {})
         self.client = None
         self.pubsub = None
+        self.connected = False
 
     def connect(self):
         """
@@ -187,3 +188,39 @@ class RedisBackend(Backend):
                 "Failed to retrieve command",
                 details=str(e),
             )
+        
+    def get_status(self) -> Dict[str, Any]:
+        """
+        Get the current status of the Redis backend.
+
+        Returns:
+            A dictionary containing the backend status and connection details.
+        """
+        try:
+            info = self.client.info() if self.connected else {}
+            return {
+                "connected": self.connected,
+                "host": self.backend_config.get("host", "localhost"),
+                "port": self.backend_config.get("port", 6379),
+                "db": self.backend_config.get("db", 0),
+                "info": info,
+            }
+        except Exception as e:
+            logger.error(
+                SimulationLogMessageCode.REDIS_READ_FAILURE.details(
+                    f"Failed to retrieve Redis status: {e}"
+                )
+            )
+            return {
+                "connected": self.connected,
+                "error": str(e),
+            }
+        
+    def is_connected(self) -> bool:
+        """
+        Check if the Redis backend is connected.
+
+        Returns:
+            True if connected, else False.
+        """
+        return self.connected

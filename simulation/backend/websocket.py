@@ -17,6 +17,7 @@ class WebSocketBackend(Backend):
         super().__init__(config)
         self.validate_config(["host", "port", "path"])
         self.ws = None
+        self.connected = False
 
     def validate_config(self, required_keys):
         for key in required_keys:
@@ -164,3 +165,6 @@ class WebSocketBackend(Backend):
                 "Failed to retrieve command",
                 details=str(e),
             )
+        
+    def get_status(self):
+        return {"connected": self.connected}

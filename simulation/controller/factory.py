@@ -1,21 +1,22 @@
-import logging
-from typing import Dict, Optional, Type
-
-from simulation.controller.commands import (
-    ICommand,
-    KillCommand,
-    PauseCommand,
-    ResetCommand,
-    ResumeCommand,
-    StartCommand,
-    StopCommand,
-)
 from simulation.controller.history import CommandHistory
 from simulation.controller.model import CommandType
-from simulation.logs.message import SimulationLogMessageCode
+from simulation.controller.commands import (
+    ICommand,
+    StartCommand,
+    PauseCommand,
+    StopCommand,
+    ResumeCommand,
+    ResetCommand,
+    KillCommand,
+    SendDataCommand,
+    UpdateParameterCommand,
+    GetBackendStatusCommand,
+)
+from typing import Dict, Type, Optional
+
+import logging
 
 logger = logging.getLogger(__name__)
-
 
 class CommandFactory:
     """
@@ -29,11 +30,21 @@ class CommandFactory:
         CommandType.RESUME: ResumeCommand,
         CommandType.RESET: ResetCommand,
         CommandType.KILL: KillCommand,
-        
+        CommandType.SEND: SendDataCommand,
+        CommandType.UPDATE_PARAMS: UpdateParameterCommand,
+        CommandType.STATUS: GetBackendStatusCommand,
     }
 
-    def __init__(self, history: CommandHistory):
+    def __init__(self, history: CommandHistory, backend, simulation_manager):
+        """
+        Args:
+            history (CommandHistory): Command execution history.
+            backend: The backend instance for handling data.
+            simulation_manager: The simulation manager instance for parameter updates.
+        """
         self.history = history
+        self.backend = backend
+        self.simulation_manager = simulation_manager
 
     def create(self, command_type: str, **kwargs) -> Optional[ICommand]:
         """
@@ -47,53 +58,22 @@ class CommandFactory:
             Optional[ICommand]: An instance of the specified command type or None if creation fails.
         """
         try:
-            # Retrieve the CommandType enum member using the provided command_type string
             command_enum = CommandType.get_by_name(command_type)
-            logger.debug(
-                SimulationLogMessageCode.COMMAND_INITIALIZED.details(
-                    f"Command enum retrieved: {command_enum.name}"
-                )
-            )
-
-            # Get the corresponding command class from the mapping
             command_class = self._command_class_mapping.get(command_enum)
 
             if not command_class:
-                logger.error(
-                    SimulationLogMessageCode.COMMAND_FAILED.details(
-                        f"No command class mapped for CommandType '{command_enum.name}'"
-                    )
-                )
+                logger.error(f"No command class mapped for CommandType '{command_enum.name}'")
                 return None
 
-            # If the command requires additional arguments, pass them
-            if command_enum == CommandType.RESET:
-                if "reset_function" not in kwargs:
-                    logger.error(
-                        SimulationLogMessageCode.COMMAND_FAILED.details(
-                            "ResetCommand requires a 'reset_function' argument"
-                        )
-                    )
-                    return None
+            # Pass additional dependencies based on command requirements
+            if issubclass(command_class, SendDataCommand) or issubclass(command_class, GetBackendStatusCommand):
+                return command_class(history=self.history, backend=self.backend)
+            if issubclass(command_class, UpdateParameterCommand):
+                return command_class(history=self.history, simulation_manager=self.simulation_manager)
 
-            # Instantiate and return the command class
             return command_class(history=self.history, **kwargs)
 
-        except ValueError as e:
-            logger.error(
-                SimulationLogMessageCode.COMMAND_FAILED.details(f"Command creation failed: {e}")
-            )
-        except TypeError as e:
-            logger.error(
-                SimulationLogMessageCode.COMMAND_FAILED.details(
-                    f"Failed to instantiate command '{command_type}': {e}"
-                )
-            )
         except Exception as e:
-            logger.error(
-                SimulationLogMessageCode.COMMAND_FAILED.details(
-                    f"Unexpected error when creating command '{command_type}': {e}"
-                )
-            )
+            logger.error(f"Unexpected error when creating command '{command_type}': {e}")
 
         return None

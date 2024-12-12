@@ -253,6 +253,35 @@ class SendDataCommand(BaseCommand):
         except Exception as e:
             logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
             raise CommandFailedError(str(e))
+        
+
+class ReceiveDataCommand(BaseCommand):
+    """Command to receive data (e.g., results) from the backend."""
+
+    @validate_state([SimulationStateMachine.RUNNING, SimulationStateMachine.PAUSED])
+    def _execute_impl(self, request: Request) -> Response:
+        try:
+            key = request.parameters.get("key")
+
+            if not key:
+                raise InvalidParametersError("Key must be provided.")
+
+            data = self.backend.read(key)
+
+            logger.info(
+                SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Data received successfully for key: {key}")
+            )
+            return Response(
+                request_id=request.request_id,
+                status=Status.SUCCESS.value,
+                message=f"Data received successfully for key: {key}",
+                data=data,
+            )
+        except InvalidParametersError as e:
+            raise e
+        except Exception as e:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
+            raise CommandFailedError(str(e))
 
 
 class UpdateParameterCommand(BaseCommand):
@@ -281,6 +310,28 @@ class UpdateParameterCommand(BaseCommand):
             )
         except InvalidParametersError as e:
             raise e
+        except Exception as e:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
+            raise CommandFailedError(str(e))
+
+
+class GetBackendStatusCommand(BaseCommand):
+    """Command to retrieve the status of the backend."""
+
+    @validate_state([SimulationStateMachine.RUNNING, SimulationStateMachine.PAUSED])
+    def _execute_impl(self, request: Request) -> Response:
+        try:
+            backend_status = self.backend.get_status()
+
+            logger.info(
+                SimulationLogMessageCode.COMMAND_SUCCESS.details("Backend status retrieved successfully.")
+            )
+            return Response(
+                request_id=request.request_id,
+                status=Status.SUCCESS.value,
+                message="Backend status retrieved successfully.",
+                data=backend_status,
+            )
         except Exception as e:
             logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
             raise CommandFailedError(str(e))

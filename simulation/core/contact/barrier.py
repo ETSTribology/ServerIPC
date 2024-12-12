@@ -183,7 +183,7 @@ class BarrierUpdater(BarrierBase):
                 str(e)
             )
 
-lass BarrierFactory(metaclass=SingletonMeta):
+class BarrierFactory(metaclass=SingletonMeta):
     """Factory for creating barrier objects."""
 
     _initializer_instances = {}
