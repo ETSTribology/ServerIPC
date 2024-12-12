@@ -1,14 +1,15 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
+from scipy import sparse
 
 from simulation.core.modifier.mesh import to_surface
 from simulation.core.parameters import Parameters, ParametersBase
 from simulation.core.utils.singleton import SingletonMeta
-from simulation.logs.message import SimulationLogMessageCode
 from simulation.logs.error import SimulationError, SimulationErrorCode
+from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
@@ -35,115 +36,238 @@ class PotentialBase(ABC):
         Returns:
             The computed potential energy.
         """
-        return super().__call__(*args, **kwds)
+        pass
 
 
 class Potential(PotentialBase):
-    def __init__(self, params: ParametersBase):
+    def __init__(self, params: Parameters):
+        super().__init__(params)
+
+    def update_params(self, params: Parameters):
         """
-        Initialize the Potential with parameters.
+        Update the parameters used by the Potential instance.
 
         Args:
-            params (ParametersBase): The parameters for the potential computation.
+            params (Parameters): The new parameters to set.
         """
+        if not isinstance(params, Parameters):
+            raise ValueError("params must be an instance of Parameters.")
         self.params = params
+        logger.info("Potential parameters updated successfully.")
+
+    def _compute_elastic_energy(self, x: np.ndarray) -> float:
+        """
+        Compute elastic potential energy.
+
+        Args:
+            x (np.ndarray): Position vector
+
+        Returns:
+            float: Elastic potential energy
+        """
+        try:
+            self.params.hep.compute_element_elasticity(x, grad=False, hessian=False)
+            return self.params.hep.eval()
+        except Exception as e:
+            logger.error(f"Failed to compute elastic energy: {e}")
+            raise SimulationError(
+                SimulationErrorCode.POTENTIAL_SETUP,
+                "Failed to compute elastic energy",
+                str(e)
+            )
+
+    def _compute_velocity_surface(self, x: np.ndarray) -> tuple:
+        """
+        Compute velocity and surface mappings.
+
+        Args:
+            x (np.ndarray): Position vector
+
+        Returns:
+            tuple: (velocity, surface position, surface velocity)
+        """
+        try:
+            v = (x - self.params.xt) / self.params.dt
+            BX = to_surface(x, self.params.mesh, self.params.cmesh)
+            BXdot = to_surface(v, self.params.mesh, self.params.cmesh)
+            return v, BX, BXdot
+        except Exception as e:
+            logger.error(f"Failed to compute velocity/surface mappings: {e}")
+            raise SimulationError(
+                SimulationErrorCode.POTENTIAL_SETUP,
+                "Failed to compute velocity/surface mappings",
+                str(e)
+            )
+
+    def _setup_constraints(self, BX: np.ndarray) -> None:
+        """
+        Setup collision and friction constraints.
+
+        Args:
+            BX (np.ndarray): Surface positions
+        """
+        try:
+            self.params.cconstraints.use_area_weighting = True
+            self.params.cconstraints.use_improved_max_approximator = True
+            self.params.cconstraints.build(
+                self.params.cmesh, BX, self.params.dhat, dmin=self.params.dmin
+            )
+
+            self.params.fconstraints.build(
+                self.params.cmesh, BX, self.params.cconstraints,
+                self.params.barrier_potential, self.params.kB, self.params.mu
+            )
+        except Exception as e:
+            logger.error(f"Failed to setup constraints: {e}")
+            raise SimulationError(
+                SimulationErrorCode.POTENTIAL_SETUP,
+                "Failed to setup constraints",
+                str(e)
+            )
+
+    def _compute_constraint_energies(self, BX: np.ndarray, BXdot: np.ndarray) -> tuple:
+        """
+        Compute barrier and friction potential energies.
+
+        Args:
+            BX (np.ndarray): Surface positions
+            BXdot (np.ndarray): Surface velocities
+
+        Returns:
+            tuple: (barrier energy, friction energy)
+        """
+        try:
+            EB = self.params.barrier_potential(self.params.cconstraints, self.params.cmesh, BX)
+            EF = self.params.friction_potential(self.params.fconstraints, self.params.cmesh, BXdot)
+            return EB, EF
+        except Exception as e:
+            logger.error(f"Failed to compute constraint energies: {e}")
+            raise SimulationError(
+                SimulationErrorCode.POTENTIAL_SETUP,
+                "Failed to compute constraint energies",
+                str(e)
+            )
+
+    def _compute_total_energy(self, x: np.ndarray, U: float, EB: float, EF: float) -> float:
+        """
+        Compute total potential energy.
+
+        Args:
+            x (np.ndarray): Position vector
+            U (float): Elastic energy
+            EB (float): Barrier energy
+            EF (float): Friction energy
+
+        Returns:
+            float: Total potential energy
+        """
+        try:
+            energy = (0.5 * (x - self.params.xtilde).T @ self.params.M @ (x - self.params.xtilde) +
+                      self.params.dt**2 * U + self.params.kB * EB + self.params.dt**2 * EF)
+            logger.debug(f"Computed total energy: {energy}")
+            if not np.isfinite(energy):
+                logger.error(f"Potential energy is not finite: {energy}")
+                raise ValueError("Potential energy is NaN or Inf.")
+            return energy
+        except Exception as e:
+            logger.error(f"Failed to compute total energy: {e}")
+            raise SimulationError(
+                SimulationErrorCode.POTENTIAL_SETUP,
+                "Failed to compute total energy",
+                str(e)
+            )
 
     def __call__(self, x: np.ndarray) -> float:
         """
-        Compute the potential energy.
+        Compute total potential energy.
 
         Args:
-            x (np.ndarray): Current positions.
+            x (np.ndarray): Current positions
 
         Returns:
-            float: The computed potential energy.
+            float: Computed potential energy
+
+        Raises:
+            SimulationError: If potential computation fails
         """
         try:
-            logger.debug(SimulationLogMessageCode.COMMAND_STARTED.details("Computing potential energy."))
-            dt = self.params.dt
-            dt2 = self.params.dt2
-            xt = self.params.xt
-            xtilde = self.params.xtilde
-            M = self.params.M
-            hep = self.params.hep
-            mesh = self.params.mesh
-            cmesh = self.params.cmesh
-            cconstraints = self.params.cconstraints
-            fconstraints = self.params.fconstraints
-            dhat = self.params.dhat
-            dmin = self.params.dmin
-            mu = self.params.mu
-            epsv = self.params.epsv
-            kB = self.params.kB
-            B = self.params.barrier_potential
-            D = self.params.friction_potential
-
-            hep.compute_element_elasticity(x, grad=False, hessian=False)
-            U = hep.eval()
-            v = (x - xt) / dt
-            BX = to_surface(x, mesh, cmesh)
-            BXdot = to_surface(v, mesh, cmesh)
-
-            # Compute the barrier potential
-            cconstraints.use_area_weighting = True
-            cconstraints.use_improved_max_approximator = True
-            cconstraints.build(cmesh, BX, dhat, dmin=dmin)
-
-            # Build friction constraints
-            fconstraints.build(cmesh, BX, cconstraints, B, kB, mu)
-
-            EB = B(cconstraints, cmesh, BX)
-            EF = D(fconstraints, cmesh, BXdot)
-
-            potential_energy = (
-                0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt**2 * U + kB * EB + dt**2 * EF
-            )
-            logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Potential energy computed successfully."))
-            return potential_energy
+            logger.debug(f"Starting computation with input: {x}")
+            U = self._compute_elastic_energy(x)
+            _, BX, BXdot = self._compute_velocity_surface(x)
+            self._setup_constraints(BX)
+            EB, EF = self._compute_constraint_energies(BX, BXdot)
+            energy = self._compute_total_energy(x, U, EB, EF)
+            logger.info("Potential energy computed successfully")
+            logger.info(f"Potential energy: {energy}")
+            logger.info(f"Elastic potential: {U}")
+            logger.info(f"Barrier potential: {EB}")
+            logger.info(f"Friction potential: {EF}")
+            logger.info(f"Barrier stiffness: {self.params.kB}")
+            logger.info(f"Friction stiffness: {self.params.mu}")
+            return energy
+        except SimulationError as se:
+            logger.error(f"Simulation error occurred: {se}")
+            raise
         except Exception as e:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to compute potential energy: {e}"))
-            raise SimulationError(SimulationErrorCode.POTENTIAL_SETUP, "Failed to compute potential energy", details=str(e))
+            logger.error(f"Unexpected error in potential computation: {e}")
+            raise SimulationError(
+                SimulationErrorCode.POTENTIAL_SETUP,
+                "Unexpected error in potential computation",
+                str(e)
+            )
 
 
 class PotentialFactory(metaclass=SingletonMeta):
-    """
-    Factory class for creating potential instances.
-    """
+    """Factory class for creating potential instances."""
 
     _instances = {}
 
     @staticmethod
-    def create(config: Dict[str, Any]) -> Any:
+    def create(params: ParametersBase) -> Any:
         """
-        Create and return a potential instance based on the configuration.
+        Create and return a default potential instance or update the existing instance.
 
         Args:
-            config: A dictionary containing the potential configuration.
+            params (ParametersBase): Parameters for potential initialization.
 
         Returns:
-            An instance of the potential class.
+            Any: Instance of the Potential class.
 
         Raises:
-            SimulationError: If the potential type is unknown.
+            SimulationError: If creation fails.
         """
         logger.info(SimulationLogMessageCode.COMMAND_STARTED.details("Creating potential..."))
-        potential_config = config.get("potential", {})
-        potential_type = potential_config.get("type", "default").lower()
 
-        if potential_type not in PotentialFactory._instances:
-            try:
-                if potential_type == "default":
-                    potential_instance = Potential(config)
-                else:
-                    raise ValueError(f"Unknown potential type: {potential_type}")
+        instance_key = "default"
 
-                PotentialFactory._instances[potential_type] = potential_instance
-                logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Potential '{potential_type}' created successfully."))
-            except ValueError as e:
-                logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unknown potential type: {potential_type}"))
-                raise SimulationError(SimulationErrorCode.POTENTIAL_SETUP, f"Unknown potential type: {potential_type}", details=str(e))
-            except Exception as e:
-                logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unexpected error when creating potential '{potential_type}': {e}"))
-                raise SimulationError(SimulationErrorCode.POTENTIAL_SETUP, f"Unexpected error when creating potential '{potential_type}'", details=str(e))
+        try:
+            if instance_key in PotentialFactory._instances:
+                # Update the existing instance with new parameters
+                instance = PotentialFactory._instances[instance_key]
+                instance.update_params(params)
+                logger.info("Potential instance updated with new parameters.")
+            else:
+                # Create a new instance if not already present
+                if params is None:
+                    raise ValueError("Parameters required for potential creation")
 
-        return PotentialFactory._instances[potential_type]
+                logger.debug(f"Parameters received for potential creation: {params}")
+                instance = Potential(params)
+                PotentialFactory._instances[instance_key] = instance
+                logger.info(
+                    SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                        "Potential created successfully."
+                    )
+                )
+        except Exception as e:
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Failed to create or update potential: {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.POTENTIAL_SETUP, "Failed to create or update potential", str(e)
+            )
+
+        return instance
+

@@ -158,30 +158,11 @@ def combine_meshes(
     C = np.vstack(C_list)
     element_materials = np.concatenate(element_materials_list)
 
-    # Deduplicate vertices to optimize mesh
-    decimals = 8  # Precision for deduplication
-    V_rounded = np.round(V, decimals=decimals)
-    unique_V, unique_indices, inverse_indices = np.unique(
-        V_rounded, axis=0, return_index=True, return_inverse=True
-    )
-    C_remapped = inverse_indices[C]
-
-    logger.info(
-        f"Combined mesh has {V.shape[0]} vertices and {C.shape[0]} elements before deduplication."
-    )
-    logger.info(
-        f"After deduplication: {unique_V.shape[0]} unique vertices out of {V.shape[0]} original vertices."
-    )
-
     # Create pbatoolkit mesh
-    mesh = pbat.fem.Mesh(unique_V.T, C_remapped.T, element=pbat.fem.Element.Tetrahedron, order=1)
+    mesh = pbat.fem.Mesh(V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
     V_combined, C_combined = mesh.X.T, mesh.E.T
 
-    # Validate remapped connectivity
-    if not (np.all(C_remapped >= 0) and np.all(C_remapped < unique_V.shape[0])):
-        logger.error("Remapped connectivity has invalid indices.")
-        raise ValueError("Remapped connectivity contains invalid vertex indices.")
-
+    logger.info(f"Combined mesh contains {V_combined.shape[0]} nodes and {C_combined.shape[0]} elements.")
     logger.info("Meshes have been combined and deduplicated.")
 
     return mesh, V_combined, C_combined, element_materials, num_nodes_list

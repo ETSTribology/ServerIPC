@@ -36,8 +36,14 @@
             "minimum": 0,
             "description": "Separation velocity",
             "default": 0.01
+        },
+        "broad_phase": {
+            "type": "string",
+            "enum": ["brute_force", "hash_grid", "spatial_hash", "bvh", "sweep_and_prune", "sweep_and_tiniest_queue"],
+            "description": "Broad phase collision detection algorithm",
+            "default": "spatial_hash"
         }
     },
-    "required": ["enabled", "method", "dhat", "friction"],
+    "required": ["enabled", "method", "dhat", "dmin", "friction", "espv", "broad_phase"],
     "additionalProperties": false
 }

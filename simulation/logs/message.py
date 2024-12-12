@@ -1,10 +1,12 @@
-from enum import Enum
 import logging
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
+
 class SimulationLogMessageCode(Enum):
     """Enumeration for simulation log message codes with unique identifiers."""
+
     # Configuration and Initialization Logs
     CONFIGURATION_LOADED = ("Configuration loaded successfully", "LOG_001")
     CONFIGURATION_FAILED = ("Failed to load configuration", "LOG_002")
@@ -106,6 +108,10 @@ class SimulationLogMessageCode(Enum):
     DATA_VALIDATION_FAILURE = ("Data validation failed", "LOG_077")
     USER_AUTHENTICATION_SUCCESS = ("User authenticated successfully", "LOG_078")
     USER_AUTHENTICATION_FAILURE = ("User authentication failed", "LOG_079")
+
+    BARRIER_UPDATER_SETUP = ("Barrier Updater Setup Error", "LOG_080")
+    OPTIMIZER_SETUP = ("Optimizer Setup Error", "LOG_081")
+    LINEAR_SOLVER_SETUP = ("Linear Solver Setup Error", "LOG_082")
 
     def __init__(self, description, code):
         self.description = description

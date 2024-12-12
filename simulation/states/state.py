@@ -79,6 +79,20 @@ class SimulationState:
 
         self.state[primary_key] = value
 
+    def update_attributes(self, data: Dict[str, Any], create: bool = True) -> None:
+        """Updates multiple attributes in the simulation state.
+
+        Parameters
+        ----------
+        data : Dict[str, Any]
+            A dictionary of attribute names and values to update.
+        create : bool, optional
+            Whether to create the attribute if it does not exist, by default True.
+
+        """
+        for key, value in data.items():
+            self.update_attribute(key, value, create=create)
+
     def get_attribute(self, key: str, default: Any = None) -> Any:
         """Retrieves the value of an attribute from the simulation state.
 

@@ -1,7 +1,8 @@
 # history.py
 from dataclasses import dataclass
-from typing import List
 from threading import Lock
+from typing import List
+
 
 @dataclass
 class CommandHistoryEntry:

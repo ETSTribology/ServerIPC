@@ -2,30 +2,114 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "version": "1.0.0",
     "type": "object",
-    "title": "Time Configuration",
-    "description": "Time configuration parameters",
-    "required": ["step", "total"],
+    "title": "Integrator Configuration",
+    "description": "Configuration for numerical integration methods",
+    "required": [
+        "start",
+        "step",
+        "total",
+        "integrator"
+    ],
     "properties": {
         "start": {
             "type": "number",
             "minimum": 0,
-            "description": "Starting time for the simulation"
+            "default": 0,
+            "description": "Starting time"
         },
         "step": {
             "type": "number",
-            "minimum": 1e-6,
+            "minimum": 1e-12,
             "maximum": 1,
-            "description": "Time step size for the simulation"
+            "description": "Time step size",
+            "default": 0.016
         },
         "total": {
             "type": "number",
             "minimum": 0,
-            "description": "Total simulation time"
+            "description": "Total simulation time",
+            "default": 1
+        },
+        "adaptive": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable adaptive time stepping"
         },
         "integrator": {
-            "type": "string",
-            "enum": ["Implicit", "Explicit", "SemiImplicit", "RK4"],
-            "default": "Implicit"
+            "type": "object",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "explicit_euler",
+                        "semi_implicit_euler",
+                        "implicit_euler",
+                        "midpoint",
+                        "rk2",
+                        "rk4",
+                        "rk38",
+                        "implicit_adams",
+                        "dopri5",
+                        "dopri3",
+                        "adaptive_heun",
+                        "verlet",
+                        "leapfrog",
+                        "yoshida",
+                        "numba_rk4",
+                        "sparse_euler",
+                        "dirk",
+                        "hht_alpha",
+                        "energy_momentum",
+                        "svk",
+                        "neural_ode"
+                    ],
+                    "description": "Integration method"
+                },
+                "config": {
+                    "type": "object",
+                    "properties": {
+                        "tolerance": {
+                            "type": "object",
+                            "properties": {
+                                "rtol": {
+                                    "type": "number",
+                                    "minimum": 1e-12,
+                                    "maximum": 1,
+                                    "default": 1e-6,
+                                    "description": "Relative tolerance"
+                                },
+                                "atol": {
+                                    "type": "number",
+                                    "minimum": 1e-12,
+                                    "maximum": 1,
+                                    "default": 1e-6,
+                                    "description": "Absolute tolerance"
+                                }
+                            }
+                        },
+                        "parallelization": {
+                            "type": "object",
+                            "properties": {
+                                "n_jobs": {
+                                    "type": "integer",
+                                    "minimum": -1,
+                                    "default": -1,
+                                    "description": "Number of parallel jobs (-1 for all cores)"
+                                },
+                                "chunk_size": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "default": 1000,
+                                    "description": "Chunk size for parallel processing"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "additionalProperties": false

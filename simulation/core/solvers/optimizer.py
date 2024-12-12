@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -19,14 +20,15 @@ from simulation.core.solvers.line_search import (
 )
 from simulation.core.solvers.linear import LinearSolverBase, LinearSolverFactory
 from simulation.core.utils.singleton import SingletonMeta
-from simulation.logs.message import SimulationLogMessageCode
 from simulation.logs.error import SimulationError, SimulationErrorCode
+from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
 
 class OptimizerType(Enum):
     """Enumeration of supported optimizer types."""
+
     NEWTON = "newton"
     BFGS = "bfgs"
     LBFGS = "lbfgs"
@@ -94,7 +96,6 @@ class NewtonOptimizer(OptimizerBase):
         self.rtol = rtol
         self.reg_param = reg_param
         self.n_threads = n_threads
-        self.logger = logging.getLogger(self.__class__.__name__)
 
     def optimize(
         self,
@@ -119,30 +120,110 @@ class NewtonOptimizer(OptimizerBase):
         Returns:
             np.ndarray: Optimized variables.
         """
-        maxiters = kwargs.get("maxiters", self.maxiters)
-        rtol = kwargs.get("rtol", self.rtol)
-        xk = x0.copy()
+        maxiters = kwargs.get("maxiters", 10)
+        rtol = kwargs.get("rtol", 1e-5)
+        xk = x0
 
-        for k in range(maxiters):
-            gk = grad(xk)
-            gnorm = np.linalg.norm(gk, np.inf)
-            if gnorm < rtol:
-                self.logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Converged at iteration {k} with gradient norm {gnorm}"))
-                break
+        try:
+            if self.n_threads == 1:
+                # Sequential Newton's method
+                for k in range(maxiters):
+                    try:
+                        gk = grad(xk)
+                    except Exception as e:
+                        logger.error(f"Error computing gradient at iteration {k}: {e}")
+                        raise
 
-            Hk = hess(xk)
-            Hk_reg = Hk + self.reg_param * sp.eye(Hk.shape[0], format="csc")
-            try:
-                dx = self.lsolver.solve(Hk_reg, -gk)
-            except Exception as e:
-                self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Linear solver failed: {e}"))
-                raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "Linear solver failed", details=str(e))
+                    gnorm = np.linalg.norm(gk, 1)
+                    if gnorm < rtol:
+                        logger.info(
+                            f"Converged at iteration {k} with gradient norm {gnorm}"
+                        )
+                        break
 
-            alpha = self.alpha0_func(xk, dx)
-            xk += alpha * dx
+                    try:
+                        Hk = hess(xk)
+                    except Exception as e:
+                        logger.error(f"Error computing Hessian at iteration {k}: {e}")
+                        raise
 
-            if callback:
-                callback(xk)
+                    try:
+                        dx = self.lsolver.solve(Hk, -gk)
+                    except Exception as e:
+                        logger.error(f"Error solving linear system at iteration {k}: {e}")
+                        raise
+
+                    try:
+                        alpha = self.line_searcher.search(alpha0=self.alpha0_func(xk, dx), x=xk, dx=dx, f=f, grad=gk)
+                        xk = xk + alpha * dx
+                        gk = grad(xk)
+                    except Exception as e:
+                        logger.error(f"Error updating variables at iteration {k}: {e}")
+                        raise
+
+                    if callback is not None:
+                        try:
+                            callback(xk)
+                        except Exception as e:
+                            logger.error(f"Error in callback at iteration {k}: {e}")
+                    return xk
+            else:
+                # Parallel Newton's method
+                Hk_cache = None
+                with ThreadPoolExecutor(max_workers=self.n_threads) as executor:
+                    for k in range(maxiters):
+                        try:
+                            future_grad = executor.submit(grad, xk)
+                            gk = future_grad.result()
+                        except Exception as e:
+                            logger.error(f"Error computing gradient at iteration {k}: {e}")
+                            raise
+
+                        gnorm = np.linalg.norm(gk, np.inf)
+                        if gnorm < rtol:
+                            logger.info(
+                                f"Converged at iteration {k} with gradient norm {gnorm}"
+                            )
+                            break
+
+                        try:
+                            if Hk_cache is None:
+                                future_hess = executor.submit(hess, xk)
+                                Hk = future_hess.result()
+                                Hk_cache = Hk
+                            else:
+                                Hk = Hk_cache
+                        except Exception as e:
+                            logger.error(f"Error computing Hessian at iteration {k}: {e}")
+                            raise
+
+                        try:
+                            # Regularize Hessian
+                            Hk_reg = Hk + self.reg_param * sp.sparse.eye(Hk.shape[0])
+                            dx = self.lsolver.solve(Hk_reg, -gk)
+                        except Exception as e:
+                            logger.error(f"Error solving linear system at iteration {k}: {e}")
+                            raise
+
+                        try:
+                            alpha = self.alpha0_func(xk, dx)
+                            xk = xk + alpha * dx
+                        except Exception as e:
+                            logger.error(f"Error updating variables at iteration {k}: {e}")
+                            raise
+
+                        if np.linalg.norm(alpha * dx) > 1e-5:
+                            Hk_cache = None  # Invalidate cache
+
+                        if callback is not None:
+                            try:
+                                callback(xk)
+                            except Exception as e:
+                                logger.error(f"Error in callback at iteration {k}: {e}")
+
+        except Exception as e:
+            logger.critical(f"Critical failure in optimization: {e}")
+            raise
 
         return xk
 
@@ -166,11 +247,12 @@ class BFGSOptimizer(OptimizerBase):
             maxiters (int, optional): Maximum number of iterations. Defaults to 100.
             rtol (float, optional): Relative tolerance for convergence. Defaults to 1e-5.
         """
-        self.line_searcher = line_searcher
+        if line_searcher is None:
+            raise ValueError("line_searcher cannot be None for Newton optimizer")
         self.alpha0_func = alpha0_func
         self.maxiters = maxiters
         self.rtol = rtol
-        self.logger = logging.getLogger(self.__class__.__name__)
+        logger = logging.getLogger(self.__class__.__name__)
 
     def optimize(
         self,
@@ -206,7 +288,11 @@ class BFGSOptimizer(OptimizerBase):
         for k in range(maxiters):
             gnorm = np.linalg.norm(gk, np.inf)
             if gnorm < rtol:
-                self.logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"BFGS converged at iteration {k} with gradient norm {gnorm}"))
+                logger.info(
+                    SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                        f"BFGS converged at iteration {k} with gradient norm {gnorm}"
+                    )
+                )
                 break
 
             pk = -Hk @ gk
@@ -222,7 +308,11 @@ class BFGSOptimizer(OptimizerBase):
                 Vk = np.eye(n) - rho_k * np.outer(sk, yk)
                 Hk = Vk @ Hk @ Vk.T + rho_k * np.outer(sk, sk)
             else:
-                self.logger.warning(SimulationLogMessageCode.COMMAND_FAILED.details("Skipping update due to small sy in BFGS."))
+                logger.warning(
+                    SimulationLogMessageCode.COMMAND_FAILED.details(
+                        "Skipping update due to small sy in BFGS."
+                    )
+                )
 
             xk, gk = xk_new, gk_new
             if callback:
@@ -246,7 +336,7 @@ class LBFGSOptimizer(OptimizerBase):
         self.maxiters = maxiters
         self.rtol = rtol
         self.m = m
-        self.logger = logging.getLogger(self.__class__.__name__)
+        logger = logging.getLogger(self.__class__.__name__)
 
     def optimize(
         self,
@@ -281,7 +371,11 @@ class LBFGSOptimizer(OptimizerBase):
         for k in range(maxiters):
             gnorm = np.linalg.norm(gk, np.inf)
             if gnorm < rtol:
-                self.logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"L-BFGS converged at iteration {k} with gradient norm {gnorm}"))
+                logger.info(
+                    SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                        f"L-BFGS converged at iteration {k} with gradient norm {gnorm}"
+                    )
+                )
                 break
 
             # Two-loop recursion
@@ -316,7 +410,11 @@ class LBFGSOptimizer(OptimizerBase):
                 y_list.append(yk)
                 rho_list.append(rho_k)
             else:
-                self.logger.warning(SimulationLogMessageCode.COMMAND_FAILED.details("Skipping update due to small sy in L-BFGS."))
+                logger.warning(
+                    SimulationLogMessageCode.COMMAND_FAILED.details(
+                        "Skipping update due to small sy in L-BFGS."
+                    )
+                )
 
             xk, gk = xk_new, gk_new
             if callback:
@@ -373,24 +471,44 @@ class OptimizerFactory(metaclass=SingletonMeta):
         Raises:
             SimulationError: If the optimizer type is unknown or required configurations are missing.
         """
-        optimizer_type_str = config.get("solver", "newton")
+        optimizer_type_str = config.get("optimization", {}).get("solver")
         if not optimizer_type_str:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details("Optimizer type must be specified in config"))
-            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "Optimizer type must be specified in config")
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    "Optimizer type must be specified in config"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.OPTIMIZER_SETUP, "Optimizer type must be specified in config"
+            )
 
         try:
             optimizer_type = OptimizerType(optimizer_type_str)
         except ValueError:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unsupported optimizer type: {optimizer_type_str}"))
-            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, f"Unsupported optimizer type: {optimizer_type_str}")
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Unsupported optimizer type: {optimizer_type_str}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.OPTIMIZER_SETUP,
+                f"Unsupported optimizer type: {optimizer_type_str}",
+            )
 
         optimizer_class = self._optimizer_mapping.get(optimizer_type)
         if not optimizer_class:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"No optimizer found for type: {optimizer_type_str}"))
-            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, f"No optimizer found for type: {optimizer_type_str}")
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"No optimizer found for type: {optimizer_type_str}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.OPTIMIZER_SETUP,
+                f"No optimizer found for type: {optimizer_type_str}",
+            )
 
-        maxiters = config.get("max_iterations", 100)
-        rtol = config.get("convergence_tolerance", 1e-5)
+        maxiters = config.get("optimization", {}).get("max_iterations", 100)
+        rtol = config.get("optimization", {}).get("convergence_tolerance", 1e-5)
 
         line_search_config = config.get("line_search", {})
         line_searcher = (
@@ -401,15 +519,29 @@ class OptimizerFactory(metaclass=SingletonMeta):
 
         if optimizer_type == OptimizerType.NEWTON:
             if not linear_solver_config:
-                logger.error(SimulationLogMessageCode.COMMAND_FAILED.details("Linear solver configuration is required for Newton optimizer."))
-                raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "Linear solver configuration is required for Newton optimizer.")
+                logger.error(
+                    SimulationLogMessageCode.COMMAND_FAILED.details(
+                        "Linear solver configuration is required for Newton optimizer."
+                    )
+                )
+                raise SimulationError(
+                    SimulationErrorCode.LINEAR_SOLVER,
+                    "Linear solver configuration is required for Newton optimizer.",
+                )
             if dofs is None:
-                logger.error(SimulationLogMessageCode.COMMAND_FAILED.details("Degrees of freedom (dofs) are required for Newton optimizer."))
-                raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "Degrees of freedom (dofs) are required for Newton optimizer.")
+                logger.error(
+                    SimulationLogMessageCode.COMMAND_FAILED.details(
+                        "Degrees of freedom (dofs) are required for Newton optimizer."
+                    )
+                )
+                raise SimulationError(
+                    SimulationErrorCode.LINEAR_SOLVER,
+                    "Degrees of freedom (dofs) are required for Newton optimizer.",
+                )
 
             linear_solver = self.linear_solver_factory.create(
                 linear_solver_config, dofs=dofs
-            )  # Pass dofs here
+            )
 
             reg_param = config.get("reg_param", 1e-4)
             n_threads = config.get("n_threads", 1)
@@ -437,5 +569,12 @@ class OptimizerFactory(metaclass=SingletonMeta):
             return optimizer_class(maxiters=maxiters, rtol=rtol, m=m)
 
         else:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unsupported optimizer type: {optimizer_type_str}"))
-            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, f"Unsupported optimizer type: {optimizer_type_str}")
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Unsupported optimizer type: {optimizer_type_str}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINEAR_SOLVER,
+                f"Unsupported optimizer type: {optimizer_type_str}",
+            )

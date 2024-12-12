@@ -11,9 +11,15 @@ from typing import Dict, Optional
 from simulation.controller.commands import CannotConnectError, CommandError
 from simulation.controller.factory import CommandFactory
 from simulation.controller.history import CommandHistory
-from simulation.controller.model import CommandType, Request, Response, Status
+from simulation.controller.model import (
+    CommandType,
+    InvalidParametersError,
+    Request,
+    Response,
+    Status,
+)
+from simulation.core.utils.singleton import SingletonMeta
 from simulation.logs.message import SimulationLogMessageCode
-from simulation.logs.error import SimulationError, SimulationErrorCode
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +32,13 @@ class CommandMetrics:
     timestamp: str
 
 
-class CommandDispatcher:
+class CommandDispatcher(metaclass=SingletonMeta):
     """Enhanced command dispatcher with retry, timeout, and metrics capabilities."""
 
     MAX_RETRIES = 3
     COMMAND_TIMEOUT = 30  # seconds
 
-    def __init__(self, history: CommandHistory):
+    def __init__(self, history=CommandHistory()):
         self.command_factory = CommandFactory(history)
         self.history = history
         self._metrics: Dict[str, CommandMetrics] = {}
@@ -69,7 +75,9 @@ class CommandDispatcher:
     def _validate_request(self, request: Request) -> Optional[Response]:
         """Validate incoming request parameters."""
         if not request.command_name:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details("Command name is required"))
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details("Command name is required")
+            )
             return Response(
                 request_id=request.request_id,
                 status=Status.INVALID_PARAMETERS.value,
@@ -79,7 +87,11 @@ class CommandDispatcher:
         try:
             CommandType.get_by_name(request.command_name)
         except ValueError:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Invalid command type: {request.command_name}"))
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Invalid command type: {request.command_name}"
+                )
+            )
             return Response(
                 request_id=request.request_id,
                 status=Status.INVALID_PARAMETERS.value,
@@ -99,7 +111,11 @@ class CommandDispatcher:
                 self._execute_command(request), timeout=self.COMMAND_TIMEOUT
             )
         except asyncio.TimeoutError:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Command execution timed out after {self.COMMAND_TIMEOUT} seconds"))
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Command execution timed out after {self.COMMAND_TIMEOUT} seconds"
+                )
+            )
             return Response(
                 request_id=request.request_id,
                 status=Status.ERROR.value,
@@ -112,7 +128,11 @@ class CommandDispatcher:
         if validation_error:
             return validation_error
 
-        logger.info(SimulationLogMessageCode.COMMAND_STARTED.details(f"Dispatching command: {request.command_name}"))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_STARTED.details(
+                f"Dispatching command: {request.command_name}"
+            )
+        )
 
         for attempt in range(self.MAX_RETRIES):
             with self._track_execution_time(request.command_name):
@@ -129,7 +149,11 @@ class CommandDispatcher:
 
                 except CannotConnectError as e:
                     if attempt < self.MAX_RETRIES - 1:
-                        logger.warning(SimulationLogMessageCode.COMMAND_RETRY.details(f"Retry attempt {attempt + 1} for command {request.command_name}"))
+                        logger.warning(
+                            SimulationLogMessageCode.COMMAND_RETRY.details(
+                                f"Retry attempt {attempt + 1} for command {request.command_name}"
+                            )
+                        )
                         continue
                     return self._handle_error(request, e, Status.CANNOT_CONNECT.value)
 
@@ -149,15 +173,21 @@ class CommandDispatcher:
 
     def _handle_error(self, request: Request, error: Exception, status: str) -> Response:
         """Handle command errors with logging."""
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Command {request.command_name} failed: {str(error)}"))
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Command {request.command_name} failed: {str(error)}"
+            )
+        )
         self._update_metrics(request.command_name, 0, status)
         return Response(request_id=request.request_id, status=status, message=str(error))
 
     def _log_success(self, request: Request, attempt: int) -> None:
         """Log successful command execution."""
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(
-            f"Command {request.command_name} executed successfully (attempt {attempt + 1}/{self.MAX_RETRIES})"
-        ))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                f"Command {request.command_name} executed successfully (attempt {attempt + 1}/{self.MAX_RETRIES})"
+            )
+        )
 
     async def _execute_command(self, request: Request) -> Response:
         """Execute command in thread pool."""

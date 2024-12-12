@@ -12,12 +12,12 @@ from simulation.controller.model import (
     CommandError,
     CommandFailedError,
     CommandType,
+    InvalidParametersError,
     Request,
     Response,
     Status,
 )
 from simulation.logs.message import SimulationLogMessageCode
-from simulation.logs.error import SimulationError, SimulationErrorCode
 
 logger = logging.getLogger(__name__)
 
@@ -219,6 +219,68 @@ class KillCommand(BaseCommand):
             logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(message))
             sys.exit(0)
             return response
+        except Exception as e:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
+            raise CommandFailedError(str(e))
+
+
+class SendDataCommand(BaseCommand):
+    """Command to send data (e.g., meshes) to the backend."""
+
+    @validate_state([SimulationStateMachine.RUNNING, SimulationStateMachine.PAUSED])
+    def _execute_impl(self, request: Request) -> Response:
+        try:
+            data = request.parameters.get("data")
+            key = request.parameters.get("key")
+
+            if not key or data is None:
+                raise InvalidParametersError("Key and data must be provided.")
+
+            self.backend.write(key, data)
+
+            logger.info(
+                SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                    f"Data sent successfully with key: {key}"
+                )
+            )
+            return Response(
+                request_id=request.request_id,
+                status=Status.SUCCESS.value,
+                message=f"Data sent successfully with key: {key}",
+            )
+        except InvalidParametersError as e:
+            raise e
+        except Exception as e:
+            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
+            raise CommandFailedError(str(e))
+
+
+class UpdateParameterCommand(BaseCommand):
+    """Command to update parameters in the simulation state."""
+
+    @validate_state([SimulationStateMachine.RUNNING, SimulationStateMachine.PAUSED])
+    def _execute_impl(self, request: Request) -> Response:
+        try:
+            param_key = request.parameters.get("key")
+            param_value = request.parameters.get("value")
+
+            if not param_key:
+                raise InvalidParametersError("Parameter key must be provided.")
+
+            self.simulation_manager.update_params(param_key, param_value)
+
+            logger.info(
+                SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                    f"Parameter '{param_key}' updated successfully."
+                )
+            )
+            return Response(
+                request_id=request.request_id,
+                status=Status.SUCCESS.value,
+                message=f"Parameter '{param_key}' updated successfully.",
+            )
+        except InvalidParametersError as e:
+            raise e
         except Exception as e:
             logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(str(e)))
             raise CommandFailedError(str(e))

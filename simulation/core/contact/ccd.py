@@ -1,15 +1,14 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any
 
 import ipctk
 import numpy as np
-
 from simulation.core.modifier.mesh import to_surface
 from simulation.core.parameters import ParametersBase
 from simulation.core.utils.singleton import SingletonMeta
-from simulation.logs.message import SimulationLogMessageCode
 from simulation.logs.error import SimulationError, SimulationErrorCode
+from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +23,7 @@ class CCDBase(ABC):
             params (ParametersBase): The parameters for the CCD.
         """
         self.params = params
-        self.broad_phase_method = params.broad_phase_method
         self.alpha = None
-        self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
     def __call__(self, x: np.ndarray, dx: np.ndarray) -> float:
@@ -44,78 +41,134 @@ class CCDBase(ABC):
 
 
 class CCD(CCDBase):
-    def __call__(self, x: np.ndarray, dx: np.ndarray) -> float:
+
+    def __init__(self, params: ParametersBase):
+        super().__init__(params)
+
+    def update_params(self, params: ParametersBase):
         """
-        Compute the collision-free stepsize using CCD.
+        Update the parameters used by the CCD instance.
 
         Args:
-            x (np.ndarray): Current positions.
-            dx (np.ndarray): Position increments.
-
-        Returns:
-            float: Maximum collision-free stepsize.
+            params (ParametersBase): The new parameters to set.
         """
+        if not isinstance(params, ParametersBase):
+            raise ValueError("params must be an instance of ParametersBase.")
+        self.params = params
+        logger.info("CCD parameters updated successfully.")
+
+    def _compute_surface_positions(self, x: np.ndarray, dx: np.ndarray) -> tuple:
+        """Compute surface positions at start and end points."""
         try:
-            self.logger.debug(SimulationLogMessageCode.COMMAND_STARTED.details("Computing CCD stepsize"))
-            mesh = self.params.mesh
-            cmesh = self.params.cmesh
-            dmin = self.params.dmin
-            broad_phase_method = self.params.broad_phase_method
-
-            self.logger.debug(SimulationLogMessageCode.COMMAND_STARTED.details(f"Computing CCD stepsize with broad_phase_method={broad_phase_method}"))
-
-            BXt0 = to_surface(x, mesh, cmesh)
-            BXt1 = to_surface(x + dx, mesh, cmesh)
-            max_alpha = ipctk.compute_collision_free_stepsize(
-                cmesh, BXt0, BXt1, broad_phase_method=broad_phase_method, min_distance=dmin
+            BXt0 = to_surface(x, self.params.mesh, self.params.cmesh)
+            BXt1 = to_surface(x + dx, self.params.mesh, self.params.cmesh)
+            return BXt0, BXt1
+        except Exception as e:
+            self.logger.error(f"Surface position computation failed: {e}")
+            raise SimulationError(
+                SimulationErrorCode.CCD_SETUP,
+                "Surface position computation failed",
+                str(e)
             )
-            self.alpha = max_alpha
-            self.logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Computed CCD stepsize: alpha={max_alpha}"))
+
+    def _compute_collision_free_step(self, BXt0: np.ndarray, BXt1: np.ndarray) -> float:
+        """Compute collision-free stepsize."""
+        try:
+            max_alpha = ipctk.compute_collision_free_stepsize(
+                self.params.cmesh,
+                BXt0,
+                BXt1,
+                broad_phase_method=ipctk.BroadPhaseMethod.HASH_GRID,
+                min_distance=self.params.dmin
+            )
             return max_alpha
         except Exception as e:
-            self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to compute CCD stepsize: {e}"))
-            raise SimulationError(SimulationErrorCode.CCD_SETUP, "Failed to compute CCD stepsize", details=str(e))
+            self.logger.error(f"Stepsize computation failed: {e}")
+            raise SimulationError(
+                SimulationErrorCode.CCD_SETUP,
+                "Stepsize computation failed",
+                str(e)
+            )
+
+    def __call__(self, x: np.ndarray, dx: np.ndarray) -> float:
+        """Compute collision-free stepsize using CCD."""
+        try:
+
+            self.logger.debug(
+                SimulationLogMessageCode.COMMAND_STARTED.details(
+                    f"Computing CCD stepsize with method={self.params.broad_phase_method}"
+                )
+            )
+
+            # Compute surface positions
+            BXt0, BXt1 = self._compute_surface_positions(x, dx)
+
+            # Compute collision-free stepsize
+            max_alpha = self._compute_collision_free_step(BXt0, BXt1)
+
+            # Store and return result
+            self.alpha = max_alpha
+
+            self.logger.info(
+                SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                    f"Computed CCD stepsize: alpha={max_alpha}"
+                )
+            )
+            return max_alpha
+        except SimulationError:
+            raise
+        except Exception as e:
+            self.logger.error(f"Unexpected error in CCD computation: {e}")
+            raise SimulationError(
+                SimulationErrorCode.CCD_SETUP,
+                "Unexpected error in CCD computation",
+                str(e)
+            )
 
 
 class CCDFactory(metaclass=SingletonMeta):
-    """
-    Factory class for creating CCD instances.
-    """
+    """Factory class for creating CCD instances."""
 
     _instances = {}
 
     @staticmethod
-    def create(config: Dict[str, Any]) -> Any:
+    def create(params: ParametersBase) -> Any:
         """
-        Create and return a CCD instance based on the configuration.
+        Create or update a CCD instance with the given parameters.
 
         Args:
-            config: A dictionary containing the CCD configuration.
+            params (ParametersBase): Parameters for CCD initialization
 
         Returns:
-            An instance of the CCD class.
+            Any: Instance of the CCD class
 
         Raises:
-            SimulationError: If the CCD type is unknown.
+            SimulationError: If creation fails
         """
-        logger.info(SimulationLogMessageCode.COMMAND_STARTED.details("Creating CCD..."))
-        ccd_config = config.get("ccd", {})
-        ccd_type = ccd_config.get("type", "default").lower()
+        logger.info(SimulationLogMessageCode.COMMAND_STARTED.details("Creating or updating CCD..."))
 
-        if ccd_type not in CCDFactory._instances:
-            try:
-                if ccd_type == "default":
-                    ccd_instance = CCD(config)
-                else:
-                    raise ValueError(f"Unknown CCD type: {ccd_type}")
+        instance_key = "default"
+        try:
+            if instance_key in CCDFactory._instances:
+                # Update the existing instance with new parameters
+                instance = CCDFactory._instances[instance_key]
+                instance.update_params(params)
+                logger.info("CCD instance updated with new parameters.")
+            else:
+                # Create a new instance if not already present
+                if params is None:
+                    raise ValueError("Parameters required for CCD creation")
 
-                CCDFactory._instances[ccd_type] = ccd_instance
-                logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"CCD '{ccd_type}' created successfully."))
-            except ValueError as e:
-                logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unknown CCD type: {ccd_type}"))
-                raise SimulationError(SimulationErrorCode.CCD_SETUP, f"Unknown CCD type: {ccd_type}", details=str(e))
-            except Exception as e:
-                logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unexpected error when creating CCD '{ccd_type}': {e}"))
-                raise SimulationError(SimulationErrorCode.CCD_SETUP, f"Unexpected error when creating CCD '{ccd_type}'", details=str(e))
+                ccd_instance = CCD(params)
+                CCDFactory._instances[instance_key] = ccd_instance
+                logger.info(
+                    SimulationLogMessageCode.COMMAND_SUCCESS.details("CCD created successfully.")
+                )
+        except Exception as e:
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to create or update CCD: {e}")
+            )
+            raise SimulationError(SimulationErrorCode.CCD_SETUP, "Failed to create or update CCD", str(e))
 
-        return CCDFactory._instances[ccd_type]
+        return CCDFactory._instances[instance_key]
+

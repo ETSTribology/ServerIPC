@@ -5,18 +5,19 @@ from enum import Enum
 from typing import Any, Dict, Optional, Protocol
 
 import numpy as np
-from simulation.logs.message import SimulationLogMessageCode
+
 from simulation.logs.error import SimulationError, SimulationErrorCode
+from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
 
 class LineSearchMethod(Enum):
     ARMIJO = "armijo"
-    BACKTRACKING = "backtracking"
     WOLFE = "wolfe"
     STRONG_WOLFE = "strong_wolfe"
     PARALLEL = "parallel"
+    BACKTRACKING = "backtracking"
 
 
 @dataclass
@@ -26,10 +27,10 @@ class LineSearchConfig:
     type: LineSearchMethod
     max_iterations: int = 20
     convergence_tolerance: float = 1e-6
-    c1: float = 1e-4  # Armijo condition parameter
-    c2: float = 0.9  # Wolfe condition parameter
-    tau: float = 0.5  # Step reduction factor
-    n_jobs: int = 1  # For parallel line search
+    c1: float = 1e-4
+    c2: float = 0.9
+    tau: float = 0.5
+    n_jobs: int = 1
 
 
 class ObjectiveFunction(Protocol):
@@ -79,42 +80,42 @@ class LineSearchBase:
 class ArmijoLineSearch(LineSearchBase):
     def search(self, alpha0: float, xk: np.ndarray, dx: np.ndarray, gk: np.ndarray) -> float:
         """
-        Perform the Armijo line search to find the optimal step size.
+        Perform line search to find optimal step size.
 
         Args:
-            alpha0 (float): Initial step size.
-            xk (np.ndarray): Current position.
-            dx (np.ndarray): Search direction.
-            gk (np.ndarray): Gradient at the current position.
+        alpha0: Initial step size
+        xk: Current position
+        dx: Search direction
+        gk: Gradient at current position
 
         Returns:
-            float: Optimal step size.
+        Optimal step size found
+
+        Raises:
+        SimulationError: If line search fails
         """
         try:
             alphaj = alpha0
+            Dfk = gk.dot(gk, dx)
             fk = self.f(xk)
-            Dfk = np.dot(gk, dx)
+            tau = 0.5
+            c = 1e-4
 
             if abs(Dfk) < self.config.convergence_tolerance:
                 return 0.0
 
             for _ in range(self.config.max_iterations):
-                xk_new = xk + alphaj * dx
-                fk_new = self.f(xk_new)
-
-                if fk_new <= fk + self.config.c1 * alphaj * Dfk:
-                    return alphaj
-
-                alphaj *= self.config.tau
-
-                if alphaj < self.config.convergence_tolerance:
-                    self.logger.warning(SimulationLogMessageCode.COMMAND_FAILED.details("Step size too small"))
+                fx = self.f(xk + alphaj*dx)
+                flinear = fk + alphaj * c * Dfk
+                if fx <= flinear:
                     break
+                alphaj = tau*alphaj
 
             return alphaj
+
         except Exception as e:
-            self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed during Armijo line search: {e}"))
-            raise SimulationError(SimulationErrorCode.LINE_SEARCH, "Failed during Armijo line search", details=str(e))
+            logger.error(f"Line search failed: {str(e)}")
+            raise SimulationError(SimulationErrorCode.LINE_SEARCH, "Line search failed", str(e))
 
 
 class WolfeLineSearch(LineSearchBase):
@@ -132,7 +133,9 @@ class WolfeLineSearch(LineSearchBase):
             float: Optimal step size.
         """
         if self.grad_f is None:
-            raise SimulationError(SimulationErrorCode.LINE_SEARCH, "Gradient function required for Wolfe line search")
+            raise SimulationError(
+                SimulationErrorCode.LINE_SEARCH, "Gradient function required for Wolfe line search"
+            )
 
         try:
             alphaj = alpha0
@@ -157,8 +160,14 @@ class WolfeLineSearch(LineSearchBase):
 
             return alphaj
         except Exception as e:
-            self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed during Wolfe line search: {e}"))
-            raise SimulationError(SimulationErrorCode.LINE_SEARCH, "Failed during Wolfe line search", details=str(e))
+            self.logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Failed during Wolfe line search: {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINE_SEARCH, "Failed during Wolfe line search", details=str(e)
+            )
 
 
 class StrongWolfeLineSearch(LineSearchBase):
@@ -176,7 +185,10 @@ class StrongWolfeLineSearch(LineSearchBase):
             float: Optimal step size.
         """
         if self.grad_f is None:
-            raise SimulationError(SimulationErrorCode.LINE_SEARCH, "Gradient function required for Strong Wolfe line search")
+            raise SimulationError(
+                SimulationErrorCode.LINE_SEARCH,
+                "Gradient function required for Strong Wolfe line search",
+            )
 
         try:
             alphaj = alpha0
@@ -207,13 +219,23 @@ class StrongWolfeLineSearch(LineSearchBase):
                 f_prev = f_new
 
                 if alphaj < self.config.convergence_tolerance:
-                    self.logger.warning(SimulationLogMessageCode.COMMAND_FAILED.details("Step size too small"))
+                    self.logger.warning(
+                        SimulationLogMessageCode.COMMAND_FAILED.details("Step size too small")
+                    )
                     break
 
             return alphaj
         except Exception as e:
-            self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed during Strong Wolfe line search: {e}"))
-            raise SimulationError(SimulationErrorCode.LINE_SEARCH, "Failed during Strong Wolfe line search", details=str(e))
+            self.logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Failed during Strong Wolfe line search: {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINE_SEARCH,
+                "Failed during Strong Wolfe line search",
+                details=str(e),
+            )
 
 
 class ParallelLineSearch(LineSearchBase):
@@ -256,7 +278,11 @@ class ParallelLineSearch(LineSearchBase):
                             return alpha
 
                         if alpha < self.config.convergence_tolerance:
-                            self.logger.warning(SimulationLogMessageCode.COMMAND_FAILED.details("Step size too small"))
+                            self.logger.warning(
+                                SimulationLogMessageCode.COMMAND_FAILED.details(
+                                    "Step size too small"
+                                )
+                            )
                             break
             else:
                 for alpha in alphas:
@@ -266,13 +292,23 @@ class ParallelLineSearch(LineSearchBase):
                         return alpha
 
                     if alpha < self.config.convergence_tolerance:
-                        self.logger.warning(SimulationLogMessageCode.COMMAND_FAILED.details("Step size too small"))
+                        self.logger.warning(
+                            SimulationLogMessageCode.COMMAND_FAILED.details("Step size too small")
+                        )
                         break
 
             return alphaj
         except Exception as e:
-            self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed during Parallel line search: {e}"))
-            raise SimulationError(SimulationErrorCode.LINE_SEARCH, "Failed during Parallel line search", details=str(e))
+            self.logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Failed during Parallel line search: {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINE_SEARCH,
+                "Failed during Parallel line search",
+                details=str(e),
+            )
 
 
 class BacktrackingLineSearch(LineSearchBase):
@@ -307,13 +343,23 @@ class BacktrackingLineSearch(LineSearchBase):
                 alphaj *= self.config.tau
 
                 if alphaj < self.config.convergence_tolerance:
-                    self.logger.warning(SimulationLogMessageCode.COMMAND_FAILED.details("Step size too small"))
+                    self.logger.warning(
+                        SimulationLogMessageCode.COMMAND_FAILED.details("Step size too small")
+                    )
                     break
 
             return alphaj
         except Exception as e:
-            self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed during Backtracking line search: {e}"))
-            raise SimulationError(SimulationErrorCode.LINE_SEARCH, "Failed during Backtracking line search", details=str(e))
+            self.logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Failed during Backtracking line search: {e}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINE_SEARCH,
+                "Failed during Backtracking line search",
+                details=str(e),
+            )
 
 
 class LineSearchFactory:
@@ -369,8 +415,18 @@ class LineSearchFactory:
 
         cls = line_searches.get(ls_config.type)
         if cls is None:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unknown line search type: {ls_config.type}"))
-            raise SimulationError(SimulationErrorCode.LINE_SEARCH, f"Unknown line search type: {ls_config.type}")
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Unknown line search type: {ls_config.type}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINE_SEARCH, f"Unknown line search type: {ls_config.type}"
+            )
 
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Line search '{ls_config.type}' created successfully."))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                f"Line search '{ls_config.type}' created successfully."
+            )
+        )
         return cls(f=f, grad_f=grad_f, config=ls_config)

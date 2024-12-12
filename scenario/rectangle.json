@@ -2,9 +2,13 @@
     "time": {
         "start": 0.0,
         "step": 0.1,
-        "total": 1.0,
-        "integrator": "Implicit"
+        "total": 100.0,
+        "adaptive": false,
+        "integrator": {
+            "type": "implicit_euler"
+        }
     },
+
     "initial": {
         "gravity": {
             "enabled": true,
@@ -28,7 +32,8 @@
         "dhat": 0.001,
         "friction": 0.0,
         "dmin": 0.001,
-        "espv": 0.01
+        "espv": 0.01,
+        "broad_phase": "spatial_hash"
     },
     "db": {
         "backend": "sqlite",

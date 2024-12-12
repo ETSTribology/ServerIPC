@@ -162,10 +162,13 @@
             "$ref": "time.json",
             "description": "Time stepping configuration",
             "default": {
-                "start": 0.0,
-                "step": 0.01,
-                "total": 1.0,
-                "integrator": "Implicit"
+                "start": 0,
+                "step": 0.016,
+                "total": 1,
+                "adaptive": false,
+                "integrator": {
+                    "type": "rk4"
+                }
             }
         }
     },

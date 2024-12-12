@@ -242,7 +242,7 @@ def run_server(
     try:
         cmd = [sys.executable, "-m", "simulation.server", "--scenario", str(scenario)]
 
-        console.print("[bold]Starting simulation server...[/bold]")
+        console.print("[bold]server...[/bold]")
         subprocess.run(cmd, check=True)
 
     except subprocess.CalledProcessError as e:

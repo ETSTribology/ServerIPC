@@ -11,8 +11,8 @@ from scipy.sparse import csc_matrix
 from scipy.sparse.linalg import cg, splu, spsolve
 
 from simulation.core.utils.singleton import SingletonMeta
-from simulation.logs.message import SimulationLogMessageCode
 from simulation.logs.error import SimulationError, SimulationErrorCode
+from simulation.logs.message import SimulationLogMessageCode
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 class SolverMethod(Enum):
     """Enumeration of supported linear solver methods."""
+
     DEFAULT = "default"
     LDLT = "ldlt"
     CHOLESKY = "cholesky"
@@ -31,6 +32,7 @@ class SolverMethod(Enum):
 @dataclass
 class LinearSolverConfig:
     """Configuration for linear solvers."""
+
     type: SolverMethod
     reg_param: Optional[float] = None
     max_iter: int = 1000
@@ -110,8 +112,12 @@ class LDLTSolver(LinearSolverBase):
             x[self.dofs] = Add_ldlt.solve(bd).squeeze()
             return x
         except Exception as e:
-            self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"LDLT solver failed: {e}"))
-            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "LDLT solver failed", details=str(e))
+            self.logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(f"LDLT solver failed: {e}")
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINEAR_SOLVER, "LDLT solver failed", details=str(e)
+            )
 
 
 class CholeskySolver(LinearSolverBase):
@@ -155,8 +161,12 @@ class CholeskySolver(LinearSolverBase):
             x[self.dofs] = x_dofs
             return x
         except Exception as e:
-            self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Cholesky solver failed: {e}"))
-            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "Cholesky solver failed", details=str(e))
+            self.logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(f"Cholesky solver failed: {e}")
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINEAR_SOLVER, "Cholesky solver failed", details=str(e)
+            )
 
 
 class CGSolver(LinearSolverBase):
@@ -191,16 +201,26 @@ class CGSolver(LinearSolverBase):
             if info == 0:
                 self.logger.debug("CG method converged successfully.")
             else:
-                self.logger.warning(SimulationLogMessageCode.COMMAND_FAILED.details(f"CG did not converge. Info: {info}."))
-                raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, f"CG did not converge. Info: {info}")
+                self.logger.warning(
+                    SimulationLogMessageCode.COMMAND_FAILED.details(
+                        f"CG did not converge. Info: {info}."
+                    )
+                )
+                raise SimulationError(
+                    SimulationErrorCode.LINEAR_SOLVER, f"CG did not converge. Info: {info}"
+                )
 
             # Assemble full solution
             x = np.zeros_like(b)
             x[self.dofs] = x_dofs
             return x
         except Exception as e:
-            self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"CG solver failed: {e}"))
-            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "CG solver failed", details=str(e))
+            self.logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(f"CG solver failed: {e}")
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINEAR_SOLVER, "CG solver failed", details=str(e)
+            )
 
 
 class LUSolver(LinearSolverBase):
@@ -240,8 +260,12 @@ class LUSolver(LinearSolverBase):
             x[self.dofs] = x_dofs
             return x
         except Exception as e:
-            self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"LU solver failed: {e}"))
-            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "LU solver failed", details=str(e))
+            self.logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(f"LU solver failed: {e}")
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINEAR_SOLVER, "LU solver failed", details=str(e)
+            )
 
 
 class DirectSolver(LinearSolverBase):
@@ -281,8 +305,12 @@ class DirectSolver(LinearSolverBase):
             x[self.dofs] = x_dofs
             return x
         except Exception as e:
-            self.logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Direct solver failed: {e}"))
-            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, "Direct solver failed", details=str(e))
+            self.logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(f"Direct solver failed: {e}")
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINEAR_SOLVER, "Direct solver failed", details=str(e)
+            )
 
 
 class LinearSolverFactory(metaclass=SingletonMeta):
@@ -322,8 +350,16 @@ class LinearSolverFactory(metaclass=SingletonMeta):
                 tol=linear_solver_config.get("tolerance", 1e-8),
             )
         except ValueError as e:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unknown linear solver type: {solver_type_str}"))
-            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, f"Unknown linear solver type: {solver_type_str}", details=str(e))
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Unknown linear solver type: {solver_type_str}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINEAR_SOLVER,
+                f"Unknown linear solver type: {solver_type_str}",
+                details=str(e),
+            )
 
     @staticmethod
     def create(
@@ -351,10 +387,20 @@ class LinearSolverFactory(metaclass=SingletonMeta):
         elif ls_config.type == SolverMethod.DEFAULT:
             # Define a default solver, e.g., DirectSolver
             solver_class = DirectSolver
-            logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Using DirectSolver as the default linear solver."))
+            logger.info(
+                SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                    "Using DirectSolver as the default linear solver."
+                )
+            )
         else:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unknown linear solver type: {ls_config.type}"))
-            raise SimulationError(SimulationErrorCode.LINEAR_SOLVER, f"Unknown linear solver type: {ls_config.type}")
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Unknown linear solver type: {ls_config.type}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.LINEAR_SOLVER, f"Unknown linear solver type: {ls_config.type}"
+            )
 
         # Check if an instance already exists to enforce singleton behavior
         key = (ls_config.type, tuple(dofs), ls_config.reg_param)
@@ -363,9 +409,17 @@ class LinearSolverFactory(metaclass=SingletonMeta):
         if key not in LinearSolverFactory._instances:
             solver_instance = solver_class(dofs=dofs, config=ls_config)
             LinearSolverFactory._instances[key] = solver_instance
-            logger.debug(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Created new instance of {solver_class.__name__}."))
+            logger.debug(
+                SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                    f"Created new instance of {solver_class.__name__}."
+                )
+            )
         else:
             solver_instance = LinearSolverFactory._instances[key]
-            logger.debug(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Retrieved existing instance of {solver_class.__name__}."))
-        
+            logger.debug(
+                SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                    f"Retrieved existing instance of {solver_class.__name__}."
+                )
+            )
+
         return solver_instance

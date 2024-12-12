@@ -4,13 +4,6 @@
     "project_url": "https://github.com/ETSTribology/ServerIPC",
     "repo": ".",
     "branches": ["main"],
-    "environment_type": "virtualenv",
-    "env_dir": ".asv/env",
-    "pythons": ["3.8", "3.9", "3.10", "3.11"],
-    "matrix": {
-        "numpy": ["latest"],
-        "scipy": ["latest"]
-    },
     "benchmark_dir": "benchmarks",
     "results_dir": ".benchmarks",
     "html_dir": "benchmarks_report",

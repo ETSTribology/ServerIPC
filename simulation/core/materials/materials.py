@@ -1,10 +1,10 @@
-import logging
 import csv
+import logging
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
-from simulation.logs.message import SimulationLogMessageCode
 from simulation.logs.error import SimulationError, SimulationErrorCode
+from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
@@ -45,15 +45,15 @@ def load_materials_from_csv(file_path: str):
         SimulationError: If there is an error reading the CSV file.
     """
     try:
-        with open(file_path, mode='r') as csvfile:
+        with open(file_path, mode="r") as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                name = row['name'].upper()
-                young_modulus = float(row['young_modulus'])
-                poisson_ratio = float(row['poisson_ratio'])
-                density = float(row['density'])
-                color = (int(row['color_r']), int(row['color_g']), int(row['color_b']))
-                hardness = float(row['hardness']) if row['hardness'] else None
+                name = row["name"].upper()
+                young_modulus = float(row["young_modulus"])
+                poisson_ratio = float(row["poisson_ratio"])
+                density = float(row["density"])
+                color = (int(row["color_r"]), int(row["color_g"]), int(row["color_b"]))
+                hardness = float(row["hardness"]) if row["hardness"] else None
 
                 materials[name] = Material(
                     name=name,
@@ -63,10 +63,22 @@ def load_materials_from_csv(file_path: str):
                     color=color,
                     hardness=hardness,
                 )
-        logger.info(SimulationLogMessageCode.CONFIGURATION_LOADED.details(f"Materials loaded from {file_path}"))
+        logger.info(
+            SimulationLogMessageCode.CONFIGURATION_LOADED.details(
+                f"Materials loaded from {file_path}"
+            )
+        )
     except Exception as e:
-        logger.error(SimulationLogMessageCode.CONFIGURATION_FAILED.details(f"Failed to load materials from {file_path}: {e}"))
-        raise SimulationError(SimulationErrorCode.FILE_IO, f"Failed to load materials from {file_path}", details=str(e))
+        logger.error(
+            SimulationLogMessageCode.CONFIGURATION_FAILED.details(
+                f"Failed to load materials from {file_path}: {e}"
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.FILE_IO,
+            f"Failed to load materials from {file_path}",
+            details=str(e),
+        )
 
 
 def add_custom_material(
@@ -96,12 +108,26 @@ def add_custom_material(
     name_upper = name.upper()
 
     if any(c < 0 or c > 255 for c in color):
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Invalid color {color}. RGB values must be between 0 and 255."))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Invalid color {color}. RGB values must be between 0 and 255.")
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Invalid color {color}. RGB values must be between 0 and 255."
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            f"Invalid color {color}. RGB values must be between 0 and 255.",
+        )
 
     if name_upper in materials and not overwrite:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Material '{name_upper}' already exists. Use overwrite=True to replace it."))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Material '{name_upper}' already exists. Use overwrite=True to replace it.")
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Material '{name_upper}' already exists. Use overwrite=True to replace it."
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            f"Material '{name_upper}' already exists. Use overwrite=True to replace it.",
+        )
 
     materials[name_upper] = Material(
         name=name_upper,
@@ -111,7 +137,11 @@ def add_custom_material(
         color=color,
         hardness=hardness,
     )
-    logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Material '{name_upper}' has been {'updated' if overwrite else 'added'}."))
+    logger.info(
+        SimulationLogMessageCode.COMMAND_SUCCESS.details(
+            f"Material '{name_upper}' has been {'updated' if overwrite else 'added'}."
+        )
+    )
 
 
 def initial_material(
@@ -145,14 +175,24 @@ def initial_material(
             # Add custom material if it doesn't exist
             add_custom_material(name, young_modulus, poisson_ratio, density, color)
             material = materials[name]
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(
-            f"Material '{name}' initialized with properties: Young's Modulus = {material.young_modulus}, Poisson's Ratio = {material.poisson_ratio}, Density = {material.density}, Color = {material.color}"
-        ))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                f"Material '{name}' initialized with properties: Young's Modulus = {material.young_modulus}, Poisson's Ratio = {material.poisson_ratio}, Density = {material.density}, Color = {material.color}"
+            )
+        )
         return material
     except Exception as e:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to initialize material '{name}': {e}"))
-        raise SimulationError(SimulationErrorCode.COMMAND_PROCESSING, f"Failed to initialize material '{name}'", details=str(e))
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Failed to initialize material '{name}': {e}"
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.COMMAND_PROCESSING,
+            f"Failed to initialize material '{name}'",
+            details=str(e),
+        )
 
 
 # Load materials from CSV file
-load_materials_from_csv('materials.csv')
+load_materials_from_csv("materials.csv")

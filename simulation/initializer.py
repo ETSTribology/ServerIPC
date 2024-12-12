@@ -1,8 +1,6 @@
 import logging
 import math
-import sys
 from pathlib import Path
-from typing import Tuple
 
 import igl
 import ipctk
@@ -10,28 +8,29 @@ import numpy as np
 import pbatoolkit as pbat
 import scipy as sp
 
-from simulation.config.config import SimulationConfigManager
 from simulation.backend.factory import BackendFactory
-from simulation.db.factory import DatabaseFactory
-from simulation.storage.factory import StorageFactory
-from simulation.states.state import SimulationState
-from simulation.io.io import combine_meshes, load_individual_meshes
+from simulation.config.config import SimulationConfigManager
 from simulation.core.modifier.mesh import compute_face_to_element_mapping, find_codim_vertices
-from simulation.logs.message import SimulationLogMessageCode
+from simulation.db.factory import DatabaseFactory
+from simulation.io.io import combine_meshes, load_individual_meshes
 from simulation.logs.error import (
-    ConfigurationError,
-    StorageInitializationError,
     BackendInitializationError,
+    BoundaryConditionsSetupError,
+    CollisionSetupError,
+    ConfigurationError,
     DatabaseInitializationError,
-    MassMatrixSetupError,
     ExternalForcesSetupError,
     HyperElasticSetupError,
-    CollisionSetupError,
-    BoundaryConditionsSetupError,
-    SimulationErrorCode
+    MassMatrixSetupError,
+    SimulationErrorCode,
+    StorageInitializationError,
 )
+from simulation.logs.message import SimulationLogMessageCode
+from simulation.states.state import SimulationState
+from simulation.storage.factory import StorageFactory
 
 logger = logging.getLogger(__name__)
+
 
 class SimulationInitializer:
     """Encapsulates the initialization process for the simulation."""
@@ -39,7 +38,7 @@ class SimulationInitializer:
     def __init__(self, scenario: str = None):
         """
         Initializes the SimulationInitializer by setting up logging and loading the configuration.
-        
+
         Args:
             scenario (str): Path to the scenario configuration file.
         """
@@ -84,7 +83,7 @@ class SimulationInitializer:
         except Exception as e:
             logger.error(SimulationLogMessageCode.DATABASE_FAILED.details(f"{e}"))
             raise DatabaseInitializationError(f"Failed to initialize database: {e}")
-        
+
     def setup_initial_conditions(self, mesh: pbat.fem.Mesh):
         """Sets up the initial conditions for the simulation.
 
@@ -120,10 +119,14 @@ class SimulationInitializer:
                 if unit == "g/cm³":
                     density *= 1000  # Convert g/cm³ to kg/m³
                 densities.append(density)
-            
+
             element_rho = np.array([densities[i] for i in element_materials])
 
-            logger.info(SimulationLogMessageCode.MASS_MATRIX_SETUP.details(f" {element_rho}"))
+            logger.info(
+                SimulationLogMessageCode.MASS_MATRIX_SETUP.details(
+                    f"Element densities: {element_rho}"
+                )
+            )
 
             # Create a 2D array with densities
             num_quadrature_points = 4
@@ -158,8 +161,8 @@ class SimulationInitializer:
             # Retrieve and convert Young's modulus values
             young_moduli = []
             for i in element_materials:
-                young_modulus = materials[i]["young_modulus"]["value"]
-                unit = materials[i]["young_modulus"]["unit"]
+                young_modulus = materials[i].get("young_modulus", {}).get("value", 1e6)
+                unit = materials[i].get("young_modulus", {}).get("unit", "Pa")
                 if unit == "kPa":
                     young_modulus *= 1e3  # Convert kPa to Pa
                 elif unit == "MPa":
@@ -216,7 +219,7 @@ class SimulationInitializer:
         node_offset = 0
         try:
             for _idx, (material, num_nodes) in enumerate(zip(materials, num_nodes_list)):
-                percent_fixed = material.get("percent_fixed", 0.0)
+                percent_fixed = 0.0
                 if percent_fixed > 0.0:
                     node_indices = slice(node_offset, node_offset + num_nodes)
                     X_sub = mesh.X[:, node_indices]
@@ -245,14 +248,15 @@ class SimulationInitializer:
             logger.error(SimulationLogMessageCode.BOUNDARY_CONDITIONS_FAILED.details(f"{e}"))
             raise BoundaryConditionsSetupError(f"Failed to set up boundary conditions: {e}")
 
-    def setup_collision_potentials(self, dhat, damping_coefficient):
+    def setup_collision_potentials(self, tangential_collisions, normal_collisions, collision_mesh, dhat, velocity):
         ipctk.BarrierPotential.use_physical_barrier = True
         barrier_potential = ipctk.BarrierPotential(dhat)
-        friction_potential = ipctk.FrictionPotential(damping_coefficient)
+        friction_potential = ipctk.FrictionPotential(velocity)
         return friction_potential, barrier_potential
 
     def initialize_simulation_state(
         self,
+        config,
         mesh,
         x,
         v,
@@ -282,7 +286,9 @@ class SimulationInitializer:
         detJeU,
         GNeU,
         element_materials,
-        num_nodes_list
+        num_nodes_list,
+        running=False,
+        broad_phase_method=ipctk.BroadPhaseMethod.SWEEP_AND_PRUNE,
     ) -> SimulationState:
         """Initializes the simulation state with the given parameters.
 
@@ -300,6 +306,7 @@ class SimulationInitializer:
 
         # Define attributes and their aliases
         attributes_with_aliases = {
+            "config": (config, []),
             "mesh": (mesh, []),
             "x": (x, ["positions", "coordinates"]),
             "v": (v, ["velocities"]),
@@ -330,16 +337,16 @@ class SimulationInitializer:
             "GNeU": (GNeU, ["gradient_NeU"]),
             "element_materials": (element_materials, []),
             "num_nodes_list": (num_nodes_list, []),
-            "running": (False, ["is_running"])
+            "running": (running, ["is_running"]),
+            "broad_phase_method": (broad_phase_method, ["broad_phase"]),
         }
 
         # Add attributes to the simulation state
         for key, (value, aliases) in attributes_with_aliases.items():
             simulation_state.add_attribute(key, value, aliases=aliases)
-            logger.info(SimulationLogMessageCode.SIMULATION_STATE_INITIALIZED.details(f"Added attribute '{key}' to simulation state."))
+            logger.info(f"Added attribute '{key}' to simulation state.")
 
         return simulation_state
-
 
     def extract_config_values(self):
         inputs = self.config.get("geometry", {}).get("meshes", [])
@@ -365,7 +372,9 @@ class SimulationInitializer:
         try:
 
             # Extract configuration values using ConfigManager
-            inputs, friction_coefficient, damping_coefficient, dhat, dmin, dt, gravity, epsv = self.extract_config_values()
+            inputs, friction_coefficient, damping_coefficient, dhat, dmin, dt, gravity, epsv = (
+                self.extract_config_values()
+            )
 
             self.initialize_storage()
             self.initialize_backend()
@@ -373,7 +382,11 @@ class SimulationInitializer:
 
             # Load input meshes and materials
             all_meshes, materials = load_individual_meshes(inputs, self.config_manager)
-            logger.info(SimulationLogMessageCode.CONFIGURATION_LOADED.details(f"Loaded {len(all_meshes)} meshes."))
+            logger.info(
+                SimulationLogMessageCode.CONFIGURATION_LOADED.details(
+                    f"Loaded {len(all_meshes)} meshes."
+                )
+            )
 
             # Combine all meshes into a single mesh
             mesh, V, C, element_materials, num_nodes_list = combine_meshes(all_meshes, materials)
@@ -383,7 +396,9 @@ class SimulationInitializer:
             x, v, acceleration, n = self.setup_initial_conditions(mesh)
 
             # Setup mass matrix
-            mass_matrix, inverse_mass_matrix = self.setup_mass_matrix(mesh, materials, element_materials)
+            mass_matrix, inverse_mass_matrix = self.setup_mass_matrix(
+                mesh, materials, element_materials
+            )
 
             # Setup external forces
             f_ext, acceleration, qgf = self.setup_external_forces(
@@ -412,13 +427,16 @@ class SimulationInitializer:
 
             # Setup collision potentials
             friction_potential, barrier_potential = self.setup_collision_potentials(
-                dhat, damping_coefficient
+                tangential_collisions, normal_collisions, collision_mesh, dhat, epsv
             )
 
-            rho_array = np.array([materials[i]["density"] for i in element_materials])
+            rho_array = np.array(
+                [materials[i].get("density", {}).get("value", 1000.0) for i in element_materials]
+            )
 
             # Initialize SimulationState
             self.simulation_state = self.initialize_simulation_state(
+                config=self.config,
                 mesh=mesh,
                 x=x,
                 v=v,
@@ -448,7 +466,9 @@ class SimulationInitializer:
                 detJeU=detJeU,
                 GNeU=GNeU,
                 element_materials=element_materials,
-                num_nodes_list=num_nodes_list
+                num_nodes_list=num_nodes_list,
+                running=False,
+                broad_phase_method=ipctk.BroadPhaseMethod.SWEEP_AND_PRUNE,
             )
 
             logger.info(SimulationLogMessageCode.SIMULATION_STATE_INITIALIZED)
@@ -456,5 +476,5 @@ class SimulationInitializer:
             return self.simulation_state
 
         except Exception as e:
-            logger.error(SimulationLogMessageCode.SIMULATION_INITIALIZATION_FAILED.details(f"{e}"))
+            logger.error(SimulationLogMessageCode.SIMULATION_INITIALIZATION_ABORTED.details(f"{e}"))
             raise SimulationErrorCode(f"Failed to initialize simulation: {e}")

@@ -3,6 +3,7 @@ from enum import Enum
 
 class SimulationErrorCode(Enum):
     """Enumeration for simulation error codes with unique identifiers."""
+
     CONFIGURATION = ("Configuration Error", "ERR_001")
     STORAGE_INITIALIZATION = ("Storage Initialization Error", "ERR_002")
     BACKEND_INITIALIZATION = ("Backend Initialization Error", "ERR_003")
@@ -20,7 +21,7 @@ class SimulationErrorCode(Enum):
     POTENTIAL_SETUP = ("Potential Setup Error", "ERR_015")
     GRADIENT_SETUP = ("Gradient Setup Error", "ERR_016")
     HESSIAN_SETUP = ("Hessian Setup Error", "ERR_017")
-    BARRIER_UPDATER_SETUP = ("Barrier Updater Setup Error", "ERR_018")
+    BARRIER_SETUP = ("Barrier Setup Error", "ERR_018")
     CCD_SETUP = ("CCD Setup Error", "ERR_019")
     SIMULATION_LOOP = ("Simulation Loop Error", "ERR_020")
     COMMAND_PROCESSING = ("Command Processing Error", "ERR_021")
@@ -82,7 +83,10 @@ class SimulationError(Exception):
         self.code = code
         self.message = message
         self.details = details
-        super().__init__(f"[{code.code}] {message} - {code.description}" + (f" Details: {details}" if details else ""))
+        super().__init__(
+            f"[{code.code}] {message} - {code.description}"
+            + (f" Details: {details}" if details else "")
+        )
 
 
 def get_simulation_error_class(code: SimulationErrorCode):
@@ -103,7 +107,7 @@ def get_simulation_error_class(code: SimulationErrorCode):
         SimulationErrorCode.GRADIENT_SETUP: GradientSetupError,
         SimulationErrorCode.GRADIENT_CALCULATION: GradientCalculationError,
         SimulationErrorCode.HESSIAN_SETUP: HessianSetupError,
-        SimulationErrorCode.BARRIER_UPDATER_SETUP: BarrierUpdaterSetupError,
+        SimulationErrorCode.BARRIER_SETUP: BarrierSetupError,
         SimulationErrorCode.CCD_SETUP: CCDSetupError,
         SimulationErrorCode.SIMULATION_LOOP: SimulationLoopError,
         SimulationErrorCode.COMMAND_PROCESSING: CommandProcessingError,
@@ -142,221 +146,276 @@ def get_simulation_error_class(code: SimulationErrorCode):
     }
     return error_classes.get(code, GeneralSimulationError)
 
+
 class ConfigurationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.CONFIGURATION, message, details)
+
 
 class StorageInitializationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.STORAGE_INITIALIZATION, message, details)
 
+
 class BackendInitializationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.BACKEND_INITIALIZATION, message, details)
+
 
 class DatabaseInitializationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.DATABASE_INITIALIZATION, message, details)
 
+
 class MeshSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.MESH_SETUP, message, details)
+
 
 class MassMatrixSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.MASS_MATRIX_SETUP, message, details)
 
+
 class ExternalForcesSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.EXTERNAL_FORCES_SETUP, message, details)
+
 
 class HyperElasticSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.HYPERELASTIC_SETUP, message, details)
 
+
 class CollisionSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.COLLISION_SETUP, message, details)
+
 
 class BoundaryConditionsSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.BOUNDARY_CONDITIONS_SETUP, message, details)
 
+
 class LineSearchSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.LINE_SEARCH_SETUP, message, details)
+
 
 class LinearSolverSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.LINEAR_SOLVER_SETUP, message, details)
 
+
 class OptimizerSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.OPTIMIZER_SETUP, message, details)
+
 
 class ParametersSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.PARAMETERS_SETUP, message, details)
 
+
 class PotentialSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.POTENTIAL_SETUP, message, details)
+
 
 class GradientSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.GRADIENT_SETUP, message, details)
 
+
 class HessianSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.HESSIAN_SETUP, message, details)
 
-class BarrierUpdaterSetupError(SimulationError):
+
+class BarrierSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
-        super().__init__(SimulationErrorCode.BARRIER_UPDATER_SETUP, message, details)
+        super().__init__(SimulationErrorCode.BARRIER_SETUP, message, details)
+
 
 class CCDSetupError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.CCD_SETUP, message, details)
 
+
 class SimulationLoopError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.SIMULATION_LOOP, message, details)
+
 
 class CommandProcessingError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.COMMAND_PROCESSING, message, details)
 
+
 class MemoryAllocationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.MEMORY_ALLOCATION, message, details)
+
 
 class FileIOError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.FILE_IO, message, details)
 
+
 class NetworkCommunicationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.NETWORK_COMMUNICATION, message, details)
+
 
 class ThreadingError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.THREADING, message, details)
 
+
 class GPUInitializationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.GPU_INITIALIZATION, message, details)
+
 
 class GPUComputationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.GPU_COMPUTATION, message, details)
 
+
 class InputValidationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.INPUT_VALIDATION, message, details)
+
 
 class ResourceAllocationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.RESOURCE_ALLOCATION, message, details)
 
+
 class TimingConstraintError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.TIMING_CONSTRAINT, message, details)
+
 
 class GeneralSimulationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.GENERAL, message, details)
 
+
 class LineSearchError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.LINE_SEARCH, message, details)
+
 
 class GradientCalculationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.GRADIENT_CALCULATION, message, details)
 
+
 class BackendError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.BACKEND_ERROR, message, details)
+
 
 class NetworkError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.NETWORK_ERROR, message, details)
 
+
 class FileError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.FILE_ERROR, message, details)
+
 
 class MemoryError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.MEMORY_ERROR, message, details)
 
+
 class CPUError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.CPU_ERROR, message, details)
+
 
 class BoardError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.BOARD_ERROR, message, details)
 
+
 class ServerError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.SERVER_ERROR, message, details)
+
 
 class ConnectionError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.CONNECTION_ERROR, message, details)
 
+
 class ConfigError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.CONFIG_ERROR, message, details)
+
 
 class CoreError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.CORE_ERROR, message, details)
 
+
 class MathError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.MATH_ERROR, message, details)
+
 
 class StateError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.STATE_ERROR, message, details)
 
+
 class ControllerError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.CONTROLLER_ERROR, message, details)
+
 
 class CommandError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.COMMAND_ERROR, message, details)
 
+
 class HistoryError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.HISTORY_ERROR, message, details)
+
 
 class ExtensionError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.EXTENSION_ERROR, message, details)
 
+
 class StorageError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.STORAGE_ERROR, message, details)
+
 
 class IOError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.IO_ERROR, message, details)
 
+
 class LogsError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.LOGS_ERROR, message, details)
+
 
 class InitializationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.INITIALIZATION_ERROR, message, details)
 
+
 class ManagerError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.MANAGER_ERROR, message, details)
+
 
 class PythonError(SimulationError):
     def __init__(self, message: str, details: str = None):

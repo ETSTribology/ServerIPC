@@ -1,9 +1,11 @@
-from typing import List, Union
 import logging
+from typing import List, Union
+
 import numpy as np
 import scipy.spatial.transform as spt
-from simulation.logs.message import SimulationLogMessageCode
+
 from simulation.logs.error import SimulationError, SimulationErrorCode
+from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
@@ -18,17 +20,36 @@ def euler_to_quaternion(euler_angles: List[float]) -> List[float]:
         List[float]: Quaternion [x, y, z, w].
     """
     if len(euler_angles) != 3:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Euler angles must be a list of three elements, got {len(euler_angles)}."))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Euler angles must be a list of three elements, got {len(euler_angles)}.")
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Euler angles must be a list of three elements, got {len(euler_angles)}."
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            f"Euler angles must be a list of three elements, got {len(euler_angles)}.",
+        )
 
     try:
         rotation = spt.Rotation.from_euler("xyz", euler_angles)
         quaternion = rotation.as_quat().tolist()
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Converted Euler angles to quaternion successfully."))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                "Converted Euler angles to quaternion successfully."
+            )
+        )
         return quaternion
     except Exception as e:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to convert Euler angles to quaternion: {e}"))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, "Failed to convert Euler angles to quaternion", details=str(e))
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Failed to convert Euler angles to quaternion: {e}"
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            "Failed to convert Euler angles to quaternion",
+            details=str(e),
+        )
 
 
 def quaternion_to_euler(quaternion: List[float]) -> List[float]:
@@ -41,17 +62,36 @@ def quaternion_to_euler(quaternion: List[float]) -> List[float]:
         List[float]: Euler angles (in radians).
     """
     if len(quaternion) != 4:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Quaternion must be a list of four elements, got {len(quaternion)}."))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Quaternion must be a list of four elements, got {len(quaternion)}.")
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Quaternion must be a list of four elements, got {len(quaternion)}."
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            f"Quaternion must be a list of four elements, got {len(quaternion)}.",
+        )
 
     try:
         rotation = spt.Rotation.from_quat(quaternion)
         euler_angles = rotation.as_euler("xyz").tolist()
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Converted quaternion to Euler angles successfully."))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                "Converted quaternion to Euler angles successfully."
+            )
+        )
         return euler_angles
     except Exception as e:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to convert quaternion to Euler angles: {e}"))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, "Failed to convert quaternion to Euler angles", details=str(e))
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Failed to convert quaternion to Euler angles: {e}"
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            "Failed to convert quaternion to Euler angles",
+            details=str(e),
+        )
 
 
 def apply_scaling(vertices: np.ndarray, scale: Union[float, List[float]]) -> np.ndarray:
@@ -81,17 +121,36 @@ def apply_scaling(vertices: np.ndarray, scale: Union[float, List[float]]) -> np.
         scale = [scale, scale, scale]
 
     if len(scale) != 3:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Scale must be a list of three elements, got {len(scale)} elements."))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Scale must be a list of three elements, got {len(scale)} elements.")
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Scale must be a list of three elements, got {len(scale)} elements."
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            f"Scale must be a list of three elements, got {len(scale)} elements.",
+        )
 
     try:
         scaling_matrix = np.diag(scale)
         scaled_vertices = vertices @ scaling_matrix
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Applied scaling to vertices successfully."))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                "Applied scaling to vertices successfully."
+            )
+        )
         return scaled_vertices
     except Exception as e:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to apply scaling to vertices: {e}"))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, "Failed to apply scaling to vertices", details=str(e))
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Failed to apply scaling to vertices: {e}"
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            "Failed to apply scaling to vertices",
+            details=str(e),
+        )
 
 
 def apply_rotation(vertices: np.ndarray, rotation: List[float]) -> np.ndarray:
@@ -118,14 +177,25 @@ def apply_rotation(vertices: np.ndarray, rotation: List[float]) -> np.ndarray:
         If the `rotation` list does not contain exactly four elements or if the quaternion is invalid.
     """
     if len(rotation) != 4:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Rotation must be a quaternion with four elements, got {len(rotation)}."))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Rotation must be a quaternion with four elements, got {len(rotation)}.")
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Rotation must be a quaternion with four elements, got {len(rotation)}."
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            f"Rotation must be a quaternion with four elements, got {len(rotation)}.",
+        )
 
     try:
         rotation_matrix = spt.Rotation.from_quat(rotation).as_matrix()
     except ValueError as e:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Invalid quaternion {rotation}: {e}"))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Invalid quaternion {rotation}", details=str(e))
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(f"Invalid quaternion {rotation}: {e}")
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION, f"Invalid quaternion {rotation}", details=str(e)
+        )
 
     try:
         # Compute centroid for rotation
@@ -135,11 +205,23 @@ def apply_rotation(vertices: np.ndarray, rotation: List[float]) -> np.ndarray:
         centered_vertices = vertices - centroid
         rotated_vertices = centered_vertices @ rotation_matrix.T
         transformed_vertices = rotated_vertices + centroid
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Applied rotation to vertices successfully."))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                "Applied rotation to vertices successfully."
+            )
+        )
         return transformed_vertices
     except Exception as e:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to apply rotation to vertices: {e}"))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, "Failed to apply rotation to vertices", details=str(e))
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Failed to apply rotation to vertices: {e}"
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            "Failed to apply rotation to vertices",
+            details=str(e),
+        )
 
 
 def apply_translation(vertices: np.ndarray, translation: List[float]) -> np.ndarray:
@@ -165,17 +247,36 @@ def apply_translation(vertices: np.ndarray, translation: List[float]) -> np.ndar
         If the `translation` list does not contain exactly three elements.
     """
     if len(translation) != 3:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Translation must be a list of three elements, got {len(translation)} elements."))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Translation must be a list of three elements, got {len(translation)} elements.")
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Translation must be a list of three elements, got {len(translation)} elements."
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            f"Translation must be a list of three elements, got {len(translation)} elements.",
+        )
 
     try:
         translation_vector = np.array(translation).reshape(1, 3)
         translated_vertices = vertices + translation_vector
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Applied translation to vertices successfully."))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                "Applied translation to vertices successfully."
+            )
+        )
         return translated_vertices
     except Exception as e:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to apply translation to vertices: {e}"))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, "Failed to apply translation to vertices", details=str(e))
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Failed to apply translation to vertices: {e}"
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            "Failed to apply translation to vertices",
+            details=str(e),
+        )
 
 
 def apply_transformations(
@@ -218,14 +319,35 @@ def apply_transformations(
 
     # Validate input lengths
     if len(scale) != 3:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Scale must be a list of three elements, got {len(scale)} elements."))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Scale must be a list of three elements, got {len(scale)} elements.")
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Scale must be a list of three elements, got {len(scale)} elements."
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            f"Scale must be a list of three elements, got {len(scale)} elements.",
+        )
     if len(rotation) != 4:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Rotation must be a list of four elements representing a quaternion, got {len(rotation)} elements."))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Rotation must be a list of four elements representing a quaternion, got {len(rotation)} elements.")
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Rotation must be a list of four elements representing a quaternion, got {len(rotation)} elements."
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            f"Rotation must be a list of four elements representing a quaternion, got {len(rotation)} elements.",
+        )
     if len(translation) != 3:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Translation must be a list of three elements, got {len(translation)} elements."))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Translation must be a list of three elements, got {len(translation)} elements.")
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Translation must be a list of three elements, got {len(translation)} elements."
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            f"Translation must be a list of three elements, got {len(translation)} elements.",
+        )
 
     try:
         # Apply scaling
@@ -237,8 +359,20 @@ def apply_transformations(
         # Apply translation
         transformed_vertices = apply_translation(rotated_vertices, translation)
 
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Applied transformations to vertices successfully."))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                "Applied transformations to vertices successfully."
+            )
+        )
         return transformed_vertices
     except Exception as e:
-        logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to apply transformations to vertices: {e}"))
-        raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, "Failed to apply transformations to vertices", details=str(e))
+        logger.error(
+            SimulationLogMessageCode.COMMAND_FAILED.details(
+                f"Failed to apply transformations to vertices: {e}"
+            )
+        )
+        raise SimulationError(
+            SimulationErrorCode.INPUT_VALIDATION,
+            "Failed to apply transformations to vertices",
+            details=str(e),
+        )

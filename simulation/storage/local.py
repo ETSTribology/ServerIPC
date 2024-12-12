@@ -17,7 +17,9 @@ class Local:
         Args:
             config: Configuration dictionary for the storage.
         """
-        self.directory = Path(config.get("storage", {}).get("config", {}).get("directory", "storage"))
+        self.directory = Path(
+            config.get("storage", {}).get("config", {}).get("directory", "storage")
+        )
         self.extensions = config.get("extensions", {})
         self.connected = False
 

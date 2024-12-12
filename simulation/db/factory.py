@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 from simulation.core.utils.singleton import SingletonMeta
 from simulation.db.db import DatabaseBase
 from simulation.db.prisma import PrismaDB
-from simulation.logs.message import SimulationLogMessageCode
 from simulation.logs.error import SimulationError, SimulationErrorCode
+from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
@@ -49,14 +49,23 @@ class DatabaseFactory(metaclass=SingletonMeta):
     def _validate_env_vars(database_url: str, db_provider: str) -> None:
         """Validate environment variables."""
         if not database_url:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details("DATABASE_URL is required"))
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details("DATABASE_URL is required")
+            )
             raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, "DATABASE_URL is required")
         if not db_provider:
             logger.error(SimulationLogMessageCode.COMMAND_FAILED.details("DB_PROVIDER is required"))
             raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, "DB_PROVIDER is required")
         if db_provider not in ["postgresql", "sqlite"]:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unsupported database provider: {db_provider}"))
-            raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Unsupported database provider: {db_provider}")
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Unsupported database provider: {db_provider}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.INPUT_VALIDATION,
+                f"Unsupported database provider: {db_provider}",
+            )
 
     @staticmethod
     def _write_env_file(database_url: str, db_provider: str) -> None:
@@ -65,7 +74,11 @@ class DatabaseFactory(metaclass=SingletonMeta):
         with open(env_path, "w") as file:
             file.write(f"DATABASE_URL={database_url}\n")
             file.write(f"DB_PROVIDER={db_provider}\n")
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Environment variables written to .env file"))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                "Environment variables written to .env file"
+            )
+        )
 
     @staticmethod
     def _initialize_prisma(
@@ -92,14 +105,26 @@ class DatabaseFactory(metaclass=SingletonMeta):
         os.environ["DATABASE_URL"] = database_url
         os.environ["DB_PROVIDER"] = db_provider
 
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Using database provider: {db_provider}"))
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Using database URL: {database_url}"))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                f"Using database provider: {db_provider}"
+            )
+        )
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Using database URL: {database_url}")
+        )
 
         # Validate schema file
         schema_path = os.path.join(os.getcwd(), "simulation", "db", "schema.prisma")
         if not os.path.exists(schema_path):
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Prisma schema file not found at {schema_path}"))
-            raise SimulationError(SimulationErrorCode.FILE_IO, f"Prisma schema file not found at {schema_path}")
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Prisma schema file not found at {schema_path}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.FILE_IO, f"Prisma schema file not found at {schema_path}"
+            )
 
         # Update schema.prisma
         with open(schema_path, "r") as file:
@@ -120,12 +145,22 @@ class DatabaseFactory(metaclass=SingletonMeta):
         # Write updated schema
         with open(schema_path, "w") as file:
             file.write(schema_content_new)
-            logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Updated schema.prisma configuration"))
+            logger.info(
+                SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                    "Updated schema.prisma configuration"
+                )
+            )
 
         # Validate models exist
         if not re.search(r"model\s+\w+\s*{", schema_content_new):
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details("No models defined in schema.prisma"))
-            raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, "No models defined in schema.prisma")
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    "No models defined in schema.prisma"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.INPUT_VALIDATION, "No models defined in schema.prisma"
+            )
 
         # Run prisma db push with environment variables
         prisma_dir = os.path.join(os.getcwd(), "simulation", "db")
@@ -140,10 +175,18 @@ class DatabaseFactory(metaclass=SingletonMeta):
                 env=env_vars,
                 check=True,
             )
-            logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Prisma initialized successfully"))
+            logger.info(
+                SimulationLogMessageCode.COMMAND_SUCCESS.details("Prisma initialized successfully")
+            )
         except subprocess.CalledProcessError as e:
-            logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Prisma db push failed: {e.stderr}"))
-            raise SimulationError(SimulationErrorCode.DATABASE_SETUP, f"Prisma db push failed: {e.stderr}")
+            logger.error(
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Prisma db push failed: {e.stderr}"
+                )
+            )
+            raise SimulationError(
+                SimulationErrorCode.DATABASE_SETUP, f"Prisma db push failed: {e.stderr}"
+            )
 
     @staticmethod
     async def create_async(config: Dict[str, Any]) -> DatabaseBase:
@@ -154,7 +197,11 @@ class DatabaseFactory(metaclass=SingletonMeta):
         # Build database URL from config
         database_url, database_type = DatabaseFactory._build_database_url(config.get("db", {}))
 
-        logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Initializing {database_type} database with URL: {database_url}"))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_SUCCESS.details(
+                f"Initializing {database_type} database with URL: {database_url}"
+            )
+        )
 
         if database_type not in DatabaseFactory._instances:
             if database_type in ["postgresql", "sqlite"]:
@@ -169,8 +216,15 @@ class DatabaseFactory(metaclass=SingletonMeta):
                 # Removed manual table creation
                 # await database_instance.create_all_tables()
             else:
-                logger.error(SimulationLogMessageCode.COMMAND_FAILED.details(f"Unsupported database type: {database_type}"))
-                raise SimulationError(SimulationErrorCode.INPUT_VALIDATION, f"Unsupported database type: {database_type}")
+                logger.error(
+                    SimulationLogMessageCode.COMMAND_FAILED.details(
+                        f"Unsupported database type: {database_type}"
+                    )
+                )
+                raise SimulationError(
+                    SimulationErrorCode.INPUT_VALIDATION,
+                    f"Unsupported database type: {database_type}",
+                )
 
             DatabaseFactory._instances[database_type] = database_instance
 
