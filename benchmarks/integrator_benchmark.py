@@ -1,17 +1,16 @@
-import pytest
 import numpy as np
-import torch
-
+import pytest
 import torch.nn as nn
+
 from simulation.core.integrator import (
+    Dopri5,
+    ExplicitEuler,
+    ImplicitAdams,
+    IntegratorBase,
     IntegratorFactory,
     IntegratorType,
-    IntegratorBase,
-    VectorizedIntegratorBase,
-    ExplicitEuler,
     NeuralODE,
-    ImplicitAdams,
-    Dopri5
+    VectorizedIntegratorBase,
 )
 
 
@@ -25,7 +24,7 @@ class SimpleNeuralModel(nn.Module):
 
 
 class TestIntegratorFactory:
-    
+
     def test_create_basic_integrator(self):
         """Test creation of basic integrator types"""
         integrator = IntegratorFactory.create_integrator(IntegratorType.EXPLICIT_EULER.value)
@@ -41,8 +40,7 @@ class TestIntegratorFactory:
         """Test creation of NeuralODE integrator"""
         model = SimpleNeuralModel()
         integrator = IntegratorFactory.create_integrator(
-            IntegratorType.NEURAL_ODE.value,
-            model=model
+            IntegratorType.NEURAL_ODE.value, model=model
         )
         assert isinstance(integrator, NeuralODE)
         assert integrator.model == model
@@ -55,8 +53,7 @@ class TestIntegratorFactory:
     def test_implicit_adams_creation(self):
         """Test creation of ImplicitAdams integrator with custom order"""
         integrator = IntegratorFactory.create_integrator(
-            IntegratorType.IMPLICIT_ADAMS.value,
-            order=3
+            IntegratorType.IMPLICIT_ADAMS.value, order=3
         )
         assert isinstance(integrator, ImplicitAdams)
         assert integrator.order == 3
@@ -64,9 +61,7 @@ class TestIntegratorFactory:
     def test_dopri5_creation(self):
         """Test creation of Dopri5 integrator with custom tolerances"""
         integrator = IntegratorFactory.create_integrator(
-            IntegratorType.DOPRI5.value,
-            rtol=1e-4,
-            atol=1e-7
+            IntegratorType.DOPRI5.value, rtol=1e-4, atol=1e-7
         )
         assert isinstance(integrator, Dopri5)
         assert integrator.rtol == 1e-4
@@ -75,21 +70,23 @@ class TestIntegratorFactory:
     def test_vectorized_integrator_n_jobs(self):
         """Test creation of vectorized integrator with custom n_jobs"""
         integrator = IntegratorFactory.create_integrator(
-            IntegratorType.EXPLICIT_EULER.value,
-            n_jobs=4
+            IntegratorType.EXPLICIT_EULER.value, n_jobs=4
         )
         assert isinstance(integrator, VectorizedIntegratorBase)
         assert integrator.n_jobs == 4
 
-    @pytest.mark.parametrize("integrator_type", [
-        IntegratorType.EXPLICIT_EULER.value,
-        IntegratorType.SEMI_IMPLICIT_EULER.value,
-        IntegratorType.IMPLICIT_EULER.value,
-        IntegratorType.MIDPOINT.value,
-        IntegratorType.RK2.value,
-        IntegratorType.RK4.value,
-        IntegratorType.RK38.value,
-    ])
+    @pytest.mark.parametrize(
+        "integrator_type",
+        [
+            IntegratorType.EXPLICIT_EULER.value,
+            IntegratorType.SEMI_IMPLICIT_EULER.value,
+            IntegratorType.IMPLICIT_EULER.value,
+            IntegratorType.MIDPOINT.value,
+            IntegratorType.RK2.value,
+            IntegratorType.RK4.value,
+            IntegratorType.RK38.value,
+        ],
+    )
     def test_all_basic_integrators(self, integrator_type):
         """Test creation of all basic integrator types"""
         integrator = IntegratorFactory.create_integrator(integrator_type)
@@ -104,35 +101,38 @@ class TestIntegratorFactory:
     def test_functional_integrator(self):
         """Test that created integrator is functional"""
         integrator = IntegratorFactory.create_integrator(IntegratorType.EXPLICIT_EULER.value)
-        
+
         # Simple test case
         xt = np.array([0.0])
         vt = np.array([1.0])
         at = np.array([0.0])
         dt = 0.1
-        
+
         xtp1, vtp1 = integrator.step(xt, vt, at, dt)
         assert isinstance(xtp1, np.ndarray)
         assert isinstance(vtp1, np.ndarray)
         assert xtp1.shape == xt.shape
         assert vtp1.shape == vt.shape
 
-    @pytest.mark.parametrize("integrator_type", [
-        IntegratorType.EXPLICIT_EULER.value,
-        IntegratorType.SEMI_IMPLICIT_EULER.value,
-        IntegratorType.IMPLICIT_EULER.value,
-        IntegratorType.MIDPOINT.value,
-        IntegratorType.RK4.value,
-    ])
+    @pytest.mark.parametrize(
+        "integrator_type",
+        [
+            IntegratorType.EXPLICIT_EULER.value,
+            IntegratorType.SEMI_IMPLICIT_EULER.value,
+            IntegratorType.IMPLICIT_EULER.value,
+            IntegratorType.MIDPOINT.value,
+            IntegratorType.RK4.value,
+        ],
+    )
     def test_accuracy_against_analytical(self, integrator_type):
         """Test integrator accuracy against an analytical solution"""
         integrator = IntegratorFactory.create_integrator(integrator_type)
-        
+
         # Analytical solution setup for SHO: x(t) = cos(t), v(t) = -sin(t)
         omega = 1.0  # Natural frequency
         xt = np.array([1.0])  # Initial position
         vt = np.array([0.0])  # Initial velocity
-        at = np.array([-omega**2 * xt[0]])  # Initial acceleration
+        at = np.array([-(omega**2) * xt[0]])  # Initial acceleration
         dt = 0.01  # Time step
         steps = 1000  # Number of steps
 
@@ -142,7 +142,7 @@ class TestIntegratorFactory:
 
         for _ in range(steps):
             xt, vt = integrator.step(xt, vt, at, dt)
-            at = np.array([-omega**2 * xt[0]])  # Update acceleration
+            at = np.array([-(omega**2) * xt[0]])  # Update acceleration
             numerical_positions.append(xt[0])
             numerical_velocities.append(vt[0])
 

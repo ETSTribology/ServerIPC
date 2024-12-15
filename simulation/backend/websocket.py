@@ -165,6 +165,6 @@ class WebSocketBackend(Backend):
                 "Failed to retrieve command",
                 details=str(e),
             )
-        
+
     def get_status(self):
         return {"connected": self.connected}

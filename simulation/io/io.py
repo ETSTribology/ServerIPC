@@ -162,7 +162,9 @@ def combine_meshes(
     mesh = pbat.fem.Mesh(V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
     V_combined, C_combined = mesh.X.T, mesh.E.T
 
-    logger.info(f"Combined mesh contains {V_combined.shape[0]} nodes and {C_combined.shape[0]} elements.")
+    logger.info(
+        f"Combined mesh contains {V_combined.shape[0]} nodes and {C_combined.shape[0]} elements."
+    )
     logger.info("Meshes have been combined and deduplicated.")
 
     return mesh, V_combined, C_combined, element_materials, num_nodes_list

@@ -202,3 +202,31 @@ class SimulationState:
         missing_attrs = [attr for attr in required_attrs if self.get_attribute(attr) is None]
         if missing_attrs:
             raise ValueError(f"Missing required attributes: {', '.join(missing_attrs)}")
+
+    def remove_attribute(self, key: str) -> None:
+        """Removes an attribute and its aliases from the simulation state.
+
+        Parameters
+        ----------
+        key : str
+            The name or alias of the attribute to remove.
+
+        Raises
+        ------
+        KeyError
+            If the attribute does not exist.
+        """
+        # Determine the primary key
+        primary_key = self.aliases.get(key, key)
+        if primary_key not in self.state:
+            raise KeyError(f"Attribute '{key}' does not exist.")
+
+        # Remove the primary attribute
+        del self.state[primary_key]
+
+        # Remove all associated aliases
+        aliases_to_remove = [
+            alias for alias, target in self.aliases.items() if target == primary_key
+        ]
+        for alias in aliases_to_remove:
+            del self.aliases[alias]

@@ -93,28 +93,24 @@ services:
       timeout: 5s
       retries: 3
 
-
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana-enterprise:latest
     container_name: grafana
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel
+      - GF_INSTALL_PLUGINS=grafana-plotly-panel,redis-datasource
     volumes:
       - grafana_data:/var/lib/grafana
     depends_on:
       timescaledb:
         condition: service_healthy
+    dns:
+      - 8.8.8.8
     networks:
       - simulation_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 volumes:
   dragonfly-data:

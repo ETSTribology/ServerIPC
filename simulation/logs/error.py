@@ -4,60 +4,77 @@ from enum import Enum
 class SimulationErrorCode(Enum):
     """Enumeration for simulation error codes with unique identifiers."""
 
-    CONFIGURATION = ("Configuration Error", "ERR_001")
-    STORAGE_INITIALIZATION = ("Storage Initialization Error", "ERR_002")
+    # Initialization Errors
     BACKEND_INITIALIZATION = ("Backend Initialization Error", "ERR_003")
+    COMMAND_DISPATCHER_INITIALIZATION = ("CommandDispatcher Initialization Error", "ERR_057")
+    CONFIGURATION = ("Configuration Error", "ERR_001")
     DATABASE_INITIALIZATION = ("Database Initialization Error", "ERR_004")
-    MESH_SETUP = ("Mesh Setup Error", "ERR_005")
-    MASS_MATRIX_SETUP = ("Mass Matrix Setup Error", "ERR_006")
-    EXTERNAL_FORCES_SETUP = ("External Forces Setup Error", "ERR_007")
-    HYPERELASTIC_SETUP = ("Hyperelastic Potential Setup Error", "ERR_008")
-    COLLISION_SETUP = ("Collision Setup Error", "ERR_009")
+    GPU_INITIALIZATION = ("GPU Initialization Error", "ERR_027")
+    INITIALIZATION_ERROR = ("Initialization Error", "ERR_053")
+    STORAGE_INITIALIZATION = ("Storage Initialization Error", "ERR_002")
+
+    # Setup Errors
+    BARRIER_SETUP = ("Barrier Setup Error", "ERR_018")
     BOUNDARY_CONDITIONS_SETUP = ("Boundary Conditions Setup Error", "ERR_010")
-    LINE_SEARCH_SETUP = ("Line Search Setup Error", "ERR_011")
+    CCD_SETUP = ("CCD Setup Error", "ERR_019")
+    COLLISION_SETUP = ("Collision Setup Error", "ERR_009")
+    EXTERNAL_FORCES_SETUP = ("External Forces Setup Error", "ERR_007")
+    GRADIENT_SETUP = ("Gradient Setup Error", "ERR_016")
+    HESSIAN_SETUP = ("Hessian Setup Error", "ERR_017")
+    HYPERELASTIC_SETUP = ("Hyperelastic Potential Setup Error", "ERR_008")
     LINEAR_SOLVER_SETUP = ("Linear Solver Setup Error", "ERR_012")
+    LINE_SEARCH_SETUP = ("Line Search Setup Error", "ERR_011")
+    MASS_MATRIX_SETUP = ("Mass Matrix Setup Error", "ERR_006")
+    MESH_SETUP = ("Mesh Setup Error", "ERR_005")
     OPTIMIZER_SETUP = ("Optimizer Setup Error", "ERR_013")
     PARAMETERS_SETUP = ("Parameters Setup Error", "ERR_014")
     POTENTIAL_SETUP = ("Potential Setup Error", "ERR_015")
-    GRADIENT_SETUP = ("Gradient Setup Error", "ERR_016")
-    HESSIAN_SETUP = ("Hessian Setup Error", "ERR_017")
-    BARRIER_SETUP = ("Barrier Setup Error", "ERR_018")
-    CCD_SETUP = ("CCD Setup Error", "ERR_019")
-    SIMULATION_LOOP = ("Simulation Loop Error", "ERR_020")
+
+    # Simulation Errors
     COMMAND_PROCESSING = ("Command Processing Error", "ERR_021")
     GENERAL = ("General Error", "ERR_022")
-    MEMORY_ALLOCATION = ("Memory Allocation Error", "ERR_023")
-    FILE_IO = ("File I/O Error", "ERR_024")
-    NETWORK_COMMUNICATION = ("Network Communication Error", "ERR_025")
-    THREADING = ("Threading Error", "ERR_026")
-    GPU_INITIALIZATION = ("GPU Initialization Error", "ERR_027")
+    SIMULATION_LOOP = ("Simulation Loop Error", "ERR_020")
+
+    # Computational Errors
+    CPU_ERROR = ("CPU Error", "ERR_038")
     GPU_COMPUTATION = ("GPU Computation Error", "ERR_028")
-    INPUT_VALIDATION = ("Input Validation Error", "ERR_029")
+    LINE_SEARCH = ("Line Search Setup Error", "ERR_032")
+    MATH_ERROR = ("Math Error", "ERR_044")
+
+    # Resource Errors
+    MEMORY_ALLOCATION = ("Memory Allocation Error", "ERR_023")
     RESOURCE_ALLOCATION = ("Resource Allocation Error", "ERR_030")
     TIMING_CONSTRAINT = ("Timing Constraint Error", "ERR_031")
-    LINE_SEARCH = ("Line Search Setup Error", "ERR_032")
-    GRADIENT_CALCULATION = ("Gradient Calculation Error", "ERR_033")
-    BACKEND_ERROR = ("Backend Error", "ERR_034")
-    NETWORK_ERROR = ("Network Error", "ERR_035")
+
+    # Input/Output Errors
     FILE_ERROR = ("File Error", "ERR_036")
-    MEMORY_ERROR = ("Memory Error", "ERR_037")
-    CPU_ERROR = ("CPU Error", "ERR_038")
-    BOARD_ERROR = ("Board Error", "ERR_039")
-    SERVER_ERROR = ("Server Error", "ERR_040")
+    FILE_IO = ("File I/O Error", "ERR_024")
+    IO_ERROR = ("I/O Error", "ERR_051")
+    INPUT_VALIDATION = ("Input Validation Error", "ERR_029")
+    LOGS_ERROR = ("Logs Error", "ERR_052")
+    STORAGE_ERROR = ("Storage Error", "ERR_050")
+
+    # Communication Errors
     CONNECTION_ERROR = ("Connection Error", "ERR_041")
-    CONFIG_ERROR = ("Configuration Error", "ERR_042")
-    CORE_ERROR = ("Core Error", "ERR_043")
-    MATH_ERROR = ("Math Error", "ERR_044")
-    STATE_ERROR = ("State Error", "ERR_045")
+    NETWORK_COMMUNICATION = ("Network Communication Error", "ERR_025")
+    NETWORK_ERROR = ("Network Error", "ERR_035")
+    SERVER_ERROR = ("Server Error", "ERR_040")
+    THREADING = ("Threading Error", "ERR_026")
+
+    # Backend and Controller Errors
+    BACKEND_ERROR = ("Backend Error", "ERR_034")
     CONTROLLER_ERROR = ("Controller Error", "ERR_046")
     COMMAND_ERROR = ("Command Error", "ERR_047")
-    HISTORY_ERROR = ("History Error", "ERR_048")
+    COMMAND_DISPATCHER_FAILED = ("CommandDispatcher Failed", "ERR_057")
+
+    # Miscellaneous Errors
+    BOARD_ERROR = ("Board Error", "ERR_039")
+    CONFIG_ERROR = ("Configuration Error", "ERR_042")
+    CORE_ERROR = ("Core Error", "ERR_043")
     EXTENSION_ERROR = ("Extension Error", "ERR_049")
-    STORAGE_ERROR = ("Storage Error", "ERR_050")
-    IO_ERROR = ("I/O Error", "ERR_051")
-    LOGS_ERROR = ("Logs Error", "ERR_052")
-    INITIALIZATION_ERROR = ("Initialization Error", "ERR_053")
+    HISTORY_ERROR = ("History Error", "ERR_048")
     MANAGER_ERROR = ("Manager Error", "ERR_054")
+    MEMORY_ERROR = ("Memory Error", "ERR_037")
     PYTHON_ERROR = ("Python Error", "ERR_055")
 
     def __init__(self, description, code):
@@ -143,6 +160,8 @@ def get_simulation_error_class(code: SimulationErrorCode):
         SimulationErrorCode.INITIALIZATION_ERROR: InitializationError,
         SimulationErrorCode.MANAGER_ERROR: ManagerError,
         SimulationErrorCode.PYTHON_ERROR: PythonError,
+        SimulationErrorCode.LINEAR_SOLVER: LinearSolverError,
+        SimulationErrorCode.COMMAND_DISPATCHER_INITIALIZATION: CommandDispatcherInitializationError,
     }
     return error_classes.get(code, GeneralSimulationError)
 
@@ -420,3 +439,13 @@ class ManagerError(SimulationError):
 class PythonError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.PYTHON_ERROR, message, details)
+
+
+class LinearSolverError(SimulationError):
+    def __init__(self, message: str, details: str = None):
+        super().__init__(SimulationErrorCode.LINEAR_SOLVER, message, details)
+
+
+class CommandDispatcherInitializationError(SimulationError):
+    def __init__(self, message: str, details: str = None):
+        super().__init__(SimulationErrorCode.COMMAND_DISPATCHER_FAILED, message, details)

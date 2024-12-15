@@ -105,11 +105,11 @@ class ArmijoLineSearch(LineSearchBase):
                 return 0.0
 
             for _ in range(self.config.max_iterations):
-                fx = self.f(xk + alphaj*dx)
+                fx = self.f(xk + alphaj * dx)
                 flinear = fk + alphaj * c * Dfk
                 if fx <= flinear:
                     break
-                alphaj = tau*alphaj
+                alphaj = tau * alphaj
 
             return alphaj
 

@@ -1,12 +1,12 @@
 # barrier.py
 import logging
-from abc import ABC, abstractmethod
-from typing import Any, Tuple
+from abc import ABC
+from typing import Tuple
 
 import ipctk
 import numpy as np
 
-from simulation.core.modifier.mesh import to_surface 
+from simulation.core.modifier.mesh import to_surface
 from simulation.core.parameters import ParametersBase
 from simulation.core.utils.singleton import SingletonMeta
 from simulation.logs.error import SimulationError, SimulationErrorCode
@@ -14,9 +14,10 @@ from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
+
 class BarrierBase(ABC):
     """Base class for barrier operations."""
-    
+
     def __init__(self, params: ParametersBase):
         self.params = params
 
@@ -35,7 +36,6 @@ class BarrierBase(ABC):
         self.params = new_params
         logger.info("Barrier parameters updated successfully.")
 
-
     def _compute_surface_position(self, x: np.ndarray) -> np.ndarray:
         """Compute surface position mapping."""
         try:
@@ -43,23 +43,17 @@ class BarrierBase(ABC):
         except Exception as e:
             logger.error(f"Failed to compute surface position: {e}")
             raise SimulationError(
-                SimulationErrorCode.BARRIER_SETUP,
-                "Failed to compute surface position",
-                str(e)
+                SimulationErrorCode.BARRIER_SETUP, "Failed to compute surface position", str(e)
             )
 
     def _compute_minimum_distance(self, BX: np.ndarray) -> float:
         """Compute minimum distance between collision objects."""
         try:
-            return self.params.cconstraints.compute_minimum_distance(
-                self.params.cmesh, BX
-            )
+            return self.params.cconstraints.compute_minimum_distance(self.params.cmesh, BX)
         except Exception as e:
             logger.error(f"Failed to compute minimum distance: {e}")
             raise SimulationError(
-                SimulationErrorCode.BARRIER_SETUP,
-                "Failed to compute minimum distance",
-                str(e)
+                SimulationErrorCode.BARRIER_SETUP, "Failed to compute minimum distance", str(e)
             )
 
     def _update_parameters(self, kB: float, dprev: float, maxkB: float = None) -> None:
@@ -71,10 +65,9 @@ class BarrierBase(ABC):
         except Exception as e:
             logger.error(f"Failed to update parameters: {e}")
             raise SimulationError(
-                SimulationErrorCode.BARRIER_SETUP,
-                "Failed to update parameters",
-                str(e)
+                SimulationErrorCode.BARRIER_SETUP, "Failed to update parameters", str(e)
             )
+
 
 class BarrierInitializer(BarrierBase):
     """Initialize barrier parameters."""
@@ -82,18 +75,18 @@ class BarrierInitializer(BarrierBase):
     def _compute_barrier_gradient(self, BX: np.ndarray) -> np.ndarray:
         """Compute barrier potential gradient."""
         try:
-            barrier_potential = self.params.barrier_potential(self.params.cconstraints, self.params.cmesh, BX)
+            barrier_potential = self.params.barrier_potential(
+                self.params.cconstraints, self.params.cmesh, BX
+            )
             return self.params.barrier_potential.gradient(
-                self.params.cconstraints,
-                self.params.cmesh,
-                BX
+                self.params.cconstraints, self.params.cmesh, BX
             )
         except Exception as e:
             logger.error(f"Failed to compute barrier gradient: {e}")
             raise SimulationError(
                 SimulationErrorCode.BARRIER_INITIALIZER_SETUP,
                 "Failed to compute barrier gradient",
-                str(e)
+                str(e),
             )
 
     def _compute_initial_stiffness(self, gU: np.ndarray, gB: np.ndarray) -> Tuple[float, float]:
@@ -106,14 +99,14 @@ class BarrierInitializer(BarrierBase):
                 self.params.avgmass,
                 gU,
                 gB,
-                dmin=self.params.dmin
+                dmin=self.params.dmin,
             )
         except Exception as e:
             logger.error(f"Failed to compute initial stiffness: {e}")
             raise SimulationError(
                 SimulationErrorCode.BARRIER_INITIALIZER_SETUP,
                 "Failed to compute initial stiffness",
-                str(e)
+                str(e),
             )
 
     def __call__(self, x: np.ndarray, gU: np.ndarray, gB: np.ndarray) -> None:
@@ -142,8 +135,9 @@ class BarrierInitializer(BarrierBase):
             raise SimulationError(
                 SimulationErrorCode.BARRIER_INITIALIZER_SETUP,
                 "Failed to initialize barrier",
-                str(e)
+                str(e),
             )
+
 
 class BarrierUpdater(BarrierBase):
     """Update barrier stiffness."""
@@ -153,18 +147,18 @@ class BarrierUpdater(BarrierBase):
         try:
             # Compute surface position
             BX = self._compute_surface_position(xk)
-            
+
             # Get current distance
             dcurrent = self._compute_minimum_distance(BX)
 
             # Update stiffness
             kB_new = ipctk.update_barrier_stiffness(
                 self.params.dprev,
-                dcurrent, 
+                dcurrent,
                 self.params.maxkB,
                 self.params.kB,
                 self.params.bboxdiag,
-                dmin=self.params.dmin
+                dmin=self.params.dmin,
             )
 
             # Update parameters
@@ -178,10 +172,9 @@ class BarrierUpdater(BarrierBase):
         except Exception as e:
             logger.error(f"Failed to update barrier: {e}")
             raise SimulationError(
-                SimulationErrorCode.BARRIER_UPDATER_SETUP,
-                "Failed to update barrier",
-                str(e)
+                SimulationErrorCode.BARRIER_UPDATER_SETUP, "Failed to update barrier", str(e)
             )
+
 
 class BarrierFactory(metaclass=SingletonMeta):
     """Factory for creating barrier objects."""
@@ -209,7 +202,7 @@ class BarrierFactory(metaclass=SingletonMeta):
             raise SimulationError(
                 SimulationErrorCode.BARRIER_INITIALIZER_SETUP,
                 "Failed to create or update initializer",
-                str(e)
+                str(e),
             )
 
     @staticmethod
@@ -232,5 +225,5 @@ class BarrierFactory(metaclass=SingletonMeta):
             raise SimulationError(
                 SimulationErrorCode.BARRIER_UPDATER_SETUP,
                 "Failed to create or update updater",
-                str(e)
+                str(e),
             )

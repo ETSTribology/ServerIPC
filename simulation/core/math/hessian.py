@@ -14,6 +14,7 @@ from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
+
 class HessianBase(ABC):
     def __init__(self, params: Parameters):
         """
@@ -69,9 +70,7 @@ class Hessian(HessianBase):
         except Exception as e:
             logger.error(f"Failed to compute elastic Hessian: {e}")
             raise SimulationError(
-                SimulationErrorCode.HESSIAN_SETUP, 
-                "Failed to compute elastic Hessian", 
-                str(e)
+                SimulationErrorCode.HESSIAN_SETUP, "Failed to compute elastic Hessian", str(e)
             )
 
     def _compute_velocity_surface(self, x: np.ndarray) -> tuple:
@@ -86,7 +85,7 @@ class Hessian(HessianBase):
             raise SimulationError(
                 SimulationErrorCode.HESSIAN_SETUP,
                 "Failed to compute velocity/surface mappings",
-                str(e)
+                str(e),
             )
 
     def _compute_barrier_hessian(self, BX: np.ndarray) -> sp.sparse.csc_matrix:
@@ -102,9 +101,7 @@ class Hessian(HessianBase):
         except Exception as e:
             logger.error(f"Failed to compute barrier Hessian: {e}")
             raise SimulationError(
-                SimulationErrorCode.HESSIAN_SETUP,
-                "Failed to compute barrier Hessian",
-                str(e)
+                SimulationErrorCode.HESSIAN_SETUP, "Failed to compute barrier Hessian", str(e)
             )
 
     def _compute_friction_hessian(self, BXdot: np.ndarray) -> sp.sparse.csc_matrix:
@@ -120,9 +117,7 @@ class Hessian(HessianBase):
         except Exception as e:
             logger.error(f"Failed to compute friction Hessian: {e}")
             raise SimulationError(
-                SimulationErrorCode.HESSIAN_SETUP,
-                "Failed to compute friction Hessian",
-                str(e)
+                SimulationErrorCode.HESSIAN_SETUP, "Failed to compute friction Hessian", str(e)
             )
 
     def _assemble_hessian(
@@ -139,9 +134,7 @@ class Hessian(HessianBase):
         except Exception as e:
             logger.error(f"Failed to assemble Hessian: {e}")
             raise SimulationError(
-                SimulationErrorCode.HESSIAN_SETUP,
-                "Failed to assemble Hessian",
-                str(e)
+                SimulationErrorCode.HESSIAN_SETUP, "Failed to assemble Hessian", str(e)
             )
 
     def __call__(self, x: np.ndarray) -> sp.sparse.csc_matrix:
@@ -170,9 +163,7 @@ class Hessian(HessianBase):
         except Exception as e:
             logger.error(f"Unexpected error computing Hessian: {e}")
             raise SimulationError(
-                SimulationErrorCode.HESSIAN_SETUP,
-                "Unexpected error computing Hessian",
-                str(e)
+                SimulationErrorCode.HESSIAN_SETUP, "Unexpected error computing Hessian", str(e)
             )
 
 

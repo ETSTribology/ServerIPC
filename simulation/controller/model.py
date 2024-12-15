@@ -1,60 +1,31 @@
 import base64
 import json
-import logging
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, Optional
 
-logger = logging.getLogger(__name__)
-
-
-class EncodingType(Enum):
-    """Supported encoding types for requests/responses"""
-
-    JSON = "json"
-    BASE64 = "base64"
-    PLAIN = "plain"
-
-    @staticmethod
-    def from_str(encoding: str) -> "EncodingType":
-        """Convert string to EncodingType"""
-        encoding = encoding.lower()
-        if encoding in EncodingType.__members__:
-            return EncodingType[encoding.upper()]
-        return EncodingType.JSON
+from .encoding import EncodingType, decode_parameters, encode_parameters
 
 
 @dataclass
 class Request:
     command_name: str
-    request_id: str
-    parameters: Dict[str, Any]
+    request_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    parameters: Dict[str, Any] = field(default_factory=dict)
     encoding: str = EncodingType.JSON.value
 
     def to_json(self) -> str:
         """Serialize request to JSON string"""
-        data = self.__dict__
-        if self.encoding == EncodingType.BASE64.value:
-            # Encode parameters as base64 if needed
-            data["parameters"] = base64.b64encode(json.dumps(self.parameters).encode()).decode()
+        data = encode_parameters(self.__dict__, EncodingType.from_str(self.encoding))
         return json.dumps(data)
 
     @staticmethod
     def from_json(data: str) -> "Request":
         """Create Request from JSON string"""
         dict_data = json.loads(data)
-        encoding = dict_data.get("encoding", EncodingType.JSON.value)
-
-        if encoding == EncodingType.BASE64.value:
-            # Decode base64 parameters
-            params_b64 = dict_data.get("parameters", "")
-            try:
-                params_json = base64.b64decode(params_b64).decode()
-                dict_data["parameters"] = json.loads(params_json)
-            except Exception as e:
-                logger.error(f"Failed to decode base64 parameters: {e}")
-                dict_data["parameters"] = {}
-
+        dict_data = decode_parameters(dict_data)
+        dict_data["encoding"] = dict_data.get("encoding", EncodingType.JSON.value)
         return Request(**dict_data)
 
 
@@ -68,29 +39,18 @@ class Response:
 
     def to_json(self) -> str:
         """Serialize response to JSON string"""
-        data = self.__dict__
         if self.encoding == EncodingType.BASE64.value and self.data:
-            # Encode data payload as base64 if present
-            data["data"] = base64.b64encode(json.dumps(self.data).encode()).decode()
-        return json.dumps(data)
+            self.data = base64.b64encode(json.dumps(self.data).encode()).decode()
+        return json.dumps(self.__dict__)
 
     @staticmethod
     def from_json(data: str) -> "Response":
         """Create Response from JSON string"""
         dict_data = json.loads(data)
         encoding = dict_data.get("encoding", EncodingType.JSON.value)
-
-        if encoding == EncodingType.BASE64.value:
-            # Decode base64 data payload if present
-            data_b64 = dict_data.get("data")
-            if data_b64:
-                try:
-                    data_json = base64.b64decode(data_b64).decode()
-                    dict_data["data"] = json.loads(data_json)
-                except Exception as e:
-                    logger.error(f"Failed to decode base64 data: {e}")
-                    dict_data["data"] = None
-
+        if encoding == EncodingType.BASE64.value and dict_data.get("data"):
+            dict_data["data"] = base64.b64decode(dict_data["data"]).decode()
+            dict_data["data"] = json.loads(dict_data["data"])
         return Response(**dict_data)
 
 
@@ -151,16 +111,20 @@ class CommandType(Enum):
         "aliases": ["exit", "terminate"],
         "description": "Terminates the simulation",
     }
-    RESET = {
-        "name": "reset",
-        "aliases": ["reinitialize"],
-        "description": "Resets the simulation state",
-    },
-    STATUS = {
-        "name": "status",
-        "aliases": ["state"],
-        "description": "Returns the current simulation status",
-    },
+    RESET = (
+        {
+            "name": "reset",
+            "aliases": ["reinitialize"],
+            "description": "Resets the simulation state",
+        },
+    )
+    STATUS = (
+        {
+            "name": "status",
+            "aliases": ["state"],
+            "description": "Returns the current simulation status",
+        },
+    )
     SEND = {
         "name": "send",
         "aliases": ["message"],
@@ -192,29 +156,3 @@ class CommandType(Enum):
             if name == command.command_name or name in command.command_aliases:
                 return command
         raise ValueError(f"Unknown command: {name}")
-
-
-class CommandError(Exception):
-    """Base class for command-related errors."""
-
-    def __init__(self, message: str):
-        super().__init__(message)
-        self.message = message
-
-
-class CommandFailedError(CommandError):
-    """Exception raised when a command fails to execute."""
-
-    pass
-
-
-class CannotConnectError(CommandError):
-    """Exception raised when a connection error occurs."""
-
-    pass
-
-
-class InvalidParametersError(CommandError):
-    """Exception raised when invalid parameters are provided."""
-
-    pass

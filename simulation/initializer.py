@@ -248,7 +248,9 @@ class SimulationInitializer:
             logger.error(SimulationLogMessageCode.BOUNDARY_CONDITIONS_FAILED.details(f"{e}"))
             raise BoundaryConditionsSetupError(f"Failed to set up boundary conditions: {e}")
 
-    def setup_collision_potentials(self, tangential_collisions, normal_collisions, collision_mesh, dhat, velocity):
+    def setup_collision_potentials(
+        self, tangential_collisions, normal_collisions, collision_mesh, dhat, velocity
+    ):
         ipctk.BarrierPotential.use_physical_barrier = True
         barrier_potential = ipctk.BarrierPotential(dhat)
         friction_potential = ipctk.FrictionPotential(velocity)

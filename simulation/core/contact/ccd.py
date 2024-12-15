@@ -4,6 +4,7 @@ from typing import Any
 
 import ipctk
 import numpy as np
+
 from simulation.core.modifier.mesh import to_surface
 from simulation.core.parameters import ParametersBase
 from simulation.core.utils.singleton import SingletonMeta
@@ -66,9 +67,7 @@ class CCD(CCDBase):
         except Exception as e:
             self.logger.error(f"Surface position computation failed: {e}")
             raise SimulationError(
-                SimulationErrorCode.CCD_SETUP,
-                "Surface position computation failed",
-                str(e)
+                SimulationErrorCode.CCD_SETUP, "Surface position computation failed", str(e)
             )
 
     def _compute_collision_free_step(self, BXt0: np.ndarray, BXt1: np.ndarray) -> float:
@@ -79,15 +78,13 @@ class CCD(CCDBase):
                 BXt0,
                 BXt1,
                 broad_phase_method=ipctk.BroadPhaseMethod.HASH_GRID,
-                min_distance=self.params.dmin
+                min_distance=self.params.dmin,
             )
             return max_alpha
         except Exception as e:
             self.logger.error(f"Stepsize computation failed: {e}")
             raise SimulationError(
-                SimulationErrorCode.CCD_SETUP,
-                "Stepsize computation failed",
-                str(e)
+                SimulationErrorCode.CCD_SETUP, "Stepsize computation failed", str(e)
             )
 
     def __call__(self, x: np.ndarray, dx: np.ndarray) -> float:
@@ -120,9 +117,7 @@ class CCD(CCDBase):
         except Exception as e:
             self.logger.error(f"Unexpected error in CCD computation: {e}")
             raise SimulationError(
-                SimulationErrorCode.CCD_SETUP,
-                "Unexpected error in CCD computation",
-                str(e)
+                SimulationErrorCode.CCD_SETUP, "Unexpected error in CCD computation", str(e)
             )
 
 
@@ -166,9 +161,12 @@ class CCDFactory(metaclass=SingletonMeta):
                 )
         except Exception as e:
             logger.error(
-                SimulationLogMessageCode.COMMAND_FAILED.details(f"Failed to create or update CCD: {e}")
+                SimulationLogMessageCode.COMMAND_FAILED.details(
+                    f"Failed to create or update CCD: {e}"
+                )
             )
-            raise SimulationError(SimulationErrorCode.CCD_SETUP, "Failed to create or update CCD", str(e))
+            raise SimulationError(
+                SimulationErrorCode.CCD_SETUP, "Failed to create or update CCD", str(e)
+            )
 
         return CCDFactory._instances[instance_key]
-

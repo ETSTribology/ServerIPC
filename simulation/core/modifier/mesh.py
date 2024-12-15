@@ -46,7 +46,8 @@ def combine(V: list, C: list):
             "Failed to combine vertex and connectivity arrays",
             details=str(e),
         )
-    
+
+
 def de_combine(V: np.ndarray, C: np.ndarray):
     """
     De-combine the vertex and connectivity arrays.

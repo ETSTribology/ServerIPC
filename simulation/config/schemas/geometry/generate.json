@@ -83,6 +83,29 @@
                     "type": "integer",
                     "default": 42,
                     "description": "Random seed for noise generation"
+                },
+                "mean": {
+                    "type": "number",
+                    "default": 0.0,
+                    "description": "Mean value for Gaussian noise"
+                },
+                "std": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "default": 1.0,
+                    "description": "Standard deviation for Gaussian noise"
+                },
+                "step_size": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "default": 1.0,
+                    "description": "Step size for Brownian noise"
+                },
+                "scale": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "default": 1.0,
+                    "description": "Scale factor for Brownian noise amplitude"
                 }
             },
             "additionalProperties": false,

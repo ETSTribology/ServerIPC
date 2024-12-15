@@ -89,7 +89,7 @@ class Backend(ABC):
             True if connected, else False.
         """
         return self.connected
-    
+
     @abstractmethod
     def get_status(self) -> Dict[str, Any]:
         """

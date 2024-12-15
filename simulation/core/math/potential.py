@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import numpy as np
-from scipy import sparse
 
 from simulation.core.modifier.mesh import to_surface
 from simulation.core.parameters import Parameters, ParametersBase
@@ -71,9 +70,7 @@ class Potential(PotentialBase):
         except Exception as e:
             logger.error(f"Failed to compute elastic energy: {e}")
             raise SimulationError(
-                SimulationErrorCode.POTENTIAL_SETUP,
-                "Failed to compute elastic energy",
-                str(e)
+                SimulationErrorCode.POTENTIAL_SETUP, "Failed to compute elastic energy", str(e)
             )
 
     def _compute_velocity_surface(self, x: np.ndarray) -> tuple:
@@ -96,7 +93,7 @@ class Potential(PotentialBase):
             raise SimulationError(
                 SimulationErrorCode.POTENTIAL_SETUP,
                 "Failed to compute velocity/surface mappings",
-                str(e)
+                str(e),
             )
 
     def _setup_constraints(self, BX: np.ndarray) -> None:
@@ -114,15 +111,17 @@ class Potential(PotentialBase):
             )
 
             self.params.fconstraints.build(
-                self.params.cmesh, BX, self.params.cconstraints,
-                self.params.barrier_potential, self.params.kB, self.params.mu
+                self.params.cmesh,
+                BX,
+                self.params.cconstraints,
+                self.params.barrier_potential,
+                self.params.kB,
+                self.params.mu,
             )
         except Exception as e:
             logger.error(f"Failed to setup constraints: {e}")
             raise SimulationError(
-                SimulationErrorCode.POTENTIAL_SETUP,
-                "Failed to setup constraints",
-                str(e)
+                SimulationErrorCode.POTENTIAL_SETUP, "Failed to setup constraints", str(e)
             )
 
     def _compute_constraint_energies(self, BX: np.ndarray, BXdot: np.ndarray) -> tuple:
@@ -143,9 +142,7 @@ class Potential(PotentialBase):
         except Exception as e:
             logger.error(f"Failed to compute constraint energies: {e}")
             raise SimulationError(
-                SimulationErrorCode.POTENTIAL_SETUP,
-                "Failed to compute constraint energies",
-                str(e)
+                SimulationErrorCode.POTENTIAL_SETUP, "Failed to compute constraint energies", str(e)
             )
 
     def _compute_total_energy(self, x: np.ndarray, U: float, EB: float, EF: float) -> float:
@@ -162,8 +159,12 @@ class Potential(PotentialBase):
             float: Total potential energy
         """
         try:
-            energy = (0.5 * (x - self.params.xtilde).T @ self.params.M @ (x - self.params.xtilde) +
-                      self.params.dt**2 * U + self.params.kB * EB + self.params.dt**2 * EF)
+            energy = (
+                0.5 * (x - self.params.xtilde).T @ self.params.M @ (x - self.params.xtilde)
+                + self.params.dt**2 * U
+                + self.params.kB * EB
+                + self.params.dt**2 * EF
+            )
             logger.debug(f"Computed total energy: {energy}")
             if not np.isfinite(energy):
                 logger.error(f"Potential energy is not finite: {energy}")
@@ -172,9 +173,7 @@ class Potential(PotentialBase):
         except Exception as e:
             logger.error(f"Failed to compute total energy: {e}")
             raise SimulationError(
-                SimulationErrorCode.POTENTIAL_SETUP,
-                "Failed to compute total energy",
-                str(e)
+                SimulationErrorCode.POTENTIAL_SETUP, "Failed to compute total energy", str(e)
             )
 
     def __call__(self, x: np.ndarray) -> float:
@@ -213,7 +212,7 @@ class Potential(PotentialBase):
             raise SimulationError(
                 SimulationErrorCode.POTENTIAL_SETUP,
                 "Unexpected error in potential computation",
-                str(e)
+                str(e),
             )
 
 
@@ -270,4 +269,3 @@ class PotentialFactory(metaclass=SingletonMeta):
             )
 
         return instance
-

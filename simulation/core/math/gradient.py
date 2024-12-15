@@ -88,14 +88,14 @@ class Gradient(GradientBase):
     def _compute_friction_gradient(self, v, BX):
         """
         Compute the friction gradient.
-        
+
         Args:
             v (np.ndarray): Velocity vector
             BX (np.ndarray): Surface positions
             https://github.com/ETSTribology/ServerIPC/tree/a325486d8aed7ae90b7b44355b67dd7fc7f9c9ba/simulation/core/math
         Returns:
             np.ndarray: Friction gradient
-            
+
         Raises:
             ValueError: If parameters are invalid
         """
@@ -108,8 +108,12 @@ class Gradient(GradientBase):
             self.params.kB,
             self.params.mu,
         )
-        friction_potential = self.params.friction_potential(self.params.fconstraints, self.params.cmesh, BXdot)
-        gF = self.params.friction_potential.gradient(self.params.fconstraints, self.params.cmesh, BXdot)
+        friction_potential = self.params.friction_potential(
+            self.params.fconstraints, self.params.cmesh, BXdot
+        )
+        gF = self.params.friction_potential.gradient(
+            self.params.fconstraints, self.params.cmesh, BXdot
+        )
         return self.params.cmesh.to_full_dof(gF)
 
     def _assemble_gradient(self, x: np.ndarray, gU: np.ndarray, gB: np.ndarray, gF: np.ndarray):
@@ -132,7 +136,6 @@ class Gradient(GradientBase):
             g = self._assemble_gradient(x, gU, gB, gF)
 
             logger.info("Gradient vector computed successfully")
-            logger.info(f"Gradient vector: {g}")
             logger.info(f"Barrier stiffness: {kB}")
             return g
         except Exception as e:
@@ -194,4 +197,3 @@ class GradientFactory(metaclass=SingletonMeta):
             )
 
         return GradientFactory._instances[instance_key]
-

@@ -1,7 +1,7 @@
-from concurrent.futures import ThreadPoolExecutor
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from typing import Any, Dict, Optional, Type
 
@@ -136,9 +136,7 @@ class NewtonOptimizer(OptimizerBase):
 
                     gnorm = np.linalg.norm(gk, 1)
                     if gnorm < rtol:
-                        logger.info(
-                            f"Converged at iteration {k} with gradient norm {gnorm}"
-                        )
+                        logger.info(f"Converged at iteration {k} with gradient norm {gnorm}")
                         break
 
                     try:
@@ -154,7 +152,9 @@ class NewtonOptimizer(OptimizerBase):
                         raise
 
                     try:
-                        alpha = self.line_searcher.search(alpha0=self.alpha0_func(xk, dx), x=xk, dx=dx, f=f, grad=gk)
+                        alpha = self.line_searcher.search(
+                            alpha0=self.alpha0_func(xk, dx), x=xk, dx=dx, f=f, grad=gk
+                        )
                         xk = xk + alpha * dx
                         gk = grad(xk)
                     except Exception as e:
@@ -181,9 +181,7 @@ class NewtonOptimizer(OptimizerBase):
 
                         gnorm = np.linalg.norm(gk, np.inf)
                         if gnorm < rtol:
-                            logger.info(
-                                f"Converged at iteration {k} with gradient norm {gnorm}"
-                            )
+                            logger.info(f"Converged at iteration {k} with gradient norm {gnorm}")
                             break
 
                         try:
@@ -539,9 +537,7 @@ class OptimizerFactory(metaclass=SingletonMeta):
                     "Degrees of freedom (dofs) are required for Newton optimizer.",
                 )
 
-            linear_solver = self.linear_solver_factory.create(
-                linear_solver_config, dofs=dofs
-            )
+            linear_solver = self.linear_solver_factory.create(linear_solver_config, dofs=dofs)
 
             reg_param = config.get("reg_param", 1e-4)
             n_threads = config.get("n_threads", 1)

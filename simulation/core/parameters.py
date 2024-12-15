@@ -22,6 +22,10 @@ class ParametersBase(ABC):
 
     pass
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the parameters to a dictionary for serialization."""
+        pass
+
 
 class Parameters(ParametersBase):
     def __init__(
@@ -289,7 +293,9 @@ class ParametersFactory(metaclass=SingletonMeta):
         Returns:
             Parameters: The created or updated Parameters instance.
         """
-        logger.info(SimulationLogMessageCode.COMMAND_STARTED.details("Creating or updating parameters..."))
+        logger.info(
+            SimulationLogMessageCode.COMMAND_STARTED.details("Creating or updating parameters...")
+        )
 
         parameters_type = config.get("parameters", {}).get("type", "default").lower()
 
@@ -316,5 +322,7 @@ class ParametersFactory(metaclass=SingletonMeta):
                 )
             )
             raise SimulationError(
-                SimulationErrorCode.PARAMETERS_SETUP, "Failed to create or update parameters", str(e)
+                SimulationErrorCode.PARAMETERS_SETUP,
+                "Failed to create or update parameters",
+                str(e),
             )

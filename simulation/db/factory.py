@@ -167,17 +167,18 @@ class DatabaseFactory(metaclass=SingletonMeta):
         env_vars = {**os.environ, "DATABASE_URL": database_url, "DB_PROVIDER": db_provider}
 
         try:
-            result = subprocess.run(
-                ["prisma", "db", "push"],
-                capture_output=True,
-                text=True,
-                cwd=prisma_dir,
-                env=env_vars,
-                check=True,
-            )
-            logger.info(
-                SimulationLogMessageCode.COMMAND_SUCCESS.details("Prisma initialized successfully")
-            )
+            pass
+            # result = subprocess.run(
+            #     ["prisma", "db", "push"],
+            #     capture_output=True,
+            #     text=True,
+            #     cwd=prisma_dir,
+            #     env=env_vars,
+            #     check=True,
+            # )
+            # logger.info(
+            #     SimulationLogMessageCode.COMMAND_SUCCESS.details("Prisma initialized successfully")
+            # )
         except subprocess.CalledProcessError as e:
             logger.error(
                 SimulationLogMessageCode.COMMAND_FAILED.details(
@@ -210,11 +211,7 @@ class DatabaseFactory(metaclass=SingletonMeta):
                 )
                 database_instance = PrismaDB(config.get("db", {}).get("config", {}))
 
-                # Connect the Prisma client before performing operations
                 await database_instance.connect_client()
-
-                # Removed manual table creation
-                # await database_instance.create_all_tables()
             else:
                 logger.error(
                     SimulationLogMessageCode.COMMAND_FAILED.details(
