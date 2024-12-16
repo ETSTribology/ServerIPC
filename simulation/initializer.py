@@ -338,7 +338,7 @@ class SimulationInitializer:
             "detJeU": (detJeU, ["determinant_JeU"]),
             "GNeU": (GNeU, ["gradient_NeU"]),
             "element_materials": (element_materials, []),
-            "num_nodes_list": (num_nodes_list, []),
+            "num_nodes_list": (num_nodes_list, ["num_nodes"]),
             "running": (running, ["is_running"]),
             "broad_phase_method": (broad_phase_method, ["broad_phase"]),
         }

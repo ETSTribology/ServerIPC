@@ -4,6 +4,7 @@
     "type": "object",
     "version": "1.0.0",
     "required": [
+        "name",
         "backend",
         "contact",
         "db",
@@ -15,6 +16,11 @@
         "initial"
     ],
     "properties": {
+        "name": {
+            "type": "string",
+            "description": "Name of the simulation",
+            "default": "simulation"
+        },
         "backend": {
             "$ref": "backend.json",
             "description": "Configuration for the backend.",

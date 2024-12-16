@@ -1,22 +1,16 @@
-import asyncio
 import logging
 import os
-import re
 import subprocess
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
-from dotenv import load_dotenv
-
-from simulation.core.utils.singleton import SingletonMeta
 from simulation.db.db import DatabaseBase
-from simulation.db.prisma import PrismaDB
+from simulation.db.prismadb import PrismaDB
 from simulation.logs.error import SimulationError, SimulationErrorCode
 from simulation.logs.message import SimulationLogMessageCode
 
 logger = logging.getLogger(__name__)
 
-
-class DatabaseFactory(metaclass=SingletonMeta):
+class DatabaseFactory:
     """Factory for creating and managing database instances."""
 
     _instances: Dict[str, DatabaseBase] = {}
@@ -24,14 +18,14 @@ class DatabaseFactory(metaclass=SingletonMeta):
     DEFAULT_PROVIDER = "postgresql"
 
     @staticmethod
-    def _build_database_url(config: Dict[str, Any]) -> Tuple[str, str]:
+    def _build_database_url(config: Dict[str, Any]) -> str:
         """Build database URL from config."""
         database_type = config.get("backend", "postgresql")
         database_config = config.get("config", {})
 
         if database_type == "sqlite":
             db_name = database_config.get("name", "database.db")
-            return f"file:{db_name}", database_type
+            return f"file:{db_name}"
 
         # PostgreSQL URL construction
         host = database_config.get("host", "localhost")
@@ -40,10 +34,7 @@ class DatabaseFactory(metaclass=SingletonMeta):
         user = database_config.get("user", "user")
         password = database_config.get("password", "password")
 
-        return (
-            f"{database_type}://{user}:{password}@{host}:{port}/{name}?schema=public",
-            database_type,
-        )
+        return f"{database_type}://{user}:{password}@{host}:{port}/{name}?schema=public"
 
     @staticmethod
     def _validate_env_vars(database_url: str, db_provider: str) -> None:
@@ -68,51 +59,13 @@ class DatabaseFactory(metaclass=SingletonMeta):
             )
 
     @staticmethod
-    def _write_env_file(database_url: str, db_provider: str) -> None:
-        """Write environment variables to .env file."""
-        env_path = os.path.join(os.getcwd(), ".env")
-        with open(env_path, "w") as file:
-            file.write(f"DATABASE_URL={database_url}\n")
-            file.write(f"DB_PROVIDER={db_provider}\n")
-        logger.info(
-            SimulationLogMessageCode.COMMAND_SUCCESS.details(
-                "Environment variables written to .env file"
-            )
-        )
-
-    @staticmethod
-    def _initialize_prisma(
-        database_url: Optional[str] = None, db_provider: str = "postgresql"
-    ) -> None:
+    def _initialize_prisma(database_url: str, db_provider: str) -> None:
         """Initialize Prisma with database configuration."""
-        logger = logging.getLogger("DatabaseFactory")
         logger.info(SimulationLogMessageCode.COMMAND_STARTED.details("Initializing Prisma..."))
 
         # Load environment variables
-        load_dotenv()
-
-        # Use provided URL or fallback to environment/default
-        database_url = database_url or os.getenv("DATABASE_URL", DatabaseFactory.DEFAULT_DB_URL)
-        db_provider = db_provider or os.getenv("DB_PROVIDER", DatabaseFactory.DEFAULT_PROVIDER)
-
-        # Validate environment variables
-        DatabaseFactory._validate_env_vars(database_url, db_provider)
-
-        # Write environment variables to .env file
-        DatabaseFactory._write_env_file(database_url, db_provider)
-
-        # Set environment variables
         os.environ["DATABASE_URL"] = database_url
         os.environ["DB_PROVIDER"] = db_provider
-
-        logger.info(
-            SimulationLogMessageCode.COMMAND_SUCCESS.details(
-                f"Using database provider: {db_provider}"
-            )
-        )
-        logger.info(
-            SimulationLogMessageCode.COMMAND_SUCCESS.details(f"Using database URL: {database_url}")
-        )
 
         # Validate schema file
         schema_path = os.path.join(os.getcwd(), "simulation", "db", "schema.prisma")
@@ -131,15 +84,11 @@ class DatabaseFactory(metaclass=SingletonMeta):
             schema_content = file.read()
 
         # Replace environment variables with actual values
-        schema_content_new = re.sub(
-            r'provider\s*=\s*env\(["\']DB_PROVIDER["\']\)',
-            f'provider = "{db_provider}"',
-            schema_content,
+        schema_content_new = schema_content.replace(
+            'provider = env("DB_PROVIDER")', f'provider = "{db_provider}"'
         )
-        schema_content_new = re.sub(
-            r'url\s*=\s*env\(["\']DATABASE_URL["\']\)',
-            f'url = "{database_url}"',
-            schema_content_new,
+        schema_content_new = schema_content_new.replace(
+            'url = env("DATABASE_URL")', f'url = "{database_url}"'
         )
 
         # Write updated schema
@@ -152,7 +101,7 @@ class DatabaseFactory(metaclass=SingletonMeta):
             )
 
         # Validate models exist
-        if not re.search(r"model\s+\w+\s*{", schema_content_new):
+        if "model" not in schema_content_new:
             logger.error(
                 SimulationLogMessageCode.COMMAND_FAILED.details(
                     "No models defined in schema.prisma"
@@ -167,18 +116,15 @@ class DatabaseFactory(metaclass=SingletonMeta):
         env_vars = {**os.environ, "DATABASE_URL": database_url, "DB_PROVIDER": db_provider}
 
         try:
-            pass
-            # result = subprocess.run(
-            #     ["prisma", "db", "push"],
-            #     capture_output=True,
-            #     text=True,
-            #     cwd=prisma_dir,
-            #     env=env_vars,
-            #     check=True,
-            # )
-            # logger.info(
-            #     SimulationLogMessageCode.COMMAND_SUCCESS.details("Prisma initialized successfully")
-            # )
+            subprocess.run(
+                ["prisma", "db", "push"],
+                capture_output=True,
+                text=True,
+                cwd=prisma_dir,
+                env=env_vars,
+                check=True,
+            )
+            logger.info(SimulationLogMessageCode.COMMAND_SUCCESS.details("Prisma initialized successfully"))
         except subprocess.CalledProcessError as e:
             logger.error(
                 SimulationLogMessageCode.COMMAND_FAILED.details(
@@ -190,55 +136,40 @@ class DatabaseFactory(metaclass=SingletonMeta):
             )
 
     @staticmethod
-    async def create_async(config: Dict[str, Any]) -> DatabaseBase:
-        """Asynchronous method to create database instance from config."""
-        logger = logging.getLogger("DatabaseFactory")
-        logger.info(SimulationLogMessageCode.COMMAND_STARTED.details("Creating database..."))
+    def create(config: Dict[str, Any]) -> DatabaseBase:
+        db_provider = config.get("db", {}).get("backend", "postgresql")
 
-        # Build database URL from config
-        database_url, database_type = DatabaseFactory._build_database_url(config.get("db", {}))
-
-        logger.info(
-            SimulationLogMessageCode.COMMAND_SUCCESS.details(
-                f"Initializing {database_type} database with URL: {database_url}"
+        # Return existing instance if already created
+        if db_provider in DatabaseFactory._instances:
+            logger.warning(
+                f"Database instance for provider '{db_provider}' is already registered."
             )
-        )
+            return DatabaseFactory._instances[db_provider]
 
-        if database_type not in DatabaseFactory._instances:
-            if database_type in ["postgresql", "sqlite"]:
-                DatabaseFactory._initialize_prisma(
-                    database_url=database_url, db_provider=database_type
-                )
-                database_instance = PrismaDB(config.get("db", {}).get("config", {}))
+        database_url = DatabaseFactory._build_database_url(config.get("db", {}))
+        try:
+            # Initialize the Prisma client
+            DatabaseFactory._initialize_prisma(database_url, db_provider)
 
-                await database_instance.connect_client()
-            else:
-                logger.error(
-                    SimulationLogMessageCode.COMMAND_FAILED.details(
-                        f"Unsupported database type: {database_type}"
-                    )
-                )
-                raise SimulationError(
-                    SimulationErrorCode.INPUT_VALIDATION,
-                    f"Unsupported database type: {database_type}",
-                )
+            # Create and register the database instance
+            database_instance = PrismaDB(config.get("db", {}).get("config", {}))
+            database_instance.connect_client()
+            DatabaseFactory._instances[db_provider] = database_instance
 
-            DatabaseFactory._instances[database_type] = database_instance
-
-        return DatabaseFactory._instances[database_type]
+            logger.info("Database instance created and registered successfully.")
+            return database_instance
+        except Exception as e:
+            logger.error(f"Failed to create or initialize the database: {e}")
+            raise SimulationError(SimulationErrorCode.DATABASE_INITIALIZATION, str(e))
 
     @staticmethod
-    def create(config: Dict[str, Any]) -> DatabaseBase:
-        """Create database instance from config."""
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            # No event loop; create a new one
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        if loop.is_closed():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        return loop.run_until_complete(DatabaseFactory.create_async(config))
+    def get_current_db() -> Optional[DatabaseBase]:
+        """Get the current database instance from the factory."""
+        if not DatabaseFactory._instances:
+            logger.warning("No database instance available.")
+            return None
+        
+        db_instance = next(iter(DatabaseFactory._instances.values()))
+        if db_instance is None:
+            logger.warning("No valid database instance found.")
+        return db_instance

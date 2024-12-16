@@ -95,45 +95,38 @@ class RedisBackend(Backend):
             self._listener_thread.start()
 
     def disconnect(self):
-        """
-        Disconnect from the Redis server gracefully.
-        """
+        """Disconnect from the Redis server gracefully."""
         with self._lock:
-            self._stop_event.set()
+            self._stop_event.set()  # Signal listener thread to stop
             if self.pubsub:
                 try:
                     self.pubsub.unsubscribe()
                     self.pubsub.close()
-                    logger.info(
-                        SimulationLogMessageCode.REDIS_DISCONNECTED.details(
-                            "Unsubscribed and closed Redis pubsub."
-                        )
-                    )
+                    logger.info("Unsubscribed and closed Redis pubsub.")
                 except Exception as e:
-                    logger.error(
-                        SimulationLogMessageCode.REDIS_DISCONNECTION_FAILED.details(
-                            f"Error while unsubscribing Redis pubsub: {e}"
-                        )
-                    )
+                    logger.error(f"Error while unsubscribing Redis pubsub: {e}")
+                finally:
+                    self.pubsub = None  # Reset pubsub to prevent invalid access
             if self.client:
                 try:
                     self.client.close()
                     self.connected = False
-                    logger.info(
-                        SimulationLogMessageCode.REDIS_DISCONNECTED.details(
-                            "Disconnected from Redis backend."
-                        )
-                    )
+                    logger.info("Disconnected from Redis backend.")
                 except Exception as e:
-                    logger.error(
-                        SimulationLogMessageCode.REDIS_DISCONNECTION_FAILED.details(
-                            f"Error while closing Redis client: {e}"
-                        )
-                    )
-            # Wait for listener thread to finish
+                    logger.error(f"Error while closing Redis client: {e}")
+            # Ensure listener thread is stopped
             if self._listener_thread.is_alive():
                 self._listener_thread.join(timeout=2)
                 logger.info("Redis command listener thread has been stopped.")
+
+    def safe_command_handler(self, command):
+        try:
+            if callable(self.command_handler):
+                self.command_handler(command)
+            else:
+                logger.error("Command handler is not callable.")
+        except Exception as e:
+            logger.error(f"Error in command handler: {e}")
 
     def _listen_commands(self):
         logger.info("Redis command listener thread started.")
@@ -165,6 +158,8 @@ class RedisBackend(Backend):
             except Exception as e:
                 logger.error(f"Unexpected error in listener thread: {e}")
                 time.sleep(self.reconnect_interval)
+        logger.info("Redis command listener thread stopped.")
+
 
     def write(self, key: str, value: Any) -> None:
         """
@@ -264,9 +259,6 @@ class RedisBackend(Backend):
     def send_response(self, response: Response) -> None:
         """
         Publish a response message to the 'responses' channel.
-
-        Args:
-            response: The Response to send.
         """
         if not self.connected:
             logger.warning(
@@ -280,7 +272,7 @@ class RedisBackend(Backend):
                 )
         try:
             message = response.to_json()
-            self.client.publish("responses", message)
+            self.client.publish("responses", message)  # Blocking publish method
             logger.info(
                 SimulationLogMessageCode.REDIS_WRITE_SUCCESS.details(
                     "Published response to 'responses' channel."

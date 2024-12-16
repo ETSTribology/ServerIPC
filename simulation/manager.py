@@ -2,6 +2,7 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
+import time
 from typing import Any, Dict
 
 import numpy as np
@@ -56,6 +57,7 @@ class SimulationManager:
         self.max_steps = int(self.total_time / self.time_step)
 
         self.current_step = 0
+        self._shutdown_initiated = False
 
     def load_configuration(self) -> Dict[str, Any]:
         logger.info(SimulationLogMessageCode.CONFIGURATION_LOADED)
@@ -357,12 +359,13 @@ class SimulationManager:
     def simulation_step(self):
         """Perform a single simulation step."""
         if self.current_step >= self.max_steps:
-            logger.info("Reached maximum simulation steps.")
+            logger.info(f"Reached maximum simulation steps at step {self.current_step}.")
             self.shutdown()
             return
 
         if not self.simulation_state.get_attribute("running"):
-            logger.info("Simulation is paused. Waiting for commands...")
+            logger.info(f"Simulation is paused at step {self.current_step}. Waiting for commands...")
+            time.sleep(1)
             return
 
         try:
@@ -375,7 +378,7 @@ class SimulationManager:
                 ccd=self.ccd,
             )
         except Exception as e:
-            logger.error(f"Failed to update simulation state: {e}")
+            logger.error(f"Failed to update simulation state at step {self.current_step}: {e}")
             return
 
         try:
@@ -390,17 +393,30 @@ class SimulationManager:
             self.update_simulation_values(xtp1)
 
             BX = to_surface(self.params.xt, self.params.mesh, self.params.cmesh)
-            self.command_handler.send_data_update(self.params.xt, BX, self.current_step)
 
+            backend_data = {
+                "timestamp": time.time(),
+                "step": self.current_step,
+                "positions": self.params.xt.tolist(),
+                "BX": BX.tolist(),
+            }
+
+            db_data = {
+                "timeStep": self.current_step,
+                "timeElapsed": self.current_step * self.params.dt,
+                "num_elements": len(self.simulation_state.get_attribute("num_nodes_list")),
+                "positions": self.params.xt.reshape(-1, 3).tolist(),
+                "velocity": self.params.vt.reshape(-1, 3).tolist(),
+                "acceleration": self.params.a.reshape(-1, 3).tolist(),
+            }
+
+            # Send data update
+            self.command_handler.send_data_update(backend_data, db_data)
+            
         except Exception as e:
-            logger.error(f"Error during simulation step {self.current_step}: {e}")
+            logger.error(f"Error during simulation optimization at step {self.current_step}: {e}")
             return
-
-        try:
-            self.command_handler.handle_commands()
-        except Exception as e:
-            logger.error(f"Failed to handle commands at step {self.current_step}: {e}")
-
+        
         self.current_step += 1
 
     def run_simulation(self) -> None:
@@ -419,25 +435,19 @@ class SimulationManager:
             logger.info("Simulation terminated gracefully.")
             self.shutdown()
 
-    def shutdown(self) -> None:
-        logger.info(SimulationLogMessageCode.SIMULATION_SHUTDOWN)
+    def shutdown(self):
+        if self._shutdown_initiated:
+            return 
+        self._shutdown_initiated = True
+        self.simulation_state.update_attribute("running", False)
+        logger.info("Shutting down simulation...")
         try:
             if self.backend:
                 self.backend.disconnect()
-                logger.info(
-                    SimulationLogMessageCode.SIMULATION_SHUTDOWN.details(
-                        "Backend disconnected successfully."
-                    )
-                )
+                logger.info("Backend disconnected successfully.")
         except Exception as e:
-            logger.error(
-                SimulationLogMessageCode.SIMULATION_SHUTDOWN.details(
-                    f"Error while disconnecting backend: {e}"
-                )
-            )
-        # Exit the main loop or set a termination flag
-        self.simulation_state.update_attribute("running", False)
-        sys.exit(0)
+            logger.error(f"Error while disconnecting backend: {e}")
+        
 
     def stop_simulation(self) -> None:
         """

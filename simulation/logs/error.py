@@ -77,6 +77,14 @@ class SimulationErrorCode(Enum):
     MEMORY_ERROR = ("Memory Error", "ERR_037")
     PYTHON_ERROR = ("Python Error", "ERR_055")
 
+    DATABASE_OPERATION = ("Database Operation Error", "ERR_056")
+    GRADIENT_CALCULATION = ("Gradient Calculation Error", "ERR_033")
+    STATE_ERROR = ("State Error", "ERR_045")
+    LINEAR_SOLVER = ("Linear Solver Error", "ERR_058")
+    DATABASE_CONNECTION = ("Database Connection Error", "ERR_059")
+    INVALID_OPERATION = ("Invalid Operation Error", "ERR_060")
+
+
     def __init__(self, description, code):
         self.description = description
         self.code = code
@@ -162,6 +170,9 @@ def get_simulation_error_class(code: SimulationErrorCode):
         SimulationErrorCode.PYTHON_ERROR: PythonError,
         SimulationErrorCode.LINEAR_SOLVER: LinearSolverError,
         SimulationErrorCode.COMMAND_DISPATCHER_INITIALIZATION: CommandDispatcherInitializationError,
+        SimulationErrorCode.DATABASE_OPERATION: DatabaseOperationError,
+        SimulationErrorCode.DATABASE_CONNECTION: DatabaseOperationError,
+        SimulationErrorCode.INVALID_OPERATION: DatabaseOperationError,
     }
     return error_classes.get(code, GeneralSimulationError)
 
@@ -449,3 +460,15 @@ class LinearSolverError(SimulationError):
 class CommandDispatcherInitializationError(SimulationError):
     def __init__(self, message: str, details: str = None):
         super().__init__(SimulationErrorCode.COMMAND_DISPATCHER_FAILED, message, details)
+
+class DatabaseOperationError(SimulationError):
+    def __init__(self, message: str, details: str = None):
+        super().__init__(SimulationErrorCode.DATABASE_OPERATION, message, details)
+
+class DatabaseConnectionError(SimulationError):
+    def __init__(self, message: str, details: str = None):
+        super().__init__(SimulationErrorCode.DATABASE_CONNECTION, message, details)
+
+class InvalidOperationError(SimulationError):
+    def __init__(self, message: str, details: str = None):
+        super().__init__(SimulationErrorCode.INVALID_OPERATION, message, details)
